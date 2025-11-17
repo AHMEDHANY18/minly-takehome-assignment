@@ -1,159 +1,315 @@
 # Minly – Media Sharing Platform (Take-Home Assignment)
 
-This repository contains a full-stack implementation of a simple media sharing platform inspired by Instagram.
+This repository contains a full-stack implementation of a realistic media sharing platform inspired by Instagram.
 Users can upload images and videos, browse a global feed, and like/unlike media from both web and mobile clients.
 
-The project is built as a **single monorepo** containing:
+The project is implemented as a **single monorepo**, containing:
 
 - `backend/` – Node.js + TypeScript REST API (media CRUD, likes, auth, AWS S3 integration)
 - `web/` – React + TypeScript web application
 - `mobile/` – React Native mobile application
-- `docs/` – Architecture diagrams, sequence flows, and UI/UX notes
+- `docs/` – Architecture diagrams, sequence flows, and UI/UX documentation
 
-The goal is to treat this assignment as a real-world product and not just a small coding exercise.
-
----
-
-## Table of Contents
-
-1. [Project Vision](#project-vision)
-2. [Core Features](#core-features)
-3. [Architecture Overview](#architecture-overview)
-4. [Why a Single Repository (Monorepo)?](#why-a-single-repository-monorepo)
-5. [Repository Structure](#repository-structure)
-6. [Tech Stack](#tech-stack)
-7. [Requirements & Assumptions](#requirements--assumptions)
-   - [Functional Requirements](#functional-requirements)
-   - [Non-Functional Requirements](#non-functional-requirements)
-   - [Assumptions](#assumptions)
-8. [Backend Overview](#backend-overview)
-9. [Web App Overview](#web-app-overview)
-10. [Mobile App Overview](#mobile-app-overview)
-11. [API Overview](#api-overview)
-12. [Getting Started](#getting-started)
-    - [Prerequisites](#prerequisites)
-    - [Clone & Install](#clone--install)
-    - [Running the Backend](#running-the-backend)
-    - [Running the Web App](#running-the-web-app)
-    - [Running the Mobile App](#running-the-mobile-app)
-13. [Environment Variables](#environment-variables)
-14. [Deployment](#deployment)
-15. [Future Improvements](#future-improvements)
+This assignment is approached as a **real-world product**, not just a coding exercise.
 
 ---
 
-## Project Vision
-
-The project aims to implement a **simple but realistic media sharing platform**:
-
-- Users can **upload** images and videos.
-- Everyone can **browse** a global feed.
-- Users can **like/unlike** media items.
-- The system is accessible from a **web app** and **mobile app** (React Native).
-- The backend is deployed to the cloud and uses **AWS S3** for media storage.
-
-The focus is on:
-
-- Clear architecture
-- Code quality and maintainability
-- Reasonable scalability
-- A straightforward UX similar to Instagram (Light Mode, feed + upload + profile)
-
----
-
-## Core Features
-
-### 1. Authentication
-
-- User registration (sign up)
-- Login with email and password
-- JWT-based authentication
-- Protected endpoints for upload/like actions
-
-### 2. Media Management
-
-- Upload image or video files
-- Store media files in AWS S3
-- Persist metadata in the database (URL, type, owner, timestamps)
-- List all media items in a paginated feed
-- View single media details
-
-### 3. Likes System
-
-- Like / Unlike a media item
-- Prevent duplicate likes by the same user
-- Maintain a likes counter per media
-
-### 4. User Profile
-
-- View basic user info
-- View media uploaded by the current user
-- Simple statistics (optional: total uploads, total likes)
-
-### 5. Clients
-
-- **Web app (React + TS)** – feed, upload, like/unlike, profile
-- **Mobile app (React Native)** – same core functionality, optimized for mobile UX
-
----
-
-## Architecture Overview
-
-High-level architecture:
-
-- **Clients**
-  - Web (React + TypeScript)
-  - Mobile (React Native)
-- **Backend API**
-  - Node.js + TypeScript + Express (or Nest-like structure)
-  - REST endpoints for auth, media, likes
-- **Database**
-  - PostgreSQL (accessed via Prisma ORM or similar)
-- **Storage**
-  - AWS S3 bucket for media assets
-- **Auth**
-  - JWT tokens, stored client-side (securely)
-- **Deployment**
-  - Backend deployed to a cloud provider (e.g. Render/Railway/AWS)
-  - Web deployed to a static hosting (e.g. Vercel/Netlify)
-  - Mobile run locally on simulator/emulator
-
-Conceptual flow:
-
-1. User authenticates via the backend.
-2. Client uploads media to the backend.
-3. Backend uploads the file to S3 and stores metadata in the DB.
-4. Clients fetch paginated media lists from the backend.
-5. Users like/unlike media; likes are stored in the DB and reflected in the UI.
-
----
-
-## Why a Single Repository (Monorepo)?
-
-Although the assignment includes three separate deliverables (backend, web, mobile), everything is hosted in **one private repository** for several reasons:
-
-1. **Single Source of Truth**
-   All code for the assignment lives in one place, making it easier for reviewers to clone, run, and navigate between backend, web, and mobile.
-
-2. **Shared Context**
-   The three projects share the same domain model (Media, User, Like). Keeping them together helps maintain a consistent architecture and simplifies coordination between client and server.
-
-3. **Simplified Review & Access**
-   The instructions ask to share a **private GitHub repository** with specific reviewers. Using a monorepo avoids managing and sharing multiple repos for the same assignment.
-
-4. **Real-world Monorepo Pattern**
-   Many modern teams use a monorepo for closely related services and clients. This structure mimics that approach and keeps the project scalable if more apps or services are added later (e.g. admin panel, analytics).
-
-If needed, each folder (`backend`, `web`, `mobile`) can be extracted into a standalone repository in the future with minimal changes.
-
----
-
-## Repository Structure
+## 📂 Repository Structure
 
 ```txt
 MINLY-TAKEHOME-ASSIGNMENT/
-  README.md          # Root documentation (this file)
-  backend/           # Node.js + TypeScript backend (REST API)
-  web/               # React + TypeScript web application
-  mobile/            # React Native mobile application
-  docs/              # Architecture diagrams, flows, and notes
+  README.md
+  backend/
+  web/
+  mobile/
+  docs/
+```
+
+### Why a Single Monorepo?
+
+* Easier for reviewers to clone and test all components.
+* Backend, web, and mobile share the same domain model (Media, User, Like), so keeping them together ensures consistency.
+* Matches the assignment requirement of one private GitHub repository.
+* Easier integration, unified documentation, shared architecture, and quicker setup.
+
+---
+
+## 🎯 Project Vision
+
+The aim of Minly is to build a **simple, scalable, maintainable media platform** where users can:
+
+* Upload images/videos
+* Browse a global feed
+* Like/unlike media
+* View their own uploads
+* Access the platform from web and mobile
+
+Focusing on:
+
+* Clean architecture
+* Cloud storage
+* Realistic UX
+* Code quality
+* Maintainability
+
+---
+
+## 🔧 Core Features
+
+### 1. Authentication
+
+* User registration
+* Login with email & password
+* JWT-based authentication
+* Protected endpoints
+
+### 2. Media Management
+
+* Upload image/video files
+* Store files in AWS S3
+* Save metadata to DB
+* Delete media (owner only)
+* View feed with pagination
+* View media details
+
+### 3. Likes System
+
+* Like/unlike
+* Prevent duplicate likes
+* Maintain likes count
+
+### 4. User Profile
+
+* View user info
+* View user uploads
+* Optional statistics
+
+### 5. Clients
+
+* React Web App
+* React Native Mobile App
+* Both use the same backend API
+
+---
+
+## 🏗 Architecture Overview
+
+### Clients
+
+* **Web** – React + TS
+* **Mobile** – React Native + TS
+
+### Backend API
+
+* Node.js + TypeScript
+* Express-style routing
+* AWS S3 integration
+* JWT authentication
+* REST endpoints
+
+### Database
+
+* PostgreSQL
+* Prisma ORM
+
+### Storage
+
+* AWS S3 bucket
+
+### Deployment
+
+* Backend → Render/Railway/AWS
+* Web → Vercel/Netlify
+* Mobile → runs locally (Android/iOS simulators)
+
+### Conceptual Flow
+
+1. User authenticates
+2. Client uploads file → backend → S3
+3. Metadata stored in DB
+4. Feed fetched paginated
+5. Users like/unlike media
+
+---
+
+# 📘 Functional Requirements
+
+### **1. Authentication**
+
+* Register using name, email, password
+* Login & receive JWT
+* Auth required for:
+
+  * Upload
+  * Like/unlike
+  * Delete media
+  * User profile actions
+
+### **2. Media Management**
+
+* Upload image or video
+* Accept only supported formats
+* Store file in S3
+* Save metadata in DB
+* Delete media (only uploader)
+* Get media by ID
+
+### **3. Feed**
+
+* Global feed for all users
+* Sort by newest
+* Support pagination: `page`, `limit`
+* Filter by type: `image`, `video`
+
+### **4. Likes**
+
+* Like media once
+* Unlike media
+* Auto-update count
+
+### **5. User Profile**
+
+* View basic info
+* View user uploads
+* Stats (uploads count, likes count – optional)
+
+### **6. Web App**
+
+* Login / Signup
+* Feed view
+* Upload flow (title, desc, file)
+* Profile
+* Like/unlike
+
+### **7. Mobile App**
+
+* Same flows as web
+* Mobile-first UX
+* Light Mode UI
+
+---
+
+# 📙 Non-Functional Requirements
+
+### **Security**
+
+* JWT authentication
+* File type validation
+* Max file size (50 MB)
+* Hash passwords (bcrypt)
+* Protect AWS credentials
+* CORS for web & mobile
+
+### **Scalability**
+
+* Use S3 for file storage
+* Pagination for feed
+* Indexed DB queries
+* Modular architecture
+
+### **Maintainability**
+
+* Clean folder structure
+* Reusable services
+* TypeScript strict mode
+* ESLint + Prettier
+* Clear separation of concerns
+
+### **Performance**
+
+* Lazy loading images
+* Efficient streaming for uploads
+* Optimized queries
+* Minimized payloads
+
+---
+
+# 🧩 Domain Model
+
+### **User**
+
+* id
+* name
+* email (unique)
+* passwordHash
+* createdAt
+
+**Relations:**
+
+* User → Media (1-to-many)
+* User → Likes (1-to-many)
+
+---
+
+### **Media**
+
+* id
+* url
+* type (IMAGE | VIDEO)
+* title
+* description
+* uploaderId
+* likesCount
+* createdAt
+
+**Relations:**
+
+* Media → Likes (1-to-many)
+
+---
+
+### **Like**
+
+* id
+* userId
+* mediaId
+* createdAt
+
+**Constraints:**
+
+* Unique (userId, mediaId)
+
+---
+
+### ERD (Text Format)
+
+```
+User (1) ---- (many) Media
+User (1) ---- (many) Likes
+Media (1) ---- (many) Likes
+```
+
+---
+
+# 📕 Assumptions
+
+1. Only authenticated users can upload or like media.
+2. The feed is public: all users see all uploads.
+3. Supported file formats:
+
+   * Images: JPG, JPEG, PNG, WebP
+   * Videos: MP4
+4. Maximum upload size = 50MB.
+5. S3 handles all media storage (no local storage).
+6. Only uploaders can delete their media.
+7. No comments or followers system in this scope.
+8. No video compression/transcoding implemented.
+9. Mobile & web consume the same backend API.
+10. Rate limiting is optional and can be added later.
+
+---
+
+# 🚀 Next Steps (Backend, Web, Mobile)
+
+Documentation for:
+
+* API structure
+* Database schema
+* Setup & environment variables
+* Deployment instructions
+
+…will be added in `docs/` and in each project folder.
+
+---
+
+# ✔ End of README.md
