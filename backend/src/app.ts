@@ -1,44 +1,45 @@
-import express from 'express';
-import cors from 'cors';
-import helmet from 'helmet';
-import morgan from 'morgan';
-import { errorHandler } from './middleware/errorHandler';
-import logger, { stream } from './config/logger';
-import { config } from './config';
-import router from './routes';
+import express from "express";
+import cors from "cors";
+import helmet from "helmet";
+import morgan from "morgan";
+import rateLimit from "express-rate-limit";
 
-// Create Express app
+import { preventHPP } from "./middleware/preventHPP";
+import { errorHandler } from "./middleware/errorHandler";
+import logger, { stream } from "./config/logger";
+import { config } from "./config";
+import router from "./routes";
+
 const app = express();
 
-// Security middleware
+/* ---------------- Security ---------------- */
+
 app.use(helmet());
-
-// CORS configuration
 app.use(cors(config.cors));
+app.use(preventHPP);
 
-// Body parsing middleware
+const globalLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 200,
+  message: "Too many requests",
+});
+app.use(globalLimiter);
+
+/* ---------------- Body parsing ---------------- */
+
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// Request logging
-app.use(morgan('combined', { stream }));
+/* ---------------- Logger ---------------- */
 
-// Health check endpoint
-// Apply routes (appMiddleware should be inside the routes)
-app.use('/', router);
+app.use(morgan("combined", { stream }));
 
-// Error handling middleware (must be last)
+/* ---------------- Routes ---------------- */
+
+app.use("/v1", router);
+
+/* ---------------- Error Handler ---------------- */
+
 app.use(errorHandler);
-
-// Log unhandled rejections
-process.on('unhandledRejection', (reason: Error) => {
-  logger.error('Unhandled Rejection:', reason);
-});
-
-// Log uncaught exceptions
-process.on('uncaughtException', (error: Error) => {
-  logger.error('Uncaught Exception:', error);
-  process.exit(1);
-});
 
 export default app;

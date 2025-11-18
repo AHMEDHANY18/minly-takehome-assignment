@@ -8,12 +8,23 @@ export async function loginService(email: string, password: string) {
     where: { email },
   });
 
-  if (!user) throw new Error("Invalid email or password");
+  if (!user) {
+    const err: any = new Error("Invalid email or password");
+    err.statusCode = 400;
+    throw err;
+  }
 
-  const valid = await bcrypt.compare(password, user.passwordHash);
-  if (!valid) throw new Error("Invalid email or password");
+  const isMatch = await bcrypt.compare(password, user.passwordHash);
+  if (!isMatch) {
+    const err: any = new Error("Invalid email or password");
+    err.statusCode = 400;
+    throw err;
+  }
 
   const token = jwtSign({ userId: user.id }, { expiresIn: "7d" });
 
-  return { user: formatUser(user), token };
+  return {
+    user: formatUser(user),
+    token,
+  };
 }
