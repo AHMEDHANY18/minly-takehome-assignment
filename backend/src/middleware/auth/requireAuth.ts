@@ -17,7 +17,7 @@ export async function requireAuth(
     if (!authHeader) {
       return res.status(401).json({
         status: "error",
-        message: "Unauthorized: Missing token",
+        message: "u should ",
       });
     }
 
