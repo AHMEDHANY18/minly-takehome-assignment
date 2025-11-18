@@ -1,6 +1,6 @@
 import { Response, NextFunction } from "express";
 import { AuthRequest } from "../../middleware/auth/requireAuth";
-import { updateProfileService } from "../../services/user/updateProfile.service";
+import { updateProfileService } from "../../services/user/updateProfileService";
 
 export async function updateProfileController(
   req: AuthRequest,
@@ -9,10 +9,13 @@ export async function updateProfileController(
 ) {
   try {
     const userId = req.user!.id;
-    const { name, bio } = req.body;
-    const avatar = req.file;
+    const { name } = req.body; // 👈 بس name
 
-    const updatedUser = await updateProfileService(userId, { name, bio }, avatar);
+    const updatedUser = await updateProfileService(
+      userId,
+      { name },   // 👈 شيل bio
+      req.file
+    );
 
     return res.status(200).json({
       status: "success",

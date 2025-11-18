@@ -1,13 +1,13 @@
 import { Router } from "express";
 import authRoutes from "./auth.router";
 import mediaRoutes from "./media.router";
-import userRoutes from "./user.router.ts";
+import userRoutes from "./user.router";
 
 const router = Router({ mergeParams: true });
 
 // هنا بقى نركب /auth على نفس router
 router.use("/auth", authRoutes);
 router.use("/media", mediaRoutes);
-router.use("/user", mediaRoutes);
+router.use("/user", userRoutes);
 
 export default router;

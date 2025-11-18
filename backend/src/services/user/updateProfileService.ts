@@ -1,10 +1,18 @@
-import { MediaRepository } from "../../repositories/media.repository";
-import { uploadAvatarBuffer } from "../../utilities/storage/uploadAvatarBuffer";
+import { UserRepository } from "../../repositories/user.repository";
+import { uploadMediaBuffer } from "../../utilities/storage/uploadToS3";
 import { deleteFromS3 } from "../../utilities/storage/deleteFromS3";
 import { extractS3Key } from "../../utilities/storage/extractS3Key";
 
-export async function updateProfileService(userId: string, data: any, file?: Express.Multer.File) {
-  // 1) Get user
+interface UpdateProfileData {
+  name?: string;
+}
+
+export async function updateProfileService(
+  userId: string,
+  data: UpdateProfileData,
+  file?: Express.Multer.File
+) {
+  // 1) find user
   const user = await UserRepository.findById(userId);
 
   if (!user) {
@@ -15,28 +23,34 @@ export async function updateProfileService(userId: string, data: any, file?: Exp
 
   let avatarUrl = user.avatarUrl;
 
-  // 2) If avatar file is uploaded → upload to S3
+  // 2) upload avatar if file exists
   if (file) {
-    // delete old avatar if exists
     if (avatarUrl) {
-      const oldKey = extractS3Key(avatarUrl);
-      await deleteFromS3(oldKey);
+      const key = extractS3Key(avatarUrl);
+      await deleteFromS3(key);
     }
 
-    // upload new avatar
-    const uploadResult = await uploadAvatarBuffer({
+    const uploadResult = await uploadMediaBuffer({
       userId,
       file,
+      kind: "avatar",
     });
 
     avatarUrl = uploadResult.url;
   }
 
-  // 3) Update user in DB
-  const updatedUser = await UserRepository.updateUser(userId, {
-    ...data,
-    avatarUrl,
-  });
+  // 3) build update data object
+  const updateData: any = {};
+
+  if (data.name !== undefined) {
+    updateData.name = data.name;
+  }
+
+  if (avatarUrl !== user.avatarUrl) {
+    updateData.avatarUrl = avatarUrl;
+  }
+
+  const updatedUser = await UserRepository.updateUser(userId, updateData);
 
   return updatedUser;
 }

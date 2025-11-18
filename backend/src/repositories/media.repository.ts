@@ -105,12 +105,7 @@ export const MediaRepository = {
       data: { mediaCount: { decrement: 1 } }
     });
   },
-  async updateUser(id: string, data: any) {
-    return prisma.user.update({
-      where: { id },
-      data,
-    });
-  },
+
 
 };
 
