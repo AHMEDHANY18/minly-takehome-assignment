@@ -5,11 +5,13 @@
   "main": "dist/server.js",
   "scripts": {
     "dev": "ts-node-dev --respawn --transpile-only src/server.ts",
+    "dev:test-db": "ts-node-dev --respawn --transpile-only src/test-db.ts",
     "build": "tsc",
     "start": "node dist/server.js",
     "lint": "eslint . --ext .ts"
   },
   "dependencies": {
+    "@prisma/client": "^6.19.0",
     "@types/morgan": "^1.9.9",
     "@types/winston": "^2.4.4",
     "aws-sdk": "^2.1692.0",
@@ -25,6 +27,7 @@
     "morgan": "^1.10.0",
     "multer": "^2.0.1",
     "node-consul-service": "^1.0.57",
+    "prisma": "^6.19.0",
     "qumra-utils": "^1.0.0",
     "sharp": "^0.34.3",
     "winston": "^3.17.0"

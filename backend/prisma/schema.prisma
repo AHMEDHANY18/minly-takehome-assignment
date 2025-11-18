@@ -1,0 +1,57 @@
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model User {
+  id                 String   @id @default(uuid())
+  name               String
+  email              String   @unique
+  passwordHash       String
+  avatarUrl          String?
+  mediaCount         Int      @default(0)
+  totalLikesReceived Int      @default(0)
+  totalLikesGiven    Int      @default(0)
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  media  Media[]
+  likes  Like[]
+}
+
+model Media {
+  id           String    @id @default(uuid())
+  url          String
+  thumbnailUrl String?
+  type         MediaType
+  title        String?
+  description  String?
+  uploaderId   String
+  likesCount   Int       @default(0)
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  uploader User  @relation(fields: [uploaderId], references: [id])
+  likes    Like[]
+}
+
+model Like {
+  id        String   @id @default(uuid())
+  userId    String
+  mediaId   String
+  createdAt DateTime @default(now())
+
+  user  User  @relation(fields: [userId], references: [id])
+  media Media @relation(fields: [mediaId], references: [id])
+
+  @@unique([userId, mediaId])
+}
+
+enum MediaType {
+  IMAGE
+  VIDEO
+}
