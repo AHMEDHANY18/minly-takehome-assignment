@@ -2,6 +2,7 @@ import { Router } from "express";
 import authRoutes from "./auth.router";
 import mediaRoutes from "./media.router";
 import userRoutes from "./user.router";
+import lileRoutes from "./like.router";
 
 const router = Router({ mergeParams: true });
 
@@ -9,5 +10,6 @@ const router = Router({ mergeParams: true });
 router.use("/auth", authRoutes);
 router.use("/media", mediaRoutes);
 router.use("/user", userRoutes);
+router.use("/like", lileRoutes);
 
 export default router;

@@ -66,10 +66,11 @@ export const MediaRepository = {
   async findById(id: string) {
     return prisma.media.findUnique({
       where: { id },
-      include: { uploader: true },
+      include: {
+        uploader: true, // عشان نجيب صاحب الميديا ونزود له totalLikesReceived
+      },
     });
   },
-
   async deleteById(id: string) {
     return prisma.media.delete({
       where: { id },
