@@ -8,7 +8,7 @@ The project is implemented as a **single monorepo**, containing:
 - `backend/` – Node.js + TypeScript REST API (media CRUD, likes, auth, AWS S3 integration)
 - `web/` – React + TypeScript web application
 - `mobile/` – React Native mobile application
-- `docs/` – Architecture diagrams, sequence flows, and UI/UX documentation
+- `docs/` – Architecture, API documentation, and system design notes
 
 This assignment is approached as a **real-world product**, not just a coding exercise.
 
@@ -18,19 +18,22 @@ This assignment is approached as a **real-world product**, not just a coding exe
 
 ```txt
 MINLY-TAKEHOME-ASSIGNMENT/
-  README.md
+  README.md                # Main documentation (this file)
   backend/
+    diagrams/              # PNG diagrams (architecture, ERD, sequences)
   web/
   mobile/
   docs/
+    api-docs.md            # Detailed API reference
 ```
 
 ### Why a Single Monorepo?
 
 * Easier for reviewers to clone and test all components.
 * Backend, web, and mobile share the same domain model (Media, User, Like), so keeping them together ensures consistency.
-* Matches the assignment requirement of one private GitHub repository.
+* Matches the assignment requirement of a single private GitHub repository.
 * Easier integration, unified documentation, shared architecture, and quicker setup.
+* Mirrors a real-world monorepo setup used in many teams.
 
 ---
 
@@ -41,14 +44,14 @@ The aim of Minly is to build a **simple, scalable, maintainable media platform**
 * Upload images/videos
 * Browse a global feed
 * Like/unlike media
-* View their own uploads
-* Access the platform from web and mobile
+* View their own uploads and stats
+* Access the platform from both web and mobile apps
 
 Focusing on:
 
 * Clean architecture
 * Cloud storage
-* Realistic UX
+* Realistic UX (Instagram-like, Light Mode)
 * Code quality
 * Maintainability
 
@@ -61,34 +64,38 @@ Focusing on:
 * User registration
 * Login with email & password
 * JWT-based authentication
-* Protected endpoints
+* Protected endpoints for write operations
 
 ### 2. Media Management
 
 * Upload image/video files
 * Store files in AWS S3
-* Save metadata to DB
+* Save metadata in PostgreSQL
 * Delete media (owner only)
 * View feed with pagination
 * View media details
 
 ### 3. Likes System
 
-* Like/unlike
-* Prevent duplicate likes
-* Maintain likes count
+* Like/unlike media
+* Prevent duplicate likes for the same user/media
+* Maintain a likes counter per media item
 
 ### 4. User Profile
 
 * View user info
 * View user uploads
-* Optional statistics
+* Profile statistics:
+
+  * Total media uploaded
+  * Total likes received on user’s media
+  * Total likes given by the user (optional)
 
 ### 5. Clients
 
 * React Web App
 * React Native Mobile App
-* Both use the same backend API
+* Both consume the same backend API
 
 ---
 
@@ -96,143 +103,163 @@ Focusing on:
 
 ### Clients
 
-* **Web** – React + TS
-* **Mobile** – React Native + TS
+* **Web** – React + TypeScript
+* **Mobile** – React Native + TypeScript
 
-### Backend API
+### Backend API (Monolith)
 
 * Node.js + TypeScript
-* Express-style routing
-* AWS S3 integration
+* Express-style routing (controllers)
+* Domain services (Auth, Media, Likes, Profile)
+* Data access layer using Prisma
+* Integration with AWS S3
 * JWT authentication
-* REST endpoints
+* Centralized error handling and validation
 
 ### Database
 
 * PostgreSQL
-* Prisma ORM
+* Prisma ORM for schema and migrations
 
 ### Storage
 
-* AWS S3 bucket
+* AWS S3 bucket for image and video files
 
 ### Deployment
 
 * Backend → Render/Railway/AWS
-* Web → Vercel/Netlify
-* Mobile → runs locally (Android/iOS simulators)
+* Web → Vercel/Netlify (or similar static hosting)
+* Mobile → runs locally on Android/iOS simulators for this assignment
 
 ### Conceptual Flow
 
-1. User authenticates
-2. Client uploads file → backend → S3
-3. Metadata stored in DB
-4. Feed fetched paginated
-5. Users like/unlike media
+1. User authenticates via `/auth/register` or `/auth/login`.
+2. Client uploads file → Backend → S3.
+3. Backend saves media metadata in PostgreSQL.
+4. Clients fetch paginated feed from `/media`.
+5. Users like/unlike media via `/media/:id/like` and `/media/:id/unlike`.
+6. Users open their profile via `/me/profile` to see info, uploads, and stats.
 
 ---
 
-# 📘 Functional Requirements
+## 📡 API Documentation
 
-### **1. Authentication**
+Full API reference (endpoints, requests, responses, error formats) is documented in:
 
-* Register using name, email, password
-* Login & receive JWT
-* Auth required for:
-
-  * Upload
-  * Like/unlike
-  * Delete media
-  * User profile actions
-
-### **2. Media Management**
-
-* Upload image or video
-* Accept only supported formats
-* Store file in S3
-* Save metadata in DB
-* Delete media (only uploader)
-* Get media by ID
-
-### **3. Feed**
-
-* Global feed for all users
-* Sort by newest
-* Support pagination: `page`, `limit`
-* Filter by type: `image`, `video`
-
-### **4. Likes**
-
-* Like media once
-* Unlike media
-* Auto-update count
-
-### **5. User Profile**
-
-* View basic info
-* View user uploads
-* Stats (uploads count, likes count – optional)
-
-### **6. Web App**
-
-* Login / Signup
-* Feed view
-* Upload flow (title, desc, file)
-* Profile
-* Like/unlike
-
-### **7. Mobile App**
-
-* Same flows as web
-* Mobile-first UX
-* Light Mode UI
+👉 **[`docs/api-docs.md`](./docs/api-docs.md)**
 
 ---
 
-# 📙 Non-Functional Requirements
+## 🧩 Functional Requirements
 
-### **Security**
+### 1. Authentication
 
-* JWT authentication
-* File type validation
-* Max file size (50 MB)
-* Hash passwords (bcrypt)
-* Protect AWS credentials
-* CORS for web & mobile
+* Register using name, email, password.
+* Login & receive JWT.
+* Authentication is required for:
 
-### **Scalability**
+  * Uploading media
+  * Liking/unliking
+  * Deleting media
+  * Accessing profile information
 
-* Use S3 for file storage
-* Pagination for feed
-* Indexed DB queries
-* Modular architecture
+### 2. Media Management
 
-### **Maintainability**
+* Upload image or video.
+* Accept only supported formats.
+* Store file in S3.
+* Save metadata in DB.
+* Delete media (only uploader).
+* Get media by ID.
 
-* Clean folder structure
-* Reusable services
-* TypeScript strict mode
-* ESLint + Prettier
-* Clear separation of concerns
+### 3. Feed
 
-### **Performance**
+* Global feed for all users.
+* Sort by newest.
+* Support pagination: `page`, `limit`.
+* Optional filter by type: `image`, `video`.
 
-* Lazy loading images
-* Efficient streaming for uploads
-* Optimized queries
-* Minimized payloads
+### 4. Likes
+
+* Like a media item once per user.
+* Unlike media.
+* Auto-update likes counter.
+
+### 5. User Profile
+
+* View basic user info.
+* View all media uploaded by the user.
+* View stats:
+
+  * uploads count
+  * total likes received
+  * total likes given (optional)
+
+### 6. Web App
+
+* Login / Signup.
+* Feed view.
+* Upload flow (title, description, file).
+* Like/unlike.
+* Profile page.
+
+### 7. Mobile App
+
+* Same flows as web.
+* Mobile-first UX.
+* Light Mode UI.
 
 ---
 
-# 🧩 Domain Model
+## 📙 Non-Functional Requirements
 
-### **User**
+### Security
 
-* id
-* name
-* email (unique)
-* passwordHash
-* createdAt
+* JWT authentication for protected endpoints.
+* File type validation.
+* Maximum file size (50 MB).
+* Passwords hashed using bcrypt.
+* AWS credentials and secrets stored in environment variables.
+* CORS configured for web and mobile origins.
+
+### Scalability
+
+* S3 used for file storage instead of local disk.
+* Pagination used for feed responses.
+* Indexed DB queries on frequently accessed fields.
+* Modular backend architecture to allow future extraction into services if needed.
+
+### Maintainability
+
+* Clean folder structure (modules: auth, media, likes, profile).
+* Reusable services and utilities.
+* TypeScript strict mode.
+* ESLint + Prettier for formatting and linting.
+* Clear separation of concerns (controller → service → repository → DB).
+
+### Performance
+
+* Lazy loading images on the client side.
+* Efficient streaming/handling for uploads.
+* Optimized DB queries.
+* Minimized JSON payloads (only necessary fields returned).
+
+---
+
+## 🧩 Domain Model
+
+### User
+
+* `id` – UUID
+* `name` – string
+* `email` – unique string
+* `passwordHash` – string
+* `avatarUrl` – string (optional)
+* `mediaCount` – int
+* `totalLikesReceived` – int
+* `totalLikesGiven` – int
+* `createdAt` – datetime
+* `updatedAt` – datetime
 
 **Relations:**
 
@@ -241,39 +268,35 @@ Focusing on:
 
 ---
 
-### **Media**
+### Media
 
-* id
-* url
-* type (IMAGE | VIDEO)
-* title
-* description
-* uploaderId
-* likesCount
-* createdAt
-
-**Relations:**
-
-* Media → Likes (1-to-many)
+* `id` – UUID
+* `url` – string
+* `thumbnailUrl` – string (optional)
+* `type` – `IMAGE` or `VIDEO`
+* `title` – string
+* `description` – string
+* `uploaderId` – UUID
+* `likesCount` – int
+* `createdAt` – datetime
+* `updatedAt` – datetime
 
 ---
 
-### **Like**
+### Like
 
-* id
-* userId
-* mediaId
-* createdAt
+* `id` – UUID
+* `userId` – UUID
+* `mediaId` – UUID
+* `createdAt` – datetime
 
-**Constraints:**
-
-* Unique (userId, mediaId)
+**Constraints:** unique (userId, mediaId)
 
 ---
 
 ### ERD (Text Format)
 
-```
+```txt
 User (1) ---- (many) Media
 User (1) ---- (many) Likes
 Media (1) ---- (many) Likes
@@ -281,35 +304,52 @@ Media (1) ---- (many) Likes
 
 ---
 
-# 📕 Assumptions
+## 🧾 Diagrams
+
+Stored under `backend/diagrams`:
+
+* Architecture Diagram.png
+* ERD Diagram.png
+* Sequence diagrams for:
+  * Registration
+  * Login
+  * View Feed
+  * Upload Media
+  * Like Media
+  * Unlike Media
+  * View Profile
+
+---
+
+## 📕 Assumptions
 
 1. Only authenticated users can upload or like media.
-2. The feed is public: all users see all uploads.
-3. Supported file formats:
-
-   * Images: JPG, JPEG, PNG, WebP
-   * Videos: MP4
-4. Maximum upload size = 50MB.
-5. S3 handles all media storage (no local storage).
-6. Only uploaders can delete their media.
-7. No comments or followers system in this scope.
-8. No video compression/transcoding implemented.
-9. Mobile & web consume the same backend API.
-10. Rate limiting is optional and can be added later.
+2. Feed is public.
+3. Supported formats: JPG, PNG, WebP, MP4.
+4. Max file size: 50MB.
+5. S3 for all file storage.
+6. Only uploader can delete media.
+7. No comments/followers system.
+8. No transcoding.
+9. Same API for Web & Mobile.
+10. Rate limiting is future improvement.
 
 ---
 
-# 🚀 Next Steps (Backend, Web, Mobile)
+## 🚀 Next Steps
 
-Documentation for:
-
-* API structure
-* Database schema
-* Setup & environment variables
-* Deployment instructions
-
-…will be added in `docs/` and in each project folder.
+* Backend:
+  * Prisma schema + migrations
+  * Implement auth/media/likes/profile modules
+  * S3 integration
+* Web:
+  * React setup
+  * Auth, feed, upload, profile
+* Mobile:
+  * React Native setup
+  * Same flows
+* Deployment:
+  * Environment variables
+  * Deploy backend + web
 
 ---
-
-# ✔ End of README.md
