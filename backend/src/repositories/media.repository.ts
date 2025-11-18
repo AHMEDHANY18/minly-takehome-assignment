@@ -106,7 +106,23 @@ export const MediaRepository = {
     });
   },
 
+  async updateMedia(mediaId: string, data: any) {
+    return prisma.media.update({
+      where: { id: mediaId },
+      data,
+    });
+  },
 
+  async findByIdWithUploader(mediaId: string) {
+    return prisma.media.findUnique({
+      where: { id: mediaId },
+      select: {
+        id: true,
+        uploaderId: true,
+        title: true,
+        description: true,
+   } })
+}
 };
 
 

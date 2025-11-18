@@ -1,3 +1,4 @@
+// src/repositories/user.repository.ts
 import { prisma } from "../config/prisma";
 
 export const UserRepository = {
@@ -11,6 +12,18 @@ export const UserRepository = {
     return prisma.user.update({
       where: { id: userId },
       data,
+    });
+  },
+
+  // 🆕 عشان البروفايل
+  findByIdWithMedia(userId: string) {
+    return prisma.user.findUnique({
+      where: { id: userId },
+      include: {
+        media: {
+          orderBy: { createdAt: "desc" },
+        },
+      },
     });
   },
 };

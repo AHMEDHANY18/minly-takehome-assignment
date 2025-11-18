@@ -8,6 +8,8 @@ import { validate } from "../../middleware/validate";
 import { getMediaByIdSchema } from "../../validation/media/getMediaById.schema";
 import { deleteMediaController } from "../../controllers/media.controller/deleteMedia.controller";
 import { deleteMediaService } from "../../validation/media/deleteMedia.schema";
+import { updateMediaSchema } from "../../validation/media/updateMedia.schema";
+import { updateMediaController } from "../../controllers/media.controller/updateMedia.controller";
 
 const router = Router();
 
@@ -31,5 +33,10 @@ router.get(
     requireAuth,
     deleteMediaController
   );
-
+  router.patch(
+    "/:id",
+    requireAuth,
+    validate(updateMediaSchema),
+    updateMediaController
+  );
 export default router;
