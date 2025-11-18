@@ -1,6 +1,6 @@
 import { Router } from "express";
-import { checkEmail, login ,register} from "../../controllers/auth.controller.ts";
 import { authLimiter } from "../../middleware/rateLimit";
+import { checkEmail, login, register } from "../../controllers/auth.controller";
 
 const router = Router();
 router.post("/check-email", authLimiter, checkEmail);

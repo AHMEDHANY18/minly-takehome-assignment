@@ -13,6 +13,7 @@ export const jwtVerify = async (token: string): Promise<any | false> => {
         resolve(decoded);
       });
     });
+    console.log("🚀 ~ decoded ~ decoded:", decoded)
 
     return decoded;
   } catch (err: any) {
