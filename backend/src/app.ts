@@ -36,7 +36,7 @@ app.use(morgan("combined", { stream }));
 
 /* ---------------- Routes ---------------- */
 
-app.use("/v1", router);
+app.use("/", router);
 
 /* ---------------- Error Handler ---------------- */
 
