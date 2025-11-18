@@ -45,6 +45,8 @@ export const MediaRepository = {
     });
   },
 
+
+
   async findManyForFeed(skip: number, take: number) {
     return prisma.media.findMany({
       skip,
@@ -73,4 +75,20 @@ export const MediaRepository = {
       where: { id },
     });
   },
+  async findByIdDetailed(id: string) {
+    return prisma.media.findUnique({
+      where: { id },
+      include: {
+        uploader: {
+          select: {
+            id: true,
+            name: true,
+            avatarUrl: true,
+          },
+        },
+      },
+    });
+  },
 };
+
+
