@@ -6,6 +6,8 @@ import { getFeedController } from "../../controllers/media.controller/getFeed.co
 import { getMediaByIdController } from "../../controllers/media.controller/getMediaById.controller";
 import { validate } from "../../middleware/validate";
 import { getMediaByIdSchema } from "../../validation/media/getMediaById.schema";
+import { deleteMediaController } from "../../controllers/media.controller/deleteMedia.controller";
+import { deleteMediaService } from "../../validation/media/deleteMedia.schema";
 
 const router = Router();
 
@@ -23,6 +25,11 @@ router.get(
 router.get(
     "/",
     getFeedController
+  );
+  router.delete(
+    "/:id",
+    requireAuth,
+    deleteMediaController
   );
 
 export default router;

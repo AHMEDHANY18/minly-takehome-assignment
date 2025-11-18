@@ -89,6 +89,23 @@ export const MediaRepository = {
       },
     });
   },
+  async findByIdDetailedForDelete(id: string) {
+    return prisma.media.findUnique({
+      where: { id },
+      select: {
+        id: true,
+        url: true,
+        uploaderId: true,
+      },
+    });
+  },
+  async decrementUserMediaCount(userId: string) {
+    return prisma.user.update({
+      where: { id: userId },
+      data: { mediaCount: { decrement: 1 } }
+    });
+  },
+
 };
 
 

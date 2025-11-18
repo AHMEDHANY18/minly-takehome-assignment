@@ -17,7 +17,7 @@ export async function requireAuth(
     if (!authHeader) {
       return res.status(401).json({
         status: "error",
-        message: "u should ",
+        message: "You don't have permission",
       });
     }
 
