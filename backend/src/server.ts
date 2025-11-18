@@ -1,26 +1,27 @@
-import express from 'express';
-import dotenv from 'dotenv';
-import app from './app';
-import './config/redis';
-import v1Router from './routes/v1';
-import logger from './config/logger';
-import mongoose from 'mongoose';
-import { config } from './config';
-
-// Load environment variables
+import dotenv from "dotenv";
 dotenv.config();
 
-const PORT = config.port || 4040;
+import app from "./app";
+import logger from "./config/logger";
+import { config } from "./config";
 
+// لو config.port مش متضبوطة، خليه 4000
+const PORT = config.port || 4000;
 
-// Handle unhandled promise rejections
-process.on('unhandledRejection', (reason: Error) => {
-  logger.error('Unhandled Rejection:', reason);
+// تشغيل السيرفر
+app.listen(PORT, () => {
+  logger.info(`Server is running on http://localhost:${PORT}`);
+  console.log(`Server is running on http://localhost:${PORT}`);
+});
+
+// لو فيه Promise مفيهوش catch
+process.on("unhandledRejection", (reason: any) => {
+  logger.error("Unhandled Rejection:", reason);
   process.exit(1);
 });
 
-// Handle uncaught exceptions
-process.on('uncaughtException', (error: Error) => {
-  logger.error('Uncaught Exception:', error);
+// لو فيه error مش متلَقط
+process.on("uncaughtException", (error: Error) => {
+  logger.error("Uncaught Exception:", error);
   process.exit(1);
 });
