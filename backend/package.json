@@ -8,6 +8,7 @@
     "dev:test-db": "ts-node-dev --respawn --transpile-only src/test-db.ts",
     "build": "tsc",
     "start": "node dist/server.js",
+    "prisma:migrate-deploy": "prisma migrate deploy",
     "lint": "eslint . --ext .ts"
   },
   "dependencies": {
