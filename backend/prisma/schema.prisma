@@ -1,10 +1,10 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
 datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
-}
-
-generator client {
-  provider = "prisma-client-js"
 }
 
 model User {
@@ -18,9 +18,8 @@ model User {
   totalLikesGiven    Int      @default(0)
   createdAt          DateTime @default(now())
   updatedAt          DateTime @updatedAt
-
-  media  Media[]
-  likes  Like[]
+  likes              Like[]
+  media              Media[]
 }
 
 model Media {
@@ -34,9 +33,8 @@ model Media {
   likesCount   Int       @default(0)
   createdAt    DateTime  @default(now())
   updatedAt    DateTime  @updatedAt
-
-  uploader User  @relation(fields: [uploaderId], references: [id])
-  likes    Like[]
+  likes        Like[]
+  uploader     User      @relation(fields: [uploaderId], references: [id])
 }
 
 model Like {
@@ -44,9 +42,8 @@ model Like {
   userId    String
   mediaId   String
   createdAt DateTime @default(now())
-
-  user  User  @relation(fields: [userId], references: [id])
-  media Media @relation(fields: [mediaId], references: [id])
+  media     Media    @relation(fields: [mediaId], references: [id])
+  user      User     @relation(fields: [userId], references: [id])
 
   @@unique([userId, mediaId])
 }
