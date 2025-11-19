@@ -1,27 +1,25 @@
-import { useState } from "react";
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import LoginPage from "./features/auth/LoginPage";
+import FeedPage from "./features/feed/FeedPage";
+import { useUserStore } from "./store/user.store";
 
 function App() {
-  const [count, setCount] = useState(0);
+  const user = useUserStore((s) => s.user);
 
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center bg-slate-900">
-      <h1 className="text-4xl font-bold text-emerald-400 mb-6">
-        Minly Frontend + Tailwind ✅
-      </h1>
-
-      {/* زرار Tailwind */}
-      <button
-        className="px-6 py-3 bg-emerald-500 hover:bg-emerald-600 text-white font-semibold rounded-lg transition-all shadow-lg"
-        onClick={() => setCount(count + 1)}
-      >
-        اضغط هنا
-      </button>
-
-      {/* JavaScript Output */}
-      <p className="text-white mt-4 text-xl">
-        عدد الضغطات: <span className="text-emerald-400">{count}</span>
-      </p>
-    </div>
+    <BrowserRouter>
+      <Routes>
+        <Route
+          path="/"
+          element={user ? <FeedPage /> : <Navigate to="/login" replace />}
+        />
+        <Route
+          path="/login"
+          element={!user ? <LoginPage /> : <Navigate to="/" replace />}
+        />
+        <Route path="*" element={<Navigate to="/" replace />} />
+      </Routes>
+    </BrowserRouter>
   );
 }
 
