@@ -17,7 +17,7 @@ router.get("/me", requireAuth, getMyProfileController);
 
 // ✅ تحديث البروفايل (اللي عملناه قبل كده)
 router.patch(
-  "/me",
+  "/",
   requireAuth,
   mediaUpload, // لو مستخدمه
   validate(updateProfileSchema),

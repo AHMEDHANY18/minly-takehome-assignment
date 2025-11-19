@@ -16,6 +16,7 @@ export async function updateProfileController(
       { name },   // 👈 شيل bio
       req.file
     );
+    console.log("🚀 ~ updatedUser:", updatedUser)
 
     return res.status(200).json({
       status: "success",
