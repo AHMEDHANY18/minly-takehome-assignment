@@ -7,10 +7,10 @@ import {
   type FormEvent,
 } from "react";
 import { useNavigate } from "react-router-dom";
+import type { MediaItem } from "../../api/media";
 import { UserAPI, type MeData } from "../../api/user";
 import BottomNav from "../../components/BottomNav";
-// Combined imports from media
-import { MediaAPI, type MediaItem } from "../../api/media";
+import { MediaAPI } from "../../api/media";
 
 // ================================
 // Helpers
@@ -62,7 +62,6 @@ export default function ProfilePage() {
         const data = res.data.data;
 
         setMe(data);
-        // Ensure media is an array even if API returns null/undefined
         setItems(data.media ?? []);
       } catch (err: any) {
         setError(
@@ -107,7 +106,6 @@ export default function ProfilePage() {
 
     setEditPreview(url);
     setEditFile(f);
-    setEditError(null);
   }
 
   async function handleSaveProfile(e: FormEvent) {
@@ -124,6 +122,7 @@ export default function ProfilePage() {
 
       const updated = res.data.data;
       setMe(updated);
+
       cancelEdit();
     } catch (err: any) {
       setEditError(err?.response?.data?.message || "Update failed.");
@@ -142,45 +141,33 @@ export default function ProfilePage() {
   const joinedYear = me ? new Date(me.createdAt).getFullYear() : null;
 
   // ================================
-  // Delete Media Logic
+  // Delete Media
   // ================================
   async function confirmDelete() {
     if (!deleteId) return;
     try {
       setDeleting(true);
-
-      // 1. Call API
       await MediaAPI.deleteMedia(deleteId);
-
-      // 2. Update Local State (Remove item from list)
       setItems((prev) => prev.filter((m) => m.id !== deleteId));
-
-      // 3. Close Modal
       setDeleteId(null);
-    } catch (error) {
-      console.error("Failed to delete media:", error);
-      alert("Could not delete media. Please try again.");
     } finally {
       setDeleting(false);
     }
   }
 
   // ================================
-  // Edit Media Logic
+  // Save Edited Media
   // ================================
   async function saveMediaEdit() {
     if (!editMedia) return;
 
     try {
       setSavingEdit(true);
-
-      // 1. Call API
       await MediaAPI.updateMedia(editMedia.id, {
         title: editMediaTitle,
         description: editMediaDesc,
       });
 
-      // 2. Update Local State (Find item and update fields)
       setItems((prev) =>
         prev.map((m) =>
           m.id === editMedia.id
@@ -189,11 +176,7 @@ export default function ProfilePage() {
         )
       );
 
-      // 3. Close Modal
       setEditMedia(null);
-    } catch (error) {
-      console.error("Failed to update media:", error);
-      alert("Could not save changes. Please try again.");
     } finally {
       setSavingEdit(false);
     }
@@ -204,14 +187,6 @@ export default function ProfilePage() {
   // ================================
   return (
     <div className="min-h-screen bg-[#f7f6f8] flex justify-center">
-      {/* Background overlay to close menus if open */}
-      {openMenuId && (
-        <div
-          className="fixed inset-0 z-20 bg-transparent"
-          onClick={() => setOpenMenuId(null)}
-        />
-      )}
-
       <div className="relative w-full max-w-md min-h-screen bg-[#f7f6f8] flex flex-col">
 
         {/* HEADER */}
@@ -284,7 +259,6 @@ export default function ProfilePage() {
                       <div className="h-14 w-14 rounded-full overflow-hidden bg-[#f3eefc]">
                         <img
                           src={avatarUrl}
-                          alt="Preview"
                           className="object-cover w-full h-full"
                         />
                       </div>
@@ -339,7 +313,6 @@ export default function ProfilePage() {
                       <button
                         type="submit"
                         className="flex-1 bg-gradient-to-r from-[#ff3fd1] to-[#a855ff] text-white rounded-xl py-2 text-xs"
-                        disabled={saving}
                       >
                         {saving ? "Saving…" : "Save changes"}
                       </button>
@@ -364,6 +337,9 @@ export default function ProfilePage() {
               ) : (
                 <div className="grid grid-cols-2 gap-2 px-4 pb-4 mt-3">
                   {items.map((m) => {
+                    const isVideo =
+                      m.type === "VIDEO" || m.type === "video";
+
                     return (
                       <div
                         key={m.id}
@@ -371,47 +347,45 @@ export default function ProfilePage() {
                       >
                         <img
                           src={m.thumbnailUrl || m.url}
-                          alt={m.title || "Media"}
                           className="w-full h-full object-cover"
                         />
 
-                        {/* 3 dots Button */}
+                        {/* 3 dots */}
                         <button
-                          className="absolute top-2 right-2 bg-black/40 p-1 rounded-full text-white z-30"
+                          type="button"
+                          className="absolute top-2 right-2 z-20 flex h-8 w-8 items-center justify-center rounded-full bg-black/55 text-white shadow-sm backdrop-blur-sm hover:bg-black/80 active:scale-95 transition"
                           onClick={(e) => {
-                            e.stopPropagation(); // Prevent closing immediately
+                            e.stopPropagation();
                             setOpenMenuId(
                               openMenuId === m.id ? null : m.id
-                            )
+                            );
                           }}
                         >
-                          <span className="material-symbols-outlined text-sm">
+                          <span className="material-symbols-outlined text-[18px]">
                             more_vert
                           </span>
                         </button>
 
-                        {/* Dropdown Menu */}
+                        {/* menu */}
                         {openMenuId === m.id && (
-                          <div className="absolute top-10 right-2 bg-white shadow-lg rounded-xl w-32 py-2 text-sm z-40">
+                          <div className="absolute top-10 right-2 z-30 w-36 rounded-2xl border border-zinc-100 bg-white/95 shadow-lg backdrop-blur-sm text-[13px] overflow-hidden">
                             <button
-                              className="w-full text-left px-4 py-2 hover:bg-purple-100"
-                              onClick={(e) => {
-                                e.stopPropagation();
+                              type="button"
+                              className="w-full text-left px-4 py-2 hover:bg-[#f5ecff]"
+                              onClick={() => {
                                 setEditMedia(m);
                                 setEditMediaTitle(m.title || "");
-                                setEditMediaDesc(
-                                  m.description || ""
-                                );
+                                setEditMediaDesc(m.description || "");
                                 setOpenMenuId(null);
                               }}
                             >
-                              Edit
+                              Edit details
                             </button>
 
                             <button
-                              className="w-full text-left px-4 py-2 text-red-500 hover:bg-red-100"
-                              onClick={(e) => {
-                                e.stopPropagation();
+                              type="button"
+                              className="w-full text-left px-4 py-2 text-red-500 hover:bg-red-50"
+                              onClick={() => {
                                 setDeleteId(m.id);
                                 setOpenMenuId(null);
                               }}
@@ -421,15 +395,26 @@ export default function ProfilePage() {
                           </div>
                         )}
 
-                        {/* likes overlay */}
-                        <div className="absolute inset-0 bg-black/0 opacity-0 group-hover:opacity-100 group-hover:bg-black/40 transition flex items-end pointer-events-none">
-                          <div className="m-2 bg-black/60 text-white text-[10px] px-2 py-1 rounded-full flex items-center gap-1">
-                            <span className="material-symbols-outlined text-xs">
+                        {/* likes overlay (visual فقط) */}
+                        <div className="pointer-events-none absolute inset-0 z-10 flex items-end justify-start bg-black/0 opacity-0 transition group-hover:bg-black/40 group-hover:opacity-100">
+                          <div className="m-2 flex items-center gap-1 rounded-full bg-black/60 px-2.5 py-1 text-[11px] font-semibold text-white">
+                            <span className="material-symbols-outlined text-[14px]">
                               favorite
                             </span>
-                            {formatCount(m.likesCount)}
+                            <span>{formatCount(m.likesCount)}</span>
                           </div>
                         </div>
+
+                        {/* فيديو overlay لو ميديا فيديو */}
+                        {isVideo && (
+                          <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
+                            <div className="flex h-8 w-8 items-center justify-center rounded-full bg-black/60">
+                              <span className="material-symbols-outlined text-white text-[18px]">
+                                play_arrow
+                              </span>
+                            </div>
+                          </div>
+                        )}
                       </div>
                     );
                   })}
@@ -444,25 +429,23 @@ export default function ProfilePage() {
 
       {/* DELETE MODAL */}
       {deleteId && (
-        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 px-4">
-          <div className="bg-white rounded-2xl p-6 w-full max-w-xs shadow-xl">
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
+          <div className="bg-white rounded-2xl p-6 w-72 shadow-xl">
             <p className="text-sm font-semibold mb-4">
               Delete this media?
             </p>
 
             <div className="flex gap-2">
               <button
-                className="flex-1 py-2 bg-gray-200 rounded-xl text-sm font-medium"
+                className="flex-1 py-2 bg-gray-200 rounded-xl"
                 onClick={() => setDeleteId(null)}
-                disabled={deleting}
               >
                 Cancel
               </button>
 
               <button
-                className="flex-1 py-2 bg-red-500 text-white rounded-xl text-sm font-medium"
+                className="flex-1 py-2 bg-red-500 text-white rounded-xl"
                 onClick={confirmDelete}
-                disabled={deleting}
               >
                 {deleting ? "Deleting…" : "Delete"}
               </button>
@@ -473,8 +456,8 @@ export default function ProfilePage() {
 
       {/* EDIT MEDIA MODAL */}
       {editMedia && (
-        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 px-4">
-          <div className="bg-white p-6 rounded-2xl w-full max-w-xs shadow-xl">
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
+          <div className="bg-white p-6 rounded-2xl w-80 shadow-xl">
             <p className="text-sm font-semibold mb-4">
               Edit media
             </p>
@@ -482,31 +465,29 @@ export default function ProfilePage() {
             <input
               value={editMediaTitle}
               onChange={(e) => setEditMediaTitle(e.target.value)}
-              className="w-full border rounded-xl px-3 py-2 text-sm bg-[#faf8ff] mb-3 outline-none focus:border-purple-400"
+              className="w-full border rounded-xl px-3 py-2 text-sm bg-[#faf8ff] mb-3"
               placeholder="Title"
             />
 
             <textarea
               value={editMediaDesc}
               onChange={(e) => setEditMediaDesc(e.target.value)}
-              className="w-full border rounded-xl px-3 py-2 text-sm bg-[#faf8ff] outline-none focus:border-purple-400 resize-none"
+              className="w-full border rounded-xl px-3 py-2 text-sm bg-[#faf8ff]"
               rows={3}
               placeholder="Description"
             />
 
             <div className="flex gap-2 mt-4">
               <button
-                className="flex-1 py-2 bg-gray-200 rounded-xl text-sm font-medium"
+                className="flex-1 py-2 bg-gray-200 rounded-xl"
                 onClick={() => setEditMedia(null)}
-                disabled={savingEdit}
               >
                 Cancel
               </button>
 
               <button
-                className="flex-1 py-2 bg-purple-600 text-white rounded-xl text-sm font-medium"
+                className="flex-1 py-2 bg-purple-600 text-white rounded-xl"
                 onClick={saveMediaEdit}
-                disabled={savingEdit}
               >
                 {savingEdit ? "Saving…" : "Save"}
               </button>
