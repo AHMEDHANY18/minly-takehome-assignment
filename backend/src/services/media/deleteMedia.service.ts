@@ -40,7 +40,7 @@ export async function deleteMediaService(mediaId: string, userId: string) {
     where: { id: userId },
     data: {
       mediaCount: { decrement: 1 },
-      totalLikesReceived: { decrement: likesCount },  // ← FIXED!
+      totalLikesReceived: { decrement: likesCount },
     },
   });
 
