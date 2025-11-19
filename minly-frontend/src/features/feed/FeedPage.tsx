@@ -50,21 +50,30 @@ function MediaCard({ item }: { item: MediaItem }) {
       ? description
       : description.slice(0, MAX_LEN) + "…";
 
-  const goToProfile = () => {
-    navigate(`/users/${item.uploader.id}`);
-  };
+  const goToProfile = () => navigate(`/users/${item.uploader.id}`);
 
-  function toggleLike() {
-    const nextLiked = !liked;
+  async function toggleLike() {
+    const prevLiked = liked;
+    const prevLikes = likes;
+
+    // Optimistic UI
+    const nextLiked = !prevLiked;
     setLiked(nextLiked);
-    setLikes((prev) => Math.max(prev + (nextLiked ? 1 : -1), 0));
-    // لو عايز تبعت للـ backend:
-    // MediaAPI.toggleLike(item.id).catch(() => { ...rollback لو حابب... })
+    setLikes((p) => Math.max(p + (nextLiked ? 1 : -1), 0));
+
+    try {
+      await MediaAPI.toggleLike(item.id);
+    } catch (err) {
+      console.error(err);
+      // rollback
+      setLiked(prevLiked);
+      setLikes(prevLikes);
+    }
   }
 
   return (
     <article className="flex flex-col overflow-hidden rounded-xl bg-white shadow-[0_4px_12px_rgba(0,0,0,0.05)]">
-      {/* Uploader row (clickable) */}
+      {/* Header */}
       <header
         className="flex items-center gap-3 p-4 cursor-pointer"
         onClick={goToProfile}
@@ -74,7 +83,7 @@ function MediaCard({ item }: { item: MediaItem }) {
           src={avatarUrl}
           alt={item.uploader.name}
         />
-        <div className="flex flex-col">
+        <div>
           <p className="font-bold text-[#161118] capitalize">
             {item.uploader.name}
           </p>
@@ -84,7 +93,7 @@ function MediaCard({ item }: { item: MediaItem }) {
         </div>
       </header>
 
-      {/* Media (clickable) */}
+      {/* Media */}
       <div className="relative w-full cursor-pointer" onClick={goToProfile}>
         {isVideo ? (
           <video
@@ -101,7 +110,7 @@ function MediaCard({ item }: { item: MediaItem }) {
         )}
       </div>
 
-      {/* Text & actions */}
+      {/* Description */}
       <div className="flex flex-col gap-3 p-4">
         <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between sm:gap-4">
           <div className="flex-1 min-w-0">
@@ -110,7 +119,7 @@ function MediaCard({ item }: { item: MediaItem }) {
             </p>
 
             {visibleDesc && (
-              <p className="mt-1 text-base font-normal text-[#7c6189] break-words">
+              <p className="mt-1 text-base text-[#7c6189] break-words">
                 {visibleDesc}
               </p>
             )}
@@ -118,11 +127,10 @@ function MediaCard({ item }: { item: MediaItem }) {
 
           {shouldTruncate && (
             <button
-              type="button"
-              className="sm:ml-4 text-sm font-bold text-[#ad2bee] hover:underline self-start"
+              className="text-sm font-bold text-[#ad2bee] hover:underline"
               onClick={() => setExpanded((prev) => !prev)}
             >
-              {expanded ? "Hide details" : "View details"}
+              {expanded ? "Hide" : "More"}
             </button>
           )}
         </div>
@@ -130,9 +138,8 @@ function MediaCard({ item }: { item: MediaItem }) {
         {/* Likes */}
         <div className="mt-1 flex items-center gap-2">
           <button
-            type="button"
             onClick={(e) => {
-              e.stopPropagation(); // 👈 عشان ما يفتحش البروفايل
+              e.stopPropagation();
               toggleLike();
             }}
             className={`flex items-center gap-1 transition ${
@@ -156,6 +163,7 @@ function MediaCard({ item }: { item: MediaItem }) {
     </article>
   );
 }
+
 
 // =============== Page: Global Feed ===============
 export default function FeedPage() {
