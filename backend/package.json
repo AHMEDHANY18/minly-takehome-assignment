@@ -1,6 +1,7 @@
 {
   "name": "minly-takehome-assignment",
   "version": "1.0.0",
+  "type": "module",
   "description": "minly-takehome-assignment",
   "main": "dist/server.js",
   "scripts": {
