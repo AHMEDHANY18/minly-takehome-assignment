@@ -3,7 +3,7 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import type { MediaItem } from "../../api/media";
 import { UserAPI, type MeData } from "../../api/user";
-import BottomNav from "../../components/BottomNav"; // ⭐ مهم
+import BottomNav from "../../components/BottomNav";
 
 // helper لتنسيق الأرقام: 1200 => 1.2k
 function formatCount(n: number) {
@@ -99,7 +99,6 @@ export default function ProfilePage() {
 
           {!loading && !error && me && (
             <section className="mt-4 rounded-3xl bg-white shadow-[0_18px_35px_rgba(15,23,42,0.08)] pb-4">
-
               {/* Header + avatar */}
               <div className="flex flex-col items-center pt-6 px-5">
                 <div className="h-24 w-24 rounded-full bg-[#f3eefc] flex items-center justify-center overflow-hidden shadow-[0_10px_25px_rgba(15,23,42,0.15)]">
@@ -114,7 +113,9 @@ export default function ProfilePage() {
                   <p className="text-base font-semibold text-[#161118]">
                     {me.name}
                   </p>
-                  <p className="text-xs text-[#7c6189] mt-0.5">{me.email}</p>
+                  <p className="text-xs text-[#7c6189] mt-0.5">
+                    {me.email}
+                  </p>
                   {joinedYear && (
                     <p className="text-xs text-[#a293bf] mt-0.5">
                       Joined in {joinedYear}
@@ -157,7 +158,7 @@ export default function ProfilePage() {
                 </p>
               </div>
 
-              {/* Gallery */}
+              {/* Gallery grid */}
               {items.length === 0 ? (
                 <p className="mt-3 px-4 pb-4 text-xs text-[#8a7aa7]">
                   You haven&apos;t uploaded any media yet.
@@ -171,7 +172,7 @@ export default function ProfilePage() {
                     return (
                       <div
                         key={m.id}
-                        className="relative aspect-square rounded-2xl overflow-hidden bg-[#e5e1f5]"
+                        className="group relative aspect-square rounded-2xl overflow-hidden bg-[#e5e1f5]"
                       >
                         <img
                           src={m.thumbnailUrl || m.url}
@@ -179,6 +180,7 @@ export default function ProfilePage() {
                           className="h-full w-full object-cover"
                         />
 
+                        {/* Play icon لو فيديو */}
                         {isVideo && (
                           <div className="absolute inset-0 flex items-center justify-center bg-black/20">
                             <div className="flex h-8 w-8 items-center justify-center rounded-full bg-white/70 backdrop-blur-sm">
@@ -188,6 +190,16 @@ export default function ProfilePage() {
                             </div>
                           </div>
                         )}
+
+                        {/* ⭐ Hover overlay بعدد اللايكات */}
+                        <div className="pointer-events-none absolute inset-0 flex items-end justify-start bg-black/0 opacity-0 transition duration-150 group-hover:bg-black/40 group-hover:opacity-100">
+                          <div className="m-2 flex items-center gap-1 rounded-full bg-black/60 px-2.5 py-1 text-[11px] font-semibold text-white">
+                            <span className="material-symbols-outlined text-[14px]">
+                              favorite
+                            </span>
+                            <span>{formatCount(m.likesCount)}</span>
+                          </div>
+                        </div>
                       </div>
                     );
                   })}
@@ -197,7 +209,7 @@ export default function ProfilePage() {
           )}
         </main>
 
-        {/* ⭐ BottomNav Component بدل القديم */}
+        {/* Bottom Navigation */}
         <BottomNav />
 
       </div>

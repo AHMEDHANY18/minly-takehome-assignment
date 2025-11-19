@@ -1,6 +1,7 @@
 // src/api/media.ts
 import { api } from "./axios";
 
+// نفس الشكل اللي ال backend بيرجعه
 export type MediaItem = {
   id: string;
   url: string;
@@ -35,14 +36,15 @@ export const MediaAPI = {
     });
   },
 
-  /** User media (profile) */
+  /** ميديا يوزر معيّن (للـ Profile) */
   getUserMedia(userId: string, page = 1, limit = 50) {
     return api.get("/media", {
+      // لو ال backend عندك عامل فلتر بالـ uploaderId ده هيشتغل
       params: { page, limit, uploaderId: userId },
     });
   },
 
-  /** Upload media */
+  /** رفع صورة / فيديو من صفحة Upload */
   uploadMedia(params: { file: File; title?: string; description?: string }) {
     const form = new FormData();
     form.append("file", params.file);
@@ -54,8 +56,8 @@ export const MediaAPI = {
     });
   },
 
-  /** Like / Unlike */
+  /** (اختياري) لايك للأمام */
   toggleLike(mediaId: string) {
-    return api.post(`/v1/like/${mediaId}`);
+    return api.post(`/like/${mediaId}`);
   },
 };
