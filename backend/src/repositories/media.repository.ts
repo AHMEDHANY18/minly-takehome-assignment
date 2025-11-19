@@ -24,10 +24,19 @@ export const MediaRepository = {
     });
   },
 
-  async deleteMedia(mediaId: string) {
-    return prisma.media.delete({
-      where: { id: mediaId },
-    });
+  // ✅ CORRECTED: This handles the Like_mediaId_fkey error
+  // It deletes the Likes first, then the Media
+  async deleteById(id: string) {
+    return prisma.$transaction([
+      // 1. Delete all likes associated with this media first
+      prisma.like.deleteMany({
+        where: { mediaId: id },
+      }),
+      // 2. Then delete the media itself
+      prisma.media.delete({
+        where: { id },
+      }),
+    ]);
   },
 
   async getUserMedia(userId: string) {
@@ -45,8 +54,6 @@ export const MediaRepository = {
     });
   },
 
-
-
   async findManyForFeed(skip: number, take: number) {
     return prisma.media.findMany({
       skip,
@@ -58,7 +65,6 @@ export const MediaRepository = {
     });
   },
 
-  // 👇 Pagination helpers
   async countAll() {
     return prisma.media.count();
   },
@@ -67,15 +73,13 @@ export const MediaRepository = {
     return prisma.media.findUnique({
       where: { id },
       include: {
-        uploader: true, // عشان نجيب صاحب الميديا ونزود له totalLikesReceived
+        uploader: true,
       },
     });
   },
-  async deleteById(id: string) {
-    return prisma.media.delete({
-      where: { id },
-    });
-  },
+
+  // ❌ Removed the duplicate (broken) deleteById from here
+
   async findByIdDetailed(id: string) {
     return prisma.media.findUnique({
       where: { id },
@@ -90,6 +94,7 @@ export const MediaRepository = {
       },
     });
   },
+
   async findByIdDetailedForDelete(id: string) {
     return prisma.media.findUnique({
       where: { id },
@@ -100,10 +105,11 @@ export const MediaRepository = {
       },
     });
   },
+
   async decrementUserMediaCount(userId: string) {
     return prisma.user.update({
       where: { id: userId },
-      data: { mediaCount: { decrement: 1 } }
+      data: { mediaCount: { decrement: 1 } },
     });
   },
 
@@ -122,8 +128,7 @@ export const MediaRepository = {
         uploaderId: true,
         title: true,
         description: true,
-   } })
-}
+      },
+    });
+  },
 };
-
-
