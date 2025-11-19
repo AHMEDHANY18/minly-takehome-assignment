@@ -14,5 +14,5 @@ export interface RegisterPayload {
 export const AuthAPI = {
   login: (data: LoginPayload) => api.post("/auth/login", data),
   register: (data: RegisterPayload) => api.post("/auth/register", data),
-  getMe: () => api.get("/users/me/profile"),
+  getMe: () => api.get("/v1/users/me/profile"),
 };
