@@ -1,3 +1,4 @@
+// src/features/feed/FeedPage.tsx
 import { useEffect, useState } from "react";
 import { MediaAPI, type MediaItem } from "../../api/media";
 
@@ -22,8 +23,8 @@ function formatTimeAgo(dateStr: string) {
 // Helper: Likes Formatting
 // ======================
 function formatLikes(n: number) {
-  if (n < 1000) return n.toString();
-  if (n < 1_000_000) return (n / 1000).toFixed(1).replace(/\.0$/, "") + "k";
+  if (n < 1_000) return n.toString();
+  if (n < 1_000_000) return (n / 1_000).toFixed(1).replace(/\.0$/, "") + "k";
   return (n / 1_000_000).toFixed(1).replace(/\.0$/, "") + "M";
 }
 
@@ -31,151 +32,130 @@ function formatLikes(n: number) {
 // Component: Media Card
 // ======================
 function MediaCard({ item }: { item: MediaItem }) {
-    const isVideo = item.type === "VIDEO";
+  const isVideo = item.type === "VIDEO";
 
-    const imageUrl = item.thumbnailUrl || item.url;
-    const avatarUrl =
-      item.uploader.avatarUrl ||
-      "https://ui-avatars.com/api/?name=" +
-        encodeURIComponent(item.uploader.name);
+  const imageUrl = item.thumbnailUrl || item.url;
+  const avatarUrl =
+    item.uploader.avatarUrl ||
+    "https://ui-avatars.com/api/?name=" +
+      encodeURIComponent(item.uploader.name);
 
-    // local like state (optimistic)
-    const [liked, setLiked] = useState<boolean>(
-      (item as any).isLikedByCurrentUser ?? false
-    );
-    const [likes, setLikes] = useState<number>(item.likesCount);
-    const [likeLoading, setLikeLoading] = useState(false);
+  // local like state (UI فقط دلوقتي)
+  const [liked, setLiked] = useState(false);
+  const [likes, setLikes] = useState(item.likesCount);
 
-    // ======== description expand logic ========
-    const description = item.description || "";
-    const [expanded, setExpanded] = useState(false);
-    const MAX_LEN = 120; // عدد الحروف اللي تظهر في الكارت قبل ما يتقص
+  // ======== description expand logic ========
+  const description = item.description || "";
+  const [expanded, setExpanded] = useState(false);
+  const MAX_LEN = 120;
 
-    const shouldTruncate = description.length > MAX_LEN;
-    const visibleDesc =
-      !description
-        ? ""
-        : expanded || !shouldTruncate
-        ? description
-        : description.slice(0, MAX_LEN) + "…";
+  const shouldTruncate = description.length > MAX_LEN;
+  const visibleDesc =
+    !description
+      ? ""
+      : expanded || !shouldTruncate
+      ? description
+      : description.slice(0, MAX_LEN) + "…";
 
-    async function handleLike() {
-      if (likeLoading) return;
+  function handleLike() {
+    const nextLiked = !liked;
+    const diff = nextLiked ? 1 : -1;
+    setLiked(nextLiked);
+    setLikes((prev) => Math.max(prev + diff, 0));
+  }
 
-      const nextLiked = !liked;
-      const diff = nextLiked ? 1 : -1;
-
-      // optimistic update
-      setLiked(nextLiked);
-      setLikes((prev) => Math.max(prev + diff, 0));
-      setLikeLoading(true);
-
-      try {
-        await MediaAPI.toggleLike(item.id);
-      } catch (err) {
-        console.error(err);
-        setLiked(!nextLiked);
-        setLikes((prev) => Math.max(prev - diff, 0));
-      } finally {
-        setLikeLoading(false);
-      }
-    }
-
-    return (
-      <article className="flex flex-col overflow-hidden rounded-xl bg-white shadow-[0_4px_12px_rgba(0,0,0,0.05)]">
-        {/* Uploader Row */}
-        <header className="flex items-center gap-3 p-4">
-          <img
-            className="size-10 rounded-full object-cover"
-            src={avatarUrl}
-            alt={item.uploader.name}
-          />
-          <div className="flex flex-col">
-            <p className="font-bold text-[#161118] capitalize">
-              {item.uploader.name}
-            </p>
-            <p className="text-sm text-[#7c6189]">
-              {formatTimeAgo(item.createdAt)}
-            </p>
-          </div>
-        </header>
-
-        {/* Media */}
-        <div className="relative w-full">
-          {isVideo ? (
-            <video
-              src={item.url}
-              controls
-              className="w-full aspect-square object-cover bg-black"
-            />
-          ) : (
-            <img
-              src={imageUrl}
-              alt={item.title || "Media"}
-              className="w-full aspect-square object-cover"
-            />
-          )}
+  return (
+    <article className="flex flex-col overflow-hidden rounded-xl bg-white shadow-[0_4px_12px_rgba(0,0,0,0.05)]">
+      {/* Uploader Row */}
+      <header className="flex items-center gap-3 p-4">
+        <img
+          className="size-10 rounded-full object-cover"
+          src={avatarUrl}
+          alt={item.uploader.name}
+        />
+        <div className="flex flex-col">
+          <p className="font-bold text-[#161118] capitalize">
+            {item.uploader.name}
+          </p>
+          <p className="text-sm text-[#7c6189]">
+            {formatTimeAgo(item.createdAt)}
+          </p>
         </div>
+      </header>
 
-        {/* Text & Actions */}
-        <div className="flex flex-col gap-3 p-4">
-          {/* Title + View Details */}
-          <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between sm:gap-4">
-            <div className="flex-1 min-w-0">
-              <p className="text-lg font-bold text-[#161118] truncate">
-                {item.title || "Untitled media"}
+      {/* Media */}
+      <div className="relative w-full">
+        {isVideo ? (
+          <video
+            src={item.url}
+            controls
+            className="w-full aspect-square object-cover bg-black"
+          />
+        ) : (
+          <img
+            src={imageUrl}
+            alt={item.title || "Media"}
+            className="w-full aspect-square object-cover"
+          />
+        )}
+      </div>
+
+      {/* Text & Actions */}
+      <div className="flex flex-col gap-3 p-4">
+        {/* Title + View Details */}
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between sm:gap-4">
+          <div className="flex-1 min-w-0">
+            <p className="text-lg font-bold text-[#161118] truncate">
+              {item.title || "Untitled media"}
+            </p>
+
+            {visibleDesc && (
+              <p className="mt-1 text-base font-normal text-[#7c6189] break-words">
+                {visibleDesc}
               </p>
-
-              {visibleDesc && (
-                <p className="mt-1 text-base font-normal text-[#7c6189]">
-                  {visibleDesc}
-                </p>
-              )}
-            </div>
-
-            {/* الزرار بيبان بس لما الوصف طويل فعلاً */}
-            {shouldTruncate && (
-              <button
-                type="button"
-                className="sm:ml-4 text-sm font-bold text-[#ad2bee] hover:underline self-start"
-                onClick={() => setExpanded((prev) => !prev)}
-              >
-                {expanded ? "Hide details" : "View details"}
-              </button>
             )}
           </div>
 
-          {/* Like count */}
-          <div className="mt-1 flex items-center gap-2">
+          {shouldTruncate && (
             <button
               type="button"
-              onClick={handleLike}
-              disabled={likeLoading}
-              className={`flex items-center gap-1 transition ${
-                liked ? "text-[#e11d48]" : "text-[#7c6189] hover:text-[#e11d48]"
-              } disabled:opacity-60`}
+              className="sm:ml-4 text-sm font-bold text-[#ad2bee] hover:underline self-start"
+              onClick={() => setExpanded((prev) => !prev)}
             >
-              <span
-                className={`material-symbols-outlined text-[22px] ${
-                  liked ? "filled" : ""
-                }`}
-              >
-                favorite
-              </span>
+              {expanded ? "Hide details" : "View details"}
             </button>
-
-            <p className="text-sm font-bold tracking-wide text-[#7c6189]">
-              {formatLikes(likes)}
-            </p>
-          </div>
+          )}
         </div>
-      </article>
-    );
-  }
 
+        {/* Like count */}
+        <div className="mt-1 flex items-center gap-2">
+          <button
+            type="button"
+            onClick={handleLike}
+            className={`flex items-center gap-1 transition ${
+              liked ? "text-[#e11d48]" : "text-[#7c6189] hover:text-[#e11d48]"
+            }`}
+          >
+            <span
+              className={`material-symbols-outlined text-[22px] ${
+                liked ? "filled" : ""
+              }`}
+            >
+              favorite
+            </span>
+          </button>
+
+          <p className="text-sm font-bold tracking-wide text-[#7c6189]">
+            {formatLikes(likes)}
+          </p>
+        </div>
+      </div>
+    </article>
+  );
+}
 
 // ======================
-// Page: Global Feed Page
+// Page: Global Feed
 // ======================
 export default function FeedPage() {
   const [items, setItems] = useState<MediaItem[]>([]);
@@ -207,10 +187,10 @@ export default function FeedPage() {
   }, []);
 
   return (
-    <div className="min-h-screen bg-[#f7f6f8] flex justify-center px-2 sm:px-4">
+    <div className="min-h-screen bg-[#f7f6f8] flex justify-center">
       <div className="relative mx-auto flex h-auto min-h-screen w-full max-w-md flex-col bg-[#f7f6f8]">
         {/* Top Bar */}
-        <header className="sticky top-0 z-10 flex flex-col gap-2 bg-[#f7f6f8]/90 p-4 pb-2 backdrop-blur-sm">
+        <header className="sticky top-0 z-10 flex flex-col gap-2 bg-[#f7f6f8]/80 p-4 pb-2 backdrop-blur-sm">
           <div className="flex h-12 items-center justify-between">
             <div className="flex items-center gap-2">
               <span className="material-symbols-outlined text-[#ad2bee] text-3xl">
@@ -232,7 +212,9 @@ export default function FeedPage() {
             </p>
           )}
 
-          {error && <p className="text-center text-sm text-red-500">{error}</p>}
+          {error && (
+            <p className="text-center text-sm text-red-500">{error}</p>
+          )}
 
           {!loading && !error && items.length === 0 && (
             <div className="flex flex-col items-center gap-6 rounded-xl bg-white p-8 shadow-[0_4px_12px_rgba(0,0,0,0.05)]">
@@ -258,7 +240,7 @@ export default function FeedPage() {
         </main>
 
         {/* Bottom Navigation */}
-        <nav className="fixed bottom-0 z-10 w-full max-w-md border-t border-zinc-200 bg-[#f7f6f8]/90 backdrop-blur-sm">
+        <nav className="fixed bottom-0 z-10 w-full max-w-md border-t border-zinc-200 bg-[#f7f6f8]/80 backdrop-blur-sm">
           <div className="flex h-16 items-center justify-around px-4">
             <button className="flex flex-col items-center gap-1 text-[#ad2bee]">
               <span className="material-symbols-outlined filled">home</span>
