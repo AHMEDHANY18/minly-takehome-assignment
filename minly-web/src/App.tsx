@@ -16,6 +16,9 @@ function App() {
           <img src={reactLogo} className="logo react" alt="React logo" />
         </a>
       </div>
+      <div className="min-h-screen bg-red-500 text-white flex items-center justify-center">
+  <h1 className="text-4xl font-bold">Tailwind Works!</h1>
+</div>
       <h1>Vite + React</h1>
       <div className="card">
         <button onClick={() => setCount((count) => count + 1)}>
@@ -29,6 +32,8 @@ function App() {
         Click on the Vite and React logos to learn more
       </p>
     </>
+
+
   )
 }
 
