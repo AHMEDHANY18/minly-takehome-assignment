@@ -1,11 +1,20 @@
 // src/features/profile/ProfilePage.tsx
-import { useEffect, useState, type ChangeEvent, type FormEvent } from "react";
+
+import {
+  useEffect,
+  useState,
+  type ChangeEvent,
+  type FormEvent,
+} from "react";
 import { useNavigate } from "react-router-dom";
-import type { MediaItem } from "../../api/media";
 import { UserAPI, type MeData } from "../../api/user";
 import BottomNav from "../../components/BottomNav";
+// Combined imports from media
+import { MediaAPI, type MediaItem } from "../../api/media";
 
-// helper لتنسيق الأرقام: 1200 => 1.2k
+// ================================
+// Helpers
+// ================================
 function formatCount(n: number) {
   if (n < 1_000) return n.toString();
   if (n < 1_000_000) return (n / 1_000).toFixed(1).replace(/\.0$/, "") + "K";
@@ -20,7 +29,7 @@ export default function ProfilePage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // 🔧 حالة الـ Edit
+  // Edit profile states
   const [isEditing, setIsEditing] = useState(false);
   const [editName, setEditName] = useState("");
   const [editEmail, setEditEmail] = useState("");
@@ -29,70 +38,59 @@ export default function ProfilePage() {
   const [saving, setSaving] = useState(false);
   const [editError, setEditError] = useState<string | null>(null);
 
+  // Media Menu (3 dots)
+  const [openMenuId, setOpenMenuId] = useState<string | null>(null);
+
+  // Delete modal
+  const [deleteId, setDeleteId] = useState<string | null>(null);
+  const [deleting, setDeleting] = useState(false);
+
+  // Edit media modal
+  const [editMedia, setEditMedia] = useState<MediaItem | null>(null);
+  const [editMediaTitle, setEditMediaTitle] = useState("");
+  const [editMediaDesc, setEditMediaDesc] = useState("");
+  const [savingEdit, setSavingEdit] = useState(false);
+
+  // ================================
+  // Load profile
+  // ================================
   useEffect(() => {
     async function load() {
       try {
         setLoading(true);
-        setError(null);
-
         const res = await UserAPI.getMe();
-        const body = res.data;
-        const data = (body as any).data as MeData;
+        const data = res.data.data;
 
         setMe(data);
+        // Ensure media is an array even if API returns null/undefined
         setItems(data.media ?? []);
       } catch (err: any) {
-        console.error(err);
         setError(
-          err?.response?.data?.message ||
-            "Failed to load profile. Please try again."
+          err?.response?.data?.message || "Failed to load profile."
         );
       } finally {
         setLoading(false);
       }
     }
-
     load();
   }, []);
 
-  // info عامة
-  const joinedYear = me ? new Date(me.createdAt).getFullYear() : null;
-  const avatarUrl =
-    me?.avatarUrl ||
-    (me
-      ? `https://ui-avatars.com/api/?background=8b5cf6&color=fff&name=${encodeURIComponent(
-          me.name
-        )}`
-      : "");
-
-  const uploadsCount = me?.mediaCount ?? items.length;
-  const likesReceived = me?.totalLikesReceived ?? 0;
-  const likesGiven = me?.totalLikesGiven ?? 0;
-
   // ================================
-  // Edit Handlers
+  // Edit Profile handlers
   // ================================
   function startEdit() {
     if (!me) return;
     setIsEditing(true);
     setEditName(me.name);
-    // لو عندك email في MeData
-    // @ts-ignore
-    setEditEmail((me as any).email ?? "");
-    setEditFile(null);
-    setEditPreview(null);
-    setEditError(null);
+    setEditEmail(me.email);
   }
 
   function cancelEdit() {
     setIsEditing(false);
-    setEditError(null);
-
-    if (editPreview && editPreview.startsWith("blob:")) {
-      URL.revokeObjectURL(editPreview);
-    }
     setEditFile(null);
+    if (editPreview?.startsWith("blob:")) URL.revokeObjectURL(editPreview);
     setEditPreview(null);
+    setEditError(null);
   }
 
   function handleAvatarChange(e: ChangeEvent<HTMLInputElement>) {
@@ -100,269 +98,272 @@ export default function ProfilePage() {
     if (!f) return;
 
     if (!f.type.startsWith("image/")) {
-      setEditError("Please choose an image file.");
+      setEditError("Please upload a valid image.");
       return;
     }
 
-    setEditError(null);
-    if (editPreview && editPreview.startsWith("blob:")) {
-      URL.revokeObjectURL(editPreview);
-    }
-
-    setEditFile(f);
+    if (editPreview?.startsWith("blob:")) URL.revokeObjectURL(editPreview);
     const url = URL.createObjectURL(f);
+
     setEditPreview(url);
+    setEditFile(f);
+    setEditError(null);
   }
 
   async function handleSaveProfile(e: FormEvent) {
     e.preventDefault();
     if (!me || saving) return;
 
-    setSaving(true);
-    setEditError(null);
-
     try {
+      setSaving(true);
       const res = await UserAPI.updateMe({
-        name: editName.trim() || me.name,
-        email: editEmail.trim() || (me as any).email,
-        file: editFile ?? undefined,
+        name: editName,
+        email: editEmail,
+        file: editFile || undefined,
       });
 
-      const body = res.data;
-      const updated = ((body as any).data ?? body) as MeData;
-
+      const updated = res.data.data;
       setMe(updated);
-      setItems((updated as any).media ?? items);
-
-      setIsEditing(false);
-
-      if (editPreview && editPreview.startsWith("blob:")) {
-        URL.revokeObjectURL(editPreview);
-      }
-      setEditFile(null);
-      setEditPreview(null);
+      cancelEdit();
     } catch (err: any) {
-      console.error(err);
-      const msg =
-        err?.response?.data?.message ||
-        err?.message ||
-        "Failed to update profile. Please try again.";
-      setEditError(msg);
+      setEditError(err?.response?.data?.message || "Update failed.");
     } finally {
       setSaving(false);
     }
   }
 
-  const currentEditAvatar = editPreview || avatarUrl;
+  const avatarUrl =
+    editPreview ||
+    me?.avatarUrl ||
+    (me
+      ? `https://ui-avatars.com/api/?background=8b5cf6&color=fff&name=${me.name}`
+      : "");
 
+  const joinedYear = me ? new Date(me.createdAt).getFullYear() : null;
+
+  // ================================
+  // Delete Media Logic
+  // ================================
+  async function confirmDelete() {
+    if (!deleteId) return;
+    try {
+      setDeleting(true);
+
+      // 1. Call API
+      await MediaAPI.deleteMedia(deleteId);
+
+      // 2. Update Local State (Remove item from list)
+      setItems((prev) => prev.filter((m) => m.id !== deleteId));
+
+      // 3. Close Modal
+      setDeleteId(null);
+    } catch (error) {
+      console.error("Failed to delete media:", error);
+      alert("Could not delete media. Please try again.");
+    } finally {
+      setDeleting(false);
+    }
+  }
+
+  // ================================
+  // Edit Media Logic
+  // ================================
+  async function saveMediaEdit() {
+    if (!editMedia) return;
+
+    try {
+      setSavingEdit(true);
+
+      // 1. Call API
+      await MediaAPI.updateMedia(editMedia.id, {
+        title: editMediaTitle,
+        description: editMediaDesc,
+      });
+
+      // 2. Update Local State (Find item and update fields)
+      setItems((prev) =>
+        prev.map((m) =>
+          m.id === editMedia.id
+            ? { ...m, title: editMediaTitle, description: editMediaDesc }
+            : m
+        )
+      );
+
+      // 3. Close Modal
+      setEditMedia(null);
+    } catch (error) {
+      console.error("Failed to update media:", error);
+      alert("Could not save changes. Please try again.");
+    } finally {
+      setSavingEdit(false);
+    }
+  }
+
+  // ================================
+  // UI
+  // ================================
   return (
     <div className="min-h-screen bg-[#f7f6f8] flex justify-center">
-      <div className="relative mx-auto flex h-auto min-h-screen w-full max-w-md flex-col bg-[#f7f6f8]">
+      {/* Background overlay to close menus if open */}
+      {openMenuId && (
+        <div
+          className="fixed inset-0 z-20 bg-transparent"
+          onClick={() => setOpenMenuId(null)}
+        />
+      )}
 
-        {/* Top bar */}
-        <header className="sticky top-0 z-10 bg-[#f7f6f8]/90 backdrop-blur-sm border-b border-zinc-200/60">
-          <div className="flex items-center justify-between px-4 py-3">
-            <button
-              type="button"
-              onClick={() => navigate("/")}
-              className="p-1 -ml-1 rounded-full hover:bg-black/5 active:scale-95 transition"
-              aria-label="Back to feed"
-            >
-              <span className="material-symbols-outlined text-[22px]">
-                arrow_back
-              </span>
-            </button>
+      <div className="relative w-full max-w-md min-h-screen bg-[#f7f6f8] flex flex-col">
 
-            <h1 className="text-[15px] font-semibold text-[#161118]">
-              Profile
-            </h1>
+        {/* HEADER */}
+        <header className="sticky top-0 bg-[#f7f6f8]/90 backdrop-blur-md border-b border-zinc-200 p-4 flex justify-between items-center z-50">
+          <button onClick={() => navigate("/")} className="p-1">
+            <span className="material-symbols-outlined">arrow_back</span>
+          </button>
 
-            <span className="w-6" />
-          </div>
+          <h1 className="text-[15px] font-semibold">Profile</h1>
+          <span className="w-6" />
         </header>
 
-        {/* Main content */}
         <main className="flex-1 overflow-y-auto px-4 pb-24">
+
+          {/* Loading */}
           {loading && (
-            <p className="mt-6 text-center text-sm text-[#7c6189]">
-              Loading profile…
-            </p>
+            <p className="text-center mt-6 text-[#7c6189]">Loading…</p>
           )}
 
+          {/* Error */}
           {error && (
-            <p className="mt-6 text-center text-sm text-red-500">{error}</p>
+            <p className="text-center text-red-500 mt-6">{error}</p>
           )}
 
+          {/* MAIN CARD */}
           {!loading && !error && me && (
-            <section className="mt-4 rounded-3xl bg-white shadow-[0_18px_35px_rgba(15,23,42,0.08)] pb-4">
-              {/* Header + avatar */}
-              <div className="flex flex-col items-center pt-6 px-5">
-                <div className="h-24 w-24 rounded-full bg-[#f3eefc] flex items-center justify-center overflow-hidden shadow-[0_10px_25px_rgba(15,23,42,0.15)]">
+            <section className="mt-4 bg-white rounded-3xl shadow-lg pb-5">
+
+              {/* Avatar */}
+              <div className="flex flex-col items-center pt-6">
+                <div className="h-24 w-24 rounded-full overflow-hidden shadow-lg bg-[#f3eefc]">
                   <img
                     src={avatarUrl}
                     alt={me.name}
-                    className="h-full w-full object-cover"
+                    className="object-cover w-full h-full"
                   />
                 </div>
 
-                <div className="mt-4 text-center">
-                  <p className="text-base font-semibold text-[#161118]">
-                    {me.name}
-                  </p>
-                  <p className="text-xs text-[#7c6189] mt-0.5">
-                    {(me as any).email}
-                  </p>
-                  {joinedYear && (
-                    <p className="text-xs text-[#a293bf] mt-0.5">
-                      Joined in {joinedYear}
-                    </p>
-                  )}
+                <p className="mt-4 font-semibold text-[#161118]">
+                  {me.name}
+                </p>
 
-                  {/* زرار Edit profile */}
-                  <button
-                    type="button"
-                    onClick={startEdit}
-                    className="mt-3 inline-flex items-center gap-1 rounded-full bg-[#f3eefc] px-3 py-1.5 text-xs font-semibold text-[#7b6b8e] hover:bg-[#e5dbff] active:scale-95 transition"
-                  >
-                    <span className="material-symbols-outlined text-[16px]">
-                      edit
-                    </span>
-                    <span>Edit profile</span>
-                  </button>
-                </div>
+                <p className="text-xs text-[#7c6189]">{me.email}</p>
+
+                {joinedYear && (
+                  <p className="text-xs text-[#a293bf] mt-1">
+                    Joined in {joinedYear}
+                  </p>
+                )}
+
+                {/* EDIT PROFILE BUTTON */}
+                <button
+                  className="mt-3 bg-[#f3eefc] px-3 py-1.5 text-xs rounded-full flex items-center gap-1 hover:bg-[#e8ddff]"
+                  onClick={startEdit}
+                >
+                  <span className="material-symbols-outlined text-sm">
+                    edit
+                  </span>
+                  Edit profile
+                </button>
               </div>
 
-              {/* Stats cards */}
-              <div className="mt-5 grid grid-cols-3 gap-2 px-4">
-                <div className="rounded-2xl bg-[#f8f6ff] px-3 py-2.5 text-center">
-                  <p className="text-[11px] text-[#8a7aa7]">Uploads</p>
-                  <p className="mt-1 text-base font-semibold text-[#161118]">
-                    {uploadsCount}
-                  </p>
-                </div>
-
-                <div className="rounded-2xl bg-[#f8f6ff] px-3 py-2.5 text-center">
-                  <p className="text-[11px] text-[#8a7aa7]">Likes received</p>
-                  <p className="mt-1 text-base font-semibold text-[#161118]">
-                    {formatCount(likesReceived)}
-                  </p>
-                </div>
-
-                <div className="rounded-2xl bg-[#f8f6ff] px-3 py-2.5 text-center">
-                  <p className="text-[11px] text-[#8a7aa7]">Likes given</p>
-                  <p className="mt-1 text-base font-semibold text-[#161118]">
-                    {formatCount(likesGiven)}
-                  </p>
-                </div>
-              </div>
-
-              {/* 🔧 Edit Profile Card */}
+              {/* EDIT PROFILE FORM */}
               {isEditing && (
-                <div className="mt-6 border-t border-[#f1edf9] pt-4 px-4">
-                  <p className="text-xs font-semibold text-[#161118] mb-3">
-                    Edit profile
-                  </p>
-
+                <div className="px-4 pt-4 mt-4 border-t border-[#efe9fd]">
                   <form onSubmit={handleSaveProfile} className="space-y-4">
-                    {/* Avatar chooser */}
-                    <div className="flex items-center gap-3">
-                      <div className="h-14 w-14 rounded-full bg-[#f3eefc] flex items-center justify-center overflow-hidden">
-                        {currentEditAvatar ? (
-                          <img
-                            src={currentEditAvatar}
-                            alt="Avatar preview"
-                            className="h-full w-full object-cover"
-                          />
-                        ) : (
-                          <span className="material-symbols-outlined text-[26px] text-[#a293bf]">
-                            person
-                          </span>
-                        )}
-                      </div>
 
-                      <label className="cursor-pointer text-[11px] font-semibold text-[#7b6b8e] underline underline-offset-2">
+                    {/* Avatar upload */}
+                    <div className="flex items-center gap-3">
+                      <div className="h-14 w-14 rounded-full overflow-hidden bg-[#f3eefc]">
+                        <img
+                          src={avatarUrl}
+                          alt="Preview"
+                          className="object-cover w-full h-full"
+                        />
+                      </div>
+                      <label className="text-xs underline cursor-pointer">
                         Change photo
                         <input
                           type="file"
-                          accept="image/*"
                           className="hidden"
+                          accept="image/*"
                           onChange={handleAvatarChange}
                         />
                       </label>
                     </div>
 
-                    {/* Name */}
+                    {/* NAME */}
                     <div>
-                      <label className="text-[11px] font-medium text-[#7b6b8e]">
-                        Name
-                      </label>
+                      <label className="text-xs">Name</label>
                       <input
                         value={editName}
                         onChange={(e) => setEditName(e.target.value)}
-                        className="mt-1 w-full rounded-xl border border-[#e3ddf5] bg-[#faf8ff] px-3 py-2 text-xs text-[#161118] outline-none focus:border-[#a855ff]"
-                        placeholder="Your name"
+                        className="w-full mt-1 px-3 py-2 bg-[#faf8ff] border rounded-xl text-xs"
                       />
                     </div>
 
-                    {/* Email */}
+                    {/* EMAIL */}
                     <div>
-                      <label className="text-[11px] font-medium text-[#7b6b8e]">
-                        Email
-                      </label>
+                      <label className="text-xs">Email</label>
                       <input
                         type="email"
                         value={editEmail}
                         onChange={(e) => setEditEmail(e.target.value)}
-                        className="mt-1 w-full rounded-xl border border-[#e3ddf5] bg-[#faf8ff] px-3 py-2 text-xs text-[#161118] outline-none focus:border-[#a855ff]"
-                        placeholder="name@example.com"
+                        className="w-full mt-1 px-3 py-2 bg-[#faf8ff] border rounded-xl text-xs"
                       />
                     </div>
 
                     {editError && (
-                      <p className="text-[11px] text-red-500">{editError}</p>
+                      <p className="text-[11px] text-red-500">
+                        {editError}
+                      </p>
                     )}
 
-                    <div className="flex gap-2 pt-1">
+                    {/* BUTTONS */}
+                    <div className="flex gap-2">
                       <button
                         type="button"
                         onClick={cancelEdit}
-                        className="flex-1 rounded-xl border border-[#ddd4f0] bg-white py-2 text-xs font-semibold text-[#5b516c] active:scale-95 transition"
+                        className="flex-1 bg-white border rounded-xl py-2 text-xs"
                       >
                         Cancel
                       </button>
+
                       <button
                         type="submit"
+                        className="flex-1 bg-gradient-to-r from-[#ff3fd1] to-[#a855ff] text-white rounded-xl py-2 text-xs"
                         disabled={saving}
-                        className="flex-1 rounded-xl bg-gradient-to-r from-[#ff3fd1] to-[#a855ff] py-2 text-xs font-semibold text-white shadow-[0_10px_25px_rgba(168,85,255,0.5)] disabled:opacity-70 disabled:cursor-not-allowed active:scale-95 transition"
                       >
-                        {saving ? "Saving..." : "Save changes"}
+                        {saving ? "Saving…" : "Save changes"}
                       </button>
                     </div>
                   </form>
                 </div>
               )}
 
-              {/* Gallery title */}
-              <div className="mt-5 px-4 flex items-center justify-between">
-                <p className="text-sm font-semibold text-[#161118]">
-                  Your uploads
-                </p>
+              {/* UPLOADS */}
+              <div className="mt-5 px-4 flex justify-between items-center">
+                <p className="text-sm font-semibold">Your uploads</p>
                 <p className="text-[11px] text-[#a293bf]">
                   {items.length} item{items.length === 1 ? "" : "s"}
                 </p>
               </div>
 
-              {/* Gallery grid */}
+              {/* GRID */}
               {items.length === 0 ? (
-                <p className="mt-3 px-4 pb-4 text-xs text-[#8a7aa7]">
-                  You haven&apos;t uploaded any media yet.
+                <p className="px-4 pb-4 text-xs text-[#8a7aa7]">
+                  No uploads yet.
                 </p>
               ) : (
-                <div className="mt-3 px-4 pb-4 grid grid-cols-2 gap-2">
+                <div className="grid grid-cols-2 gap-2 px-4 pb-4 mt-3">
                   {items.map((m) => {
-                    const isVideo =
-                      m.type === "VIDEO" || m.type === "video";
-
                     return (
                       <div
                         key={m.id}
@@ -371,27 +372,62 @@ export default function ProfilePage() {
                         <img
                           src={m.thumbnailUrl || m.url}
                           alt={m.title || "Media"}
-                          className="h-full w-full object-cover"
+                          className="w-full h-full object-cover"
                         />
 
-                        {/* Play icon لو فيديو */}
-                        {isVideo && (
-                          <div className="absolute inset-0 flex items-center justify-center bg-black/20">
-                            <div className="flex h-8 w-8 items-center justify-center rounded-full bg-white/70 backdrop-blur-sm">
-                              <span className="material-symbols-outlined text-[18px]">
-                                play_arrow
-                              </span>
-                            </div>
+                        {/* 3 dots Button */}
+                        <button
+                          className="absolute top-2 right-2 bg-black/40 p-1 rounded-full text-white z-30"
+                          onClick={(e) => {
+                            e.stopPropagation(); // Prevent closing immediately
+                            setOpenMenuId(
+                              openMenuId === m.id ? null : m.id
+                            )
+                          }}
+                        >
+                          <span className="material-symbols-outlined text-sm">
+                            more_vert
+                          </span>
+                        </button>
+
+                        {/* Dropdown Menu */}
+                        {openMenuId === m.id && (
+                          <div className="absolute top-10 right-2 bg-white shadow-lg rounded-xl w-32 py-2 text-sm z-40">
+                            <button
+                              className="w-full text-left px-4 py-2 hover:bg-purple-100"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setEditMedia(m);
+                                setEditMediaTitle(m.title || "");
+                                setEditMediaDesc(
+                                  m.description || ""
+                                );
+                                setOpenMenuId(null);
+                              }}
+                            >
+                              Edit
+                            </button>
+
+                            <button
+                              className="w-full text-left px-4 py-2 text-red-500 hover:bg-red-100"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setDeleteId(m.id);
+                                setOpenMenuId(null);
+                              }}
+                            >
+                              Delete
+                            </button>
                           </div>
                         )}
 
-                        {/* Hover overlay بعدد اللايكات */}
-                        <div className="pointer-events-none absolute inset-0 flex items-end justify-start bg-black/0 opacity-0 transition duration-150 group-hover:bg-black/40 group-hover:opacity-100">
-                          <div className="m-2 flex items-center gap-1 rounded-full bg-black/60 px-2.5 py-1 text-[11px] font-semibold text-white">
-                            <span className="material-symbols-outlined text-[14px]">
+                        {/* likes overlay */}
+                        <div className="absolute inset-0 bg-black/0 opacity-0 group-hover:opacity-100 group-hover:bg-black/40 transition flex items-end pointer-events-none">
+                          <div className="m-2 bg-black/60 text-white text-[10px] px-2 py-1 rounded-full flex items-center gap-1">
+                            <span className="material-symbols-outlined text-xs">
                               favorite
                             </span>
-                            <span>{formatCount(m.likesCount)}</span>
+                            {formatCount(m.likesCount)}
                           </div>
                         </div>
                       </div>
@@ -403,10 +439,81 @@ export default function ProfilePage() {
           )}
         </main>
 
-        {/* Bottom Navigation */}
         <BottomNav />
-
       </div>
+
+      {/* DELETE MODAL */}
+      {deleteId && (
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 px-4">
+          <div className="bg-white rounded-2xl p-6 w-full max-w-xs shadow-xl">
+            <p className="text-sm font-semibold mb-4">
+              Delete this media?
+            </p>
+
+            <div className="flex gap-2">
+              <button
+                className="flex-1 py-2 bg-gray-200 rounded-xl text-sm font-medium"
+                onClick={() => setDeleteId(null)}
+                disabled={deleting}
+              >
+                Cancel
+              </button>
+
+              <button
+                className="flex-1 py-2 bg-red-500 text-white rounded-xl text-sm font-medium"
+                onClick={confirmDelete}
+                disabled={deleting}
+              >
+                {deleting ? "Deleting…" : "Delete"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* EDIT MEDIA MODAL */}
+      {editMedia && (
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 px-4">
+          <div className="bg-white p-6 rounded-2xl w-full max-w-xs shadow-xl">
+            <p className="text-sm font-semibold mb-4">
+              Edit media
+            </p>
+
+            <input
+              value={editMediaTitle}
+              onChange={(e) => setEditMediaTitle(e.target.value)}
+              className="w-full border rounded-xl px-3 py-2 text-sm bg-[#faf8ff] mb-3 outline-none focus:border-purple-400"
+              placeholder="Title"
+            />
+
+            <textarea
+              value={editMediaDesc}
+              onChange={(e) => setEditMediaDesc(e.target.value)}
+              className="w-full border rounded-xl px-3 py-2 text-sm bg-[#faf8ff] outline-none focus:border-purple-400 resize-none"
+              rows={3}
+              placeholder="Description"
+            />
+
+            <div className="flex gap-2 mt-4">
+              <button
+                className="flex-1 py-2 bg-gray-200 rounded-xl text-sm font-medium"
+                onClick={() => setEditMedia(null)}
+                disabled={savingEdit}
+              >
+                Cancel
+              </button>
+
+              <button
+                className="flex-1 py-2 bg-purple-600 text-white rounded-xl text-sm font-medium"
+                onClick={saveMediaEdit}
+                disabled={savingEdit}
+              >
+                {savingEdit ? "Saving…" : "Save"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

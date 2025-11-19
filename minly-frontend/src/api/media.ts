@@ -60,4 +60,12 @@ export const MediaAPI = {
   toggleLike(mediaId: string) {
     return api.post(`/like/${mediaId}`);
   },
+  deleteMedia(id: string) {
+    return api.delete(`/media/${id}`);
+  },
+
+  updateMedia(id: string, body: { title?: string; description?: string }) {
+    return api.patch(`/media/${id}`, body);
+  },
+
 };
