@@ -34,12 +34,12 @@ export default function RegisterPage() {
     setLoading(true);
 
     try {
-      const res = await AuthAPI.register({
-        name,
-        email,
-        password,
-      });
-
+        const res = await AuthAPI.register({
+            name,
+            email,
+            password,
+            confirmPassword, // 👈 زوّد دي
+          });
       const body: any = res.data;
 
       // نحاول ندعم اكتر من شكل للـ response
