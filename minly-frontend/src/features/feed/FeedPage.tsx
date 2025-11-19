@@ -1,6 +1,6 @@
-// src/features/feed/FeedPage.tsx
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import BottomNav from "../../components/BottomNav";
 import { MediaAPI, type MediaItem } from "../../api/media";
 
 // ======================
@@ -41,11 +41,9 @@ function MediaCard({ item }: { item: MediaItem }) {
     "https://ui-avatars.com/api/?name=" +
       encodeURIComponent(item.uploader.name);
 
-  // local like state (UI فقط دلوقتي)
   const [liked, setLiked] = useState(false);
   const [likes, setLikes] = useState(item.likesCount);
 
-  // ======== description expand logic ========
   const description = item.description || "";
   const [expanded, setExpanded] = useState(false);
   const MAX_LEN = 120;
@@ -58,16 +56,32 @@ function MediaCard({ item }: { item: MediaItem }) {
       ? description
       : description.slice(0, MAX_LEN) + "…";
 
-  function handleLike() {
-    const nextLiked = !liked;
-    const diff = nextLiked ? 1 : -1;
-    setLiked(nextLiked);
-    setLikes((prev) => Math.max(prev + diff, 0));
-  }
+      async function handleLike() {
+        const previousLiked = liked;
+
+        // Optimistic update
+        const nextLiked = !liked;
+        setLiked(nextLiked);
+        setLikes((prev) => Math.max(prev + (nextLiked ? 1 : -1), 0));
+
+        try {
+          await MediaAPI.toggleLike(item.id);
+        } catch (err) {
+          console.error("Failed to toggle like:", err);
+
+          // rollback UI
+          setLiked(previousLiked);
+          setLikes((prev) =>
+            Math.max(prev + (previousLiked ? 1 : -1), 0)
+          );
+        }
+      }
+
 
   return (
     <article className="flex flex-col overflow-hidden rounded-xl bg-white shadow-[0_4px_12px_rgba(0,0,0,0.05)]">
-      {/* Uploader Row */}
+
+      {/* Header */}
       <header className="flex items-center gap-3 p-4">
         <img
           className="size-10 rounded-full object-cover"
@@ -103,7 +117,6 @@ function MediaCard({ item }: { item: MediaItem }) {
 
       {/* Text & Actions */}
       <div className="flex flex-col gap-3 p-4">
-        {/* Title + View Details */}
         <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between sm:gap-4">
           <div className="flex-1 min-w-0">
             <p className="text-lg font-bold text-[#161118] truncate">
@@ -128,7 +141,7 @@ function MediaCard({ item }: { item: MediaItem }) {
           )}
         </div>
 
-        {/* Like count */}
+        {/* Likes */}
         <div className="mt-1 flex items-center gap-2">
           <button
             type="button"
@@ -159,7 +172,7 @@ function MediaCard({ item }: { item: MediaItem }) {
 // Page: Global Feed
 // ======================
 export default function FeedPage() {
-  const navigate = useNavigate(); // 👈 عشان الزرار اللي تحت
+  const navigate = useNavigate();
 
   const [items, setItems] = useState<MediaItem[]>([]);
   const [loading, setLoading] = useState(true);
@@ -192,6 +205,7 @@ export default function FeedPage() {
   return (
     <div className="min-h-screen bg-[#f7f6f8] flex justify-center">
       <div className="relative mx-auto flex h-auto min-h-screen w-full max-w-md flex-col bg-[#f7f6f8]">
+
         {/* Top Bar */}
         <header className="sticky top-0 z-10 flex flex-col gap-2 bg-[#f7f6f8]/80 p-4 pb-2 backdrop-blur-sm">
           <div className="flex h-12 items-center justify-between">
@@ -207,7 +221,7 @@ export default function FeedPage() {
           </h1>
         </header>
 
-        {/* Main Content */}
+        {/* Main */}
         <main className="flex flex-1 flex-col gap-6 p-4 pb-24">
           {loading && (
             <p className="text-center text-sm text-[#7c6189]">
@@ -242,39 +256,9 @@ export default function FeedPage() {
           ))}
         </main>
 
-        {/* Bottom Navigation */}
-        <nav className="fixed bottom-0 z-10 w-full max-w-md border-t border-zinc-200 bg-[#f7f6f8]/80 backdrop-blur-sm">
-          <div className="flex h-16 items-center justify-around px-4">
-            {/* Home */}
-            <button
-              type="button"
-              onClick={() => navigate("/")}
-              className="flex flex-col items-center gap-1 text-[#ad2bee]"
-            >
-              <span className="material-symbols-outlined filled">home</span>
-              <span className="text-xs font-bold">Home</span>
-            </button>
+        {/* ⭐ BottomNav imported */}
+        <BottomNav />
 
-            {/* Upload */}
-            <button
-              type="button"
-              onClick={() => navigate("/upload")}
-              className="flex flex-col items-center gap-1 text-[#7c6189] hover:text-[#ad2bee]"
-            >
-              <span className="material-symbols-outlined">add_circle</span>
-              <span className="text-xs font-medium">Upload</span>
-            </button>
-
-            {/* Profile (لسه مفيش صفحة، ممكن نعملها بعدين) */}
-            <button
-              type="button"
-              className="flex flex-col items-center gap-1 text-[#7c6189]"
-            >
-              <span className="material-symbols-outlined">person</span>
-              <span className="text-xs font-medium">Profile</span>
-            </button>
-          </div>
-        </nav>
       </div>
     </div>
   );

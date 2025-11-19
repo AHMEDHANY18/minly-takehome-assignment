@@ -2,6 +2,7 @@
 import { useEffect, useState, type FormEvent } from "react";
 import { useNavigate } from "react-router-dom";
 import { MediaAPI } from "../../api/media";
+import BottomNav from "../../components/BottomNav"; // ⭐ مهم
 
 export default function UploadPage() {
   const navigate = useNavigate();
@@ -14,7 +15,7 @@ export default function UploadPage() {
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
 
-  // Cleanup preview
+  // Cleanup preview URL
   useEffect(() => {
     return () => {
       if (previewUrl) URL.revokeObjectURL(previewUrl);
@@ -81,6 +82,7 @@ export default function UploadPage() {
   return (
     <div className="min-h-screen bg-[#f7f6f8] flex justify-center">
       <div className="relative mx-auto w-full max-w-md flex-col bg-[#f7f6f8] min-h-screen">
+
         {/* Top Bar */}
         <header className="sticky top-0 bg-[#f7f6f8]/90 backdrop-blur-sm z-20">
           <div className="flex items-center justify-between px-4 pt-3 pb-2">
@@ -94,22 +96,31 @@ export default function UploadPage() {
           </div>
         </header>
 
-        {/* Content */}
-        <main className="px-4 pb-20">
+        {/* Main Content */}
+        <main className="px-4 pb-24">
           <form onSubmit={handleSubmit} className="space-y-5">
             <div className="mt-3 bg-white rounded-3xl shadow p-4">
 
-              {/* Preview */}
+              {/* Preview Section */}
               <div className="aspect-[3/4] w-full bg-[#f0edf7] rounded-3xl overflow-hidden">
                 {previewUrl ? (
                   isVideo ? (
-                    <video src={previewUrl} controls className="w-full h-full object-cover" />
+                    <video
+                      src={previewUrl}
+                      controls
+                      className="w-full h-full object-cover"
+                    />
                   ) : (
-                    <img src={previewUrl} className="w-full h-full object-cover" />
+                    <img
+                      src={previewUrl}
+                      className="w-full h-full object-cover"
+                    />
                   )
                 ) : (
                   <div className="flex flex-col items-center justify-center h-full text-[#aca0c2]">
-                    <span className="material-symbols-outlined text-[40px]">image</span>
+                    <span className="material-symbols-outlined text-[40px]">
+                      image
+                    </span>
                     <p className="text-sm mt-2">Tap to choose photo or video</p>
                   </div>
                 )}
@@ -118,13 +129,20 @@ export default function UploadPage() {
               <div className="flex justify-center mt-3">
                 <label className="cursor-pointer px-4 py-2 bg-white rounded-full shadow text-[#7c6189] text-xs font-semibold">
                   Choose file
-                  <input type="file" className="hidden" accept="image/*,video/*" onChange={handleFileChange} />
+                  <input
+                    type="file"
+                    className="hidden"
+                    accept="image/*,video/*"
+                    onChange={handleFileChange}
+                  />
                 </label>
               </div>
 
               {/* Title */}
               <div className="mt-4">
-                <label className="text-xs font-medium text-[#7b6b8e]">Title</label>
+                <label className="text-xs font-medium text-[#7b6b8e]">
+                  Title
+                </label>
                 <input
                   value={title}
                   onChange={(e) => setTitle(e.target.value)}
@@ -135,7 +153,9 @@ export default function UploadPage() {
 
               {/* Description */}
               <div className="mt-4">
-                <label className="text-xs font-medium text-[#7b6b8e]">Description</label>
+                <label className="text-xs font-medium text-[#7b6b8e]">
+                  Description
+                </label>
                 <textarea
                   rows={3}
                   value={description}
@@ -145,8 +165,14 @@ export default function UploadPage() {
               </div>
             </div>
 
-            {error && <p className="text-center text-xs text-red-500">{error}</p>}
-            {success && <p className="text-center text-xs text-green-500">Uploaded! Redirecting…</p>}
+            {error && (
+              <p className="text-center text-xs text-red-500">{error}</p>
+            )}
+            {success && (
+              <p className="text-center text-xs text-green-500">
+                Uploaded! Redirecting…
+              </p>
+            )}
 
             <div className="flex gap-3">
               <button
@@ -156,6 +182,7 @@ export default function UploadPage() {
               >
                 Cancel
               </button>
+
               <button
                 type="submit"
                 disabled={submitting}
@@ -167,42 +194,8 @@ export default function UploadPage() {
           </form>
         </main>
 
-        {/* Bottom Navigation */}
-        <nav className="fixed bottom-0 z-10 w-full max-w-md border-t border-zinc-200 bg-[#f7f6f8]/80 backdrop-blur-sm">
-  <div className="flex h-16 items-center justify-around px-4">
-
-    {/* Home */}
-    <button
-      type="button"
-      onClick={() => navigate("/")}
-      className="flex flex-col items-center gap-1 text-[#ad2bee]"
-    >
-      <span className="material-symbols-outlined filled">home</span>
-      <span className="text-xs font-bold">Home</span>
-    </button>
-
-    {/* Upload */}
-    <button
-      type="button"
-      onClick={() => navigate("/upload")}
-      className="flex flex-col items-center gap-1 text-[#7c6189] hover:text-[#ad2bee]"
-    >
-      <span className="material-symbols-outlined">add_circle</span>
-      <span className="text-xs font-medium">Upload</span>
-    </button>
-
-    {/* Profile */}
-    <button
-      type="button"
-      onClick={() => navigate("/profile")}
-      className="flex flex-col items-center gap-1 text-[#7c6189] hover:text-[#ad2bee]"
-    >
-      <span className="material-symbols-outlined">person</span>
-      <span className="text-xs font-medium">Profile</span>
-    </button>
-
-  </div>
-</nav>
+        {/* ⭐ Bottom Navigation Component */}
+        <BottomNav />
 
       </div>
     </div>

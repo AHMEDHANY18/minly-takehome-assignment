@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import type { MediaItem } from "../../api/media";
 import { UserAPI, type MeData } from "../../api/user";
+import BottomNav from "../../components/BottomNav"; // ⭐ مهم
 
 // helper لتنسيق الأرقام: 1200 => 1.2k
 function formatCount(n: number) {
@@ -25,7 +26,6 @@ export default function ProfilePage() {
         setLoading(true);
         setError(null);
 
-        // 👈 هنا بنستخدم بس /user/me
         const res = await UserAPI.getMe();
         const body = res.data;
         const data = (body as any).data as MeData;
@@ -62,6 +62,7 @@ export default function ProfilePage() {
   return (
     <div className="min-h-screen bg-[#f7f6f8] flex justify-center">
       <div className="relative mx-auto flex h-auto min-h-screen w-full max-w-md flex-col bg-[#f7f6f8]">
+
         {/* Top bar */}
         <header className="sticky top-0 z-10 bg-[#f7f6f8]/90 backdrop-blur-sm border-b border-zinc-200/60">
           <div className="flex items-center justify-between px-4 py-3">
@@ -98,6 +99,7 @@ export default function ProfilePage() {
 
           {!loading && !error && me && (
             <section className="mt-4 rounded-3xl bg-white shadow-[0_18px_35px_rgba(15,23,42,0.08)] pb-4">
+
               {/* Header + avatar */}
               <div className="flex flex-col items-center pt-6 px-5">
                 <div className="h-24 w-24 rounded-full bg-[#f3eefc] flex items-center justify-center overflow-hidden shadow-[0_10px_25px_rgba(15,23,42,0.15)]">
@@ -112,9 +114,7 @@ export default function ProfilePage() {
                   <p className="text-base font-semibold text-[#161118]">
                     {me.name}
                   </p>
-                  <p className="text-xs text-[#7c6189] mt-0.5">
-                    {me.email}
-                  </p>
+                  <p className="text-xs text-[#7c6189] mt-0.5">{me.email}</p>
                   {joinedYear && (
                     <p className="text-xs text-[#a293bf] mt-0.5">
                       Joined in {joinedYear}
@@ -157,7 +157,7 @@ export default function ProfilePage() {
                 </p>
               </div>
 
-              {/* Gallery grid */}
+              {/* Gallery */}
               {items.length === 0 ? (
                 <p className="mt-3 px-4 pb-4 text-xs text-[#8a7aa7]">
                   You haven&apos;t uploaded any media yet.
@@ -178,6 +178,7 @@ export default function ProfilePage() {
                           alt={m.title || "Media"}
                           className="h-full w-full object-cover"
                         />
+
                         {isVideo && (
                           <div className="absolute inset-0 flex items-center justify-center bg-black/20">
                             <div className="flex h-8 w-8 items-center justify-center rounded-full bg-white/70 backdrop-blur-sm">
@@ -196,42 +197,9 @@ export default function ProfilePage() {
           )}
         </main>
 
-        {/* Bottom Navigation */}
-        <nav className="fixed bottom-0 z-10 w-full max-w-md border-t border-zinc-200 bg-[#f7f6f8]/90 backdrop-blur-sm">
-          <div className="flex h-16 items-center justify-around px-4">
-            <button
-              type="button"
-              onClick={() => navigate("/")}
-              className="flex flex-col items-center gap-0.5 text-[#7c6189] hover:text-[#ad2bee]"
-            >
-              <span className="material-symbols-outlined text-[22px]">
-                home
-              </span>
-              <span className="text-[11px] font-medium">Home</span>
-            </button>
+        {/* ⭐ BottomNav Component بدل القديم */}
+        <BottomNav />
 
-            <button
-              type="button"
-              onClick={() => navigate("/upload")}
-              className="flex flex-col items-center gap-0.5 text-[#7c6189] hover:text-[#ad2bee]"
-            >
-              <span className="material-symbols-outlined text-[22px]">
-                add_circle
-              </span>
-              <span className="text-[11px] font-medium">Upload</span>
-            </button>
-
-            <button
-              type="button"
-              className="flex flex-col items-center gap-0.5 text-[#ad2bee]"
-            >
-              <span className="material-symbols-outlined filled text-[22px]">
-                person
-              </span>
-              <span className="text-[11px] font-semibold">Profile</span>
-            </button>
-          </div>
-        </nav>
       </div>
     </div>
   );
