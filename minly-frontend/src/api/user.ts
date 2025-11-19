@@ -19,7 +19,9 @@ export const UserAPI = {
   getMe() {
     return api.get<{ status: string; data: MeData }>("/user/me");
   },
-
+  getById(userId: string) {
+    return api.get<{ status: string; data: MeData }>(`/user/${userId}`);
+  },
   // PATCH /v1/user  (update profile: name, email, file)
   updateMe(params: { name?: string; email?: string; file?: File }) {
     const form = new FormData();

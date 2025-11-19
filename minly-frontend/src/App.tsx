@@ -8,6 +8,7 @@ import ProfilePage from "./features/profile/ProfilePage";
 import { useUserStore } from "./store/user.store";
 import { ThemeProvider } from "./components/ThemeProvider";
 import MainLayout from "./layouts/MainLayout";
+import UserProfilePage from "./features/profile/UserProfilePage";
 
 export default function App() {
   const user = useUserStore((s) => s.user);
@@ -25,7 +26,11 @@ export default function App() {
             <Route path="/upload" element={<UploadPage />} />
             <Route path="/profile" element={<ProfilePage />} />
           </Route>
-
+       {/* ⭐ public profile for any user */}
+       <Route
+          path="/users/:userId"
+          element={user ? <UserProfilePage /> : <Navigate to="/login" replace />}
+        />
           <Route
             path="/login"
             element={!user ? <LoginPage /> : <Navigate to="/" replace />}

@@ -1,11 +1,9 @@
+// src/features/feed/FeedPage.tsx
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import BottomNav from "../../components/BottomNav";
 import { MediaAPI, type MediaItem } from "../../api/media";
 
-// ======================
-// Helper: Time Formatting
-// ======================
 function formatTimeAgo(dateStr: string) {
   const date = new Date(dateStr);
   const diffMs = Date.now() - date.getTime();
@@ -20,28 +18,24 @@ function formatTimeAgo(dateStr: string) {
   return `${diffD}d ago`;
 }
 
-// ======================
-// Helper: Likes Formatting
-// ======================
 function formatLikes(n: number) {
   if (n < 1_000) return n.toString();
   if (n < 1_000_000) return (n / 1_000).toFixed(1).replace(/\.0$/, "") + "k";
   return (n / 1_000_000).toFixed(1).replace(/\.0$/, "") + "M";
 }
 
-// ======================
-// Component: Media Card
-// ======================
+// =============== MediaCard ===============
 function MediaCard({ item }: { item: MediaItem }) {
-  const isVideo = item.type === "VIDEO";
+  const navigate = useNavigate();
 
+  const isVideo = item.type === "VIDEO" || item.type === "video";
   const imageUrl = item.thumbnailUrl || item.url;
   const avatarUrl =
     item.uploader.avatarUrl ||
     "https://ui-avatars.com/api/?name=" +
       encodeURIComponent(item.uploader.name);
 
-  const [liked, setLiked] = useState(false);
+  const [liked, setLiked] = useState(item.isLikedByCurrentUser ?? false);
   const [likes, setLikes] = useState(item.likesCount);
 
   const description = item.description || "";
@@ -56,33 +50,25 @@ function MediaCard({ item }: { item: MediaItem }) {
       ? description
       : description.slice(0, MAX_LEN) + "…";
 
-      async function handleLike() {
-        const previousLiked = liked;
+  const goToProfile = () => {
+    navigate(`/users/${item.uploader.id}`);
+  };
 
-        // Optimistic update
-        const nextLiked = !liked;
-        setLiked(nextLiked);
-        setLikes((prev) => Math.max(prev + (nextLiked ? 1 : -1), 0));
-
-        try {
-          await MediaAPI.toggleLike(item.id);
-        } catch (err) {
-          console.error("Failed to toggle like:", err);
-
-          // rollback UI
-          setLiked(previousLiked);
-          setLikes((prev) =>
-            Math.max(prev + (previousLiked ? 1 : -1), 0)
-          );
-        }
-      }
-
+  function toggleLike() {
+    const nextLiked = !liked;
+    setLiked(nextLiked);
+    setLikes((prev) => Math.max(prev + (nextLiked ? 1 : -1), 0));
+    // لو عايز تبعت للـ backend:
+    // MediaAPI.toggleLike(item.id).catch(() => { ...rollback لو حابب... })
+  }
 
   return (
     <article className="flex flex-col overflow-hidden rounded-xl bg-white shadow-[0_4px_12px_rgba(0,0,0,0.05)]">
-
-      {/* Header */}
-      <header className="flex items-center gap-3 p-4">
+      {/* Uploader row (clickable) */}
+      <header
+        className="flex items-center gap-3 p-4 cursor-pointer"
+        onClick={goToProfile}
+      >
         <img
           className="size-10 rounded-full object-cover"
           src={avatarUrl}
@@ -98,8 +84,8 @@ function MediaCard({ item }: { item: MediaItem }) {
         </div>
       </header>
 
-      {/* Media */}
-      <div className="relative w-full">
+      {/* Media (clickable) */}
+      <div className="relative w-full cursor-pointer" onClick={goToProfile}>
         {isVideo ? (
           <video
             src={item.url}
@@ -115,7 +101,7 @@ function MediaCard({ item }: { item: MediaItem }) {
         )}
       </div>
 
-      {/* Text & Actions */}
+      {/* Text & actions */}
       <div className="flex flex-col gap-3 p-4">
         <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between sm:gap-4">
           <div className="flex-1 min-w-0">
@@ -145,7 +131,10 @@ function MediaCard({ item }: { item: MediaItem }) {
         <div className="mt-1 flex items-center gap-2">
           <button
             type="button"
-            onClick={handleLike}
+            onClick={(e) => {
+              e.stopPropagation(); // 👈 عشان ما يفتحش البروفايل
+              toggleLike();
+            }}
             className={`flex items-center gap-1 transition ${
               liked ? "text-[#e11d48]" : "text-[#7c6189] hover:text-[#e11d48]"
             }`}
@@ -168,12 +157,8 @@ function MediaCard({ item }: { item: MediaItem }) {
   );
 }
 
-// ======================
-// Page: Global Feed
-// ======================
+// =============== Page: Global Feed ===============
 export default function FeedPage() {
-  const navigate = useNavigate();
-
   const [items, setItems] = useState<MediaItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -205,7 +190,6 @@ export default function FeedPage() {
   return (
     <div className="min-h-screen bg-[#f7f6f8] flex justify-center">
       <div className="relative mx-auto flex h-auto min-h-screen w-full max-w-md flex-col bg-[#f7f6f8]">
-
         {/* Top Bar */}
         <header className="sticky top-0 z-10 flex flex-col gap-2 bg-[#f7f6f8]/80 p-4 pb-2 backdrop-blur-sm">
           <div className="flex h-12 items-center justify-between">
@@ -221,7 +205,7 @@ export default function FeedPage() {
           </h1>
         </header>
 
-        {/* Main */}
+        {/* Main Content */}
         <main className="flex flex-1 flex-col gap-6 p-4 pb-24">
           {loading && (
             <p className="text-center text-sm text-[#7c6189]">
@@ -256,9 +240,7 @@ export default function FeedPage() {
           ))}
         </main>
 
-        {/* ⭐ BottomNav imported */}
         <BottomNav />
-
       </div>
     </div>
   );
