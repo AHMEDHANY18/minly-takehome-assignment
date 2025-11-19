@@ -1,4 +1,4 @@
-import { api } from "./axios"; // أو مسار الـ axios instance عندك
+import { api } from "./axios";
 
 export type MediaItem = {
   id: string;
@@ -15,7 +15,6 @@ export type MediaItem = {
     email: string;
     avatarUrl: string | null;
   };
-  isLikedByCurrentUser?: boolean;
 };
 
 export const MediaAPI = {
@@ -23,7 +22,17 @@ export const MediaAPI = {
     return api.get("/media", { params: { page, limit } });
   },
 
-  // NEW: toggle like endpoint
+  uploadMedia(payload: { file: File; title?: string; description?: string }) {
+    const form = new FormData();
+    form.append("file", payload.file);
+    if (payload.title) form.append("title", payload.title);
+    if (payload.description) form.append("description", payload.description);
+
+    return api.post("/media", form, {
+      headers: { "Content-Type": "multipart/form-data" },
+    });
+  },
+
   toggleLike(mediaId: string) {
     return api.post(`/like/${mediaId}`);
   },

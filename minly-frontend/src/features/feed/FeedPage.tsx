@@ -1,5 +1,6 @@
 // src/features/feed/FeedPage.tsx
 import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { MediaAPI, type MediaItem } from "../../api/media";
 
 // ======================
@@ -158,6 +159,8 @@ function MediaCard({ item }: { item: MediaItem }) {
 // Page: Global Feed
 // ======================
 export default function FeedPage() {
+  const navigate = useNavigate(); // 👈 عشان الزرار اللي تحت
+
   const [items, setItems] = useState<MediaItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -242,15 +245,31 @@ export default function FeedPage() {
         {/* Bottom Navigation */}
         <nav className="fixed bottom-0 z-10 w-full max-w-md border-t border-zinc-200 bg-[#f7f6f8]/80 backdrop-blur-sm">
           <div className="flex h-16 items-center justify-around px-4">
-            <button className="flex flex-col items-center gap-1 text-[#ad2bee]">
+            {/* Home */}
+            <button
+              type="button"
+              onClick={() => navigate("/")}
+              className="flex flex-col items-center gap-1 text-[#ad2bee]"
+            >
               <span className="material-symbols-outlined filled">home</span>
               <span className="text-xs font-bold">Home</span>
             </button>
-            <button className="flex flex-col items-center gap-1 text-[#7c6189]">
+
+            {/* Upload */}
+            <button
+              type="button"
+              onClick={() => navigate("/upload")}
+              className="flex flex-col items-center gap-1 text-[#7c6189] hover:text-[#ad2bee]"
+            >
               <span className="material-symbols-outlined">add_circle</span>
               <span className="text-xs font-medium">Upload</span>
             </button>
-            <button className="flex flex-col items-center gap-1 text-[#7c6189]">
+
+            {/* Profile (لسه مفيش صفحة، ممكن نعملها بعدين) */}
+            <button
+              type="button"
+              className="flex flex-col items-center gap-1 text-[#7c6189]"
+            >
               <span className="material-symbols-outlined">person</span>
               <span className="text-xs font-medium">Profile</span>
             </button>
