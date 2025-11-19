@@ -4,7 +4,8 @@ export interface User {
   id: string;
   name: string;
   email: string;
-  // لو عندك حقول تانية من الباكند زوّدها هنا
+  avatarUrl?: string;
+  // زوّد اللي محتاجه من الباكند هنا
 }
 
 interface UserStore {
@@ -13,11 +14,35 @@ interface UserStore {
   logout: () => void;
 }
 
+// نقرأ اليوزر من localStorage أول ما الابلكيشن يفتح
+const getInitialUser = (): User | null => {
+  if (typeof window === "undefined") return null;
+
+  const raw = localStorage.getItem("user");
+  if (!raw) return null;
+
+  try {
+    return JSON.parse(raw) as User;
+  } catch {
+    return null;
+  }
+};
+
 export const useUserStore = create<UserStore>((set) => ({
-  user: null,
-  setUser: (user) => set({ user }),
+  user: getInitialUser(),
+
+  setUser: (user) => {
+    if (user) {
+      localStorage.setItem("user", JSON.stringify(user));
+    } else {
+      localStorage.removeItem("user");
+    }
+    set({ user });
+  },
+
   logout: () => {
     localStorage.removeItem("token");
+    localStorage.removeItem("user");
     set({ user: null });
   },
 }));

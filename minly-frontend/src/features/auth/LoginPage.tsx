@@ -19,6 +19,18 @@ export default function LoginPage() {
     setLoading(true);
 
     try {
+      // 1) شيك الأول هل الإيميل موجود ولا لأ 👇
+      const checkRes = await AuthAPI.checkEmail(email);
+      const exists =
+        (checkRes.data as any).exists ?? (checkRes.data as any).result ?? checkRes.data;
+
+      if (!exists) {
+        // لو الإيميل مش موجود → روح على صفحة التسجيل ومعاك الإيميل
+        navigate("/register", { state: { email } });
+        return;
+      }
+
+      // 2) لو الإيميل موجود فعلاً → كمّل login عادي 👇
       const res = await AuthAPI.login({ email, password });
       const body: any = res.data;
 
@@ -89,7 +101,6 @@ export default function LoginPage() {
                 className="absolute inset-y-0 right-2 flex items-center px-2 text-slate-400 hover:text-slate-700"
                 aria-label={showPassword ? "Hide password" : "Show password"}
               >
-                {/* Eye icon بسيط */}
                 <svg
                   xmlns="http://www.w3.org/2000/svg"
                   className="h-4 w-4"
@@ -138,9 +149,7 @@ export default function LoginPage() {
           <button
             type="button"
             className="font-semibold text-[#b845ff] hover:underline"
-            onClick={() => {
-              // لسه مفيش صفحة Register، ممكن نضيفها بعدين
-            }}
+            onClick={() => navigate("/register", { state: { email } })}
           >
             Create an account
           </button>
