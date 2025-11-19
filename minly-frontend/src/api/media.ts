@@ -1,38 +1,62 @@
+// src/api/media.ts
 import { api } from "./axios";
 
+// نفس الشكل اللي ال backend بيرجعه
 export type MediaItem = {
   id: string;
   url: string;
   thumbnailUrl: string | null;
-  type: "IMAGE" | "VIDEO";
+  type: "image" | "video" | "IMAGE" | "VIDEO";
   title: string | null;
   description: string | null;
   likesCount: number;
   createdAt: string;
+  updatedAt?: string;
+
   uploader: {
     id: string;
     name: string;
     email: string;
     avatarUrl: string | null;
+    mediaCount?: number;
+    totalLikesReceived?: number;
+    totalLikesGiven?: number;
+    createdAt?: string;
+    updatedAt?: string;
   };
+
+  isLikedByCurrentUser?: boolean;
 };
 
 export const MediaAPI = {
+  /** Global feed */
   getFeed(page: number, limit: number) {
-    return api.get("/media", { params: { page, limit } });
+    return api.get("/media", {
+      params: { page, limit },
+    });
   },
 
-  uploadMedia(payload: { file: File; title?: string; description?: string }) {
+  /** ميديا يوزر معيّن (للـ Profile) */
+  getUserMedia(userId: string, page = 1, limit = 50) {
+    return api.get("/media", {
+      // لو ال backend عندك عامل فلتر بالـ uploaderId ده هيشتغل
+      params: { page, limit, uploaderId: userId },
+    });
+  },
+
+  /** رفع صورة / فيديو من صفحة Upload */
+  uploadMedia(params: { file: File; title?: string; description?: string }) {
     const form = new FormData();
-    form.append("file", payload.file);
-    if (payload.title) form.append("title", payload.title);
-    if (payload.description) form.append("description", payload.description);
+    form.append("file", params.file);
+    if (params.title) form.append("title", params.title);
+    if (params.description) form.append("description", params.description);
 
     return api.post("/media", form, {
       headers: { "Content-Type": "multipart/form-data" },
     });
   },
 
+  /** (اختياري) لايك للأمام */
   toggleLike(mediaId: string) {
     return api.post(`/like/${mediaId}`);
   },

@@ -4,6 +4,7 @@ import LoginPage from "./features/auth/LoginPage";
 import RegisterPage from "./features/auth/RegisterPage";
 import FeedPage from "./features/feed/FeedPage";
 import UploadPage from "./features/upload/UploadPage";
+import ProfilePage from "./features/profile/ProfilePage";
 import { useUserStore } from "./store/user.store";
 
 export default function App() {
@@ -20,6 +21,11 @@ export default function App() {
         <Route
           path="/upload"
           element={user ? <UploadPage /> : <Navigate to="/login" replace />}
+        />
+
+        <Route
+          path="/profile"
+          element={user ? <ProfilePage /> : <Navigate to="/login" replace />}
         />
 
         <Route
