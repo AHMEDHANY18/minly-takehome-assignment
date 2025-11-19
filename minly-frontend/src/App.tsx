@@ -6,40 +6,38 @@ import FeedPage from "./features/feed/FeedPage";
 import UploadPage from "./features/upload/UploadPage";
 import ProfilePage from "./features/profile/ProfilePage";
 import { useUserStore } from "./store/user.store";
+import { ThemeProvider } from "./components/ThemeProvider";
+import MainLayout from "./layouts/MainLayout";
 
 export default function App() {
   const user = useUserStore((s) => s.user);
 
   return (
-    <BrowserRouter>
-      <Routes>
-        <Route
-          path="/"
-          element={user ? <FeedPage /> : <Navigate to="/login" replace />}
-        />
+    <ThemeProvider>
+      <BrowserRouter>
+        <Routes>
+          <Route
+            element={
+              user ? <MainLayout /> : <Navigate to="/login" replace />
+            }
+          >
+            <Route path="/" element={<FeedPage />} />
+            <Route path="/upload" element={<UploadPage />} />
+            <Route path="/profile" element={<ProfilePage />} />
+          </Route>
 
-        <Route
-          path="/upload"
-          element={user ? <UploadPage /> : <Navigate to="/login" replace />}
-        />
+          <Route
+            path="/login"
+            element={!user ? <LoginPage /> : <Navigate to="/" replace />}
+          />
+          <Route
+            path="/register"
+            element={!user ? <RegisterPage /> : <Navigate to="/" replace />}
+          />
 
-        <Route
-          path="/profile"
-          element={user ? <ProfilePage /> : <Navigate to="/login" replace />}
-        />
-
-        <Route
-          path="/login"
-          element={!user ? <LoginPage /> : <Navigate to="/" replace />}
-        />
-
-        <Route
-          path="/register"
-          element={!user ? <RegisterPage /> : <Navigate to="/" replace />}
-        />
-
-        <Route path="*" element={<Navigate to="/" replace />} />
-      </Routes>
-    </BrowserRouter>
+          <Route path="*" element={<Navigate to="/" replace />} />
+        </Routes>
+      </BrowserRouter>
+    </ThemeProvider>
   );
 }
