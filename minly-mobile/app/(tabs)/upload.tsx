@@ -14,7 +14,7 @@ import * as ImagePicker from "expo-image-picker";
 import axios from "axios";
 import * as SecureStore from "expo-secure-store";
 
-const API_URL = "http://192.168.1.40:4000/v1";
+const API_URL = "https://minly-takehome-assignment.onrender.com/v1";
 
 export default function UploadScreen() {
   const [media, setMedia] = useState<any>(null); // image or video

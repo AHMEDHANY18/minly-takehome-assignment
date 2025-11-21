@@ -4,7 +4,7 @@ import { Link, router, useLocalSearchParams } from "expo-router";
 import * as SecureStore from "expo-secure-store";
 import axios from "axios";
 
-const API_URL = "http://192.168.1.40:4000/v1"; // عدّلها لو لازم
+const API_URL = "https://minly-takehome-assignment.onrender.com/v1";
 
 export default function LoginScreen() {
   // لو جاي من register ومعاه email

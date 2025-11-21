@@ -11,7 +11,7 @@ import {
 import { ResizeMode, Video } from "expo-av";
 import axios from "axios";
 
-const API_URL = "http://192.168.1.40:4000/v1";
+const API_URL = "https://minly-takehome-assignment.onrender.com/v1";
 
 const screenWidth = Dimensions.get("window").width;
 

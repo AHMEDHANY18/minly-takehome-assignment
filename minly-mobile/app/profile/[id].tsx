@@ -14,7 +14,7 @@ import {
 import axios from "axios";
 import { Video, ResizeMode } from "expo-av";
 
-const API_URL = "http://192.168.1.7:4000/v1";
+const API_URL = "https://minly-takehome-assignment.onrender.com/v1";
 const { width: SCREEN_WIDTH } = Dimensions.get("window");
 const GAP = 12;
 const TILE_SIZE = (SCREEN_WIDTH - 16 * 2 - GAP) / 2;
