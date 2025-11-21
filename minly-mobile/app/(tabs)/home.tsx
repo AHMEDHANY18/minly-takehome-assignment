@@ -12,7 +12,7 @@ import {
 import { ResizeMode, Video } from "expo-av";
 import axios from "axios";
 import * as SecureStore from "expo-secure-store";
-import { red } from "react-native-reanimated/lib/typescript/Colors";
+import { router } from "expo-router"; // ✅ NEW
 
 const API_URL = "http://192.168.1.7:4000/v1";
 const screenWidth = Dimensions.get("window").width;
@@ -53,6 +53,13 @@ function MediaCard({ item, onToggleLike }: any) {
       item.uploader?.name || "User"
     )}`;
 
+  // ✅ NEW: go to user profile
+  function goToProfile() {
+    const userId = item.uploader?.id;
+    if (!userId) return;
+    router.push(`/profile/${userId}`);
+  }
+
   return (
     <View
       style={{
@@ -66,8 +73,10 @@ function MediaCard({ item, onToggleLike }: any) {
         shadowRadius: 8,
       }}
     >
-      {/* Header */}
-      <View
+      {/* ✅ Header clickable */}
+      <TouchableOpacity
+        onPress={goToProfile}
+        activeOpacity={0.8}
         style={{
           flexDirection: "row",
           alignItems: "center",
@@ -88,7 +97,7 @@ function MediaCard({ item, onToggleLike }: any) {
             {formatTimeAgo(item.createdAt)}
           </Text>
         </View>
-      </View>
+      </TouchableOpacity>
 
       {/* Media */}
       {isVideo ? (
@@ -116,7 +125,7 @@ function MediaCard({ item, onToggleLike }: any) {
 
       {/* Content */}
       <View style={{ padding: 14 }}>
-        <Text style={{ fontWeight: "bold", fontSize: 16, marginBottom: 4, color:"red"}}>
+        <Text style={{ fontWeight: "bold", fontSize: 16, marginBottom: 4 }}>
           {item.title || "Untitled media"}
         </Text>
 
@@ -193,16 +202,13 @@ export default function FeedScreen() {
 
     try {
       const token = await SecureStore.getItemAsync("token");
-      console.log("🔍 TOKEN:", token);
 
       const res = await axios.post(
         `${API_URL}/like/${item.id}`,
         {},
         {
           headers: {
-            Authorization: token || "", // نفس Postman
-            // لو backend عايز Bearer:
-            // Authorization: `Bearer ${token}`,
+            Authorization: token || "",
           },
         }
       );

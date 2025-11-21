@@ -1,26 +1,25 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   View,
   Text,
-  Image,
   FlatList,
+  Image,
   TouchableOpacity,
   ActivityIndicator,
   Dimensions,
-  RefreshControl,
+  Modal,
+  Pressable,
   StatusBar,
 } from "react-native";
 import axios from "axios";
 import * as SecureStore from "expo-secure-store";
+import { Video, ResizeMode } from "expo-av";
 import { router } from "expo-router";
 
 const API_URL = "http://192.168.1.7:4000/v1";
-const { width } = Dimensions.get("window");
-const CARD_RADIUS = 18;
-const GAP = 10;
-const COLS = 2;
-const ITEM_W = (width - 16 * 2 - GAP) / COLS; // paddingHorizontal 16
-const ITEM_H = ITEM_W * 1.1;
+const { width: SCREEN_WIDTH } = Dimensions.get("window");
+const GAP = 12;
+const TILE_SIZE = (SCREEN_WIDTH - 16 * 2 - GAP) / 2;
 
 type MediaItem = {
   id: string;
@@ -34,204 +33,232 @@ type MediaItem = {
 };
 
 type MeResponse = {
-  status: "success";
-  data: {
-    id: string;
-    name: string;
-    email?: string;
-    avatarUrl: string | null;
-    mediaCount: number;
-    totalLikesReceived: number;
-    totalLikesGiven: number;
-    createdAt: string;
-    media: MediaItem[];
-  };
+  id: string;
+  name: string;
+  avatarUrl: string | null;
+  mediaCount: number;
+  totalLikesReceived: number;
+  totalLikesGiven: number;
+  createdAt: string;
+  media: MediaItem[];
 };
 
-function formatLikes(n: number) {
-  if (n < 1_000) return n.toString();
-  if (n < 1_000_000) return (n / 1_000).toFixed(1).replace(/\.0$/, "") + "k";
-  return (n / 1_000_000).toFixed(1).replace(/\.0$/, "") + "M";
+function getInitials(name?: string) {
+  if (!name) return "U";
+  const parts = name.trim().split(" ");
+  if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
+  return (parts[0][0] + parts[1][0]).toUpperCase();
 }
 
-function getYear(dateStr: string) {
-  const d = new Date(dateStr);
-  return d.getFullYear();
+function getJoinedYear(iso?: string) {
+  if (!iso) return "";
+  try {
+    return new Date(iso).getFullYear();
+  } catch {
+    return "";
+  }
 }
 
-function isVideoType(t: string) {
+function isVideoType(t: MediaItem["type"]) {
   return t === "VIDEO" || t === "video";
 }
 
-// ============================
-// Media Tile (Grid Item)
-// ============================
-function MediaTile({ item }: { item: MediaItem }) {
-  const isVideo = isVideoType(item.type);
-  const preview = item.thumbnailUrl || item.url;
-
-  return (
-    <TouchableOpacity
-      activeOpacity={0.9}
-      onPress={() => {
-        // لو عندك صفحة تفاصيل بعدين غيّر المسار ده
-        // router.push(`/media/${item.id}`);
-      }}
-      style={{
-        width: ITEM_W,
-        height: ITEM_H,
-        borderRadius: 14,
-        overflow: "hidden",
-        backgroundColor: "#eee",
-        position: "relative",
-      }}
-    >
-      {/* Preview Image */}
-      <Image
-        source={{ uri: preview }}
-        resizeMode="cover"
-        style={{ width: "100%", height: "100%" }}
-      />
-
-      {/* Video overlay */}
-      {isVideo && (
-        <View
-          style={{
-            position: "absolute",
-            inset: 0,
-            backgroundColor: "rgba(0,0,0,0.12)",
-            alignItems: "center",
-            justifyContent: "center",
-          }}
-        >
-          <View
-            style={{
-              width: 44,
-              height: 44,
-              borderRadius: 999,
-              backgroundColor: "rgba(255,255,255,0.9)",
-              alignItems: "center",
-              justifyContent: "center",
-            }}
-          >
-            <Text style={{ fontSize: 18 }}>▶</Text>
-          </View>
-        </View>
-      )}
-    </TouchableOpacity>
-  );
-}
-
-// ============================
-// Profile Screen
-// ============================
 export default function ProfileScreen() {
-  const [user, setUser] = useState<MeResponse["data"] | null>(null);
+  const [me, setMe] = useState<MeResponse | null>(null);
+  const [media, setMedia] = useState<MediaItem[]>([]);
   const [loading, setLoading] = useState(true);
-  const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const avatarUrl = useMemo(() => {
-    if (!user) return null;
-    return (
-      user.avatarUrl ||
-      `https://ui-avatars.com/api/?name=${encodeURIComponent(user.name)}`
-    );
-  }, [user]);
+  // viewer modal
+  const [viewerItem, setViewerItem] = useState<MediaItem | null>(null);
 
-  const loadProfile = useCallback(async () => {
+  async function loadProfile() {
     try {
+      setLoading(true);
       setError(null);
+
       const token = await SecureStore.getItemAsync("token");
+      console.log("🔍 TOKEN (profile):", token);
 
-      if (!token) {
-        setUser(null);
-        setError("No token found. Please login again.");
-        return;
-      }
-
-      const res = await axios.get<MeResponse>(`${API_URL}/user/me`, {
-        headers: { Authorization: token }, // نفس Postman عندك
-        // لو الباك عندك Bearer:
-        // headers: { Authorization: `Bearer ${token}` },
+      const res = await axios.get(`${API_URL}/user/me`, {
+        headers: {
+          Authorization: token || "", // نفس Postman عندك
+          // لو غيرت الباك لـ Bearer استخدم:
+          // Authorization: `Bearer ${token}`
+        },
       });
 
-      setUser(res.data.data);
+      const userData: MeResponse = res.data?.data;
+      console.log("✅ /user/me response:", userData);
+
+      setMe(userData);
+      setMedia(userData?.media || []);
     } catch (err: any) {
-      const msg =
-        err?.response?.data?.message ||
-        err?.message ||
-        "Failed to load profile";
-      setError(msg);
+      console.log("❌ Profile error:", err?.response?.data || err);
+      setError(err?.response?.data?.message || "Failed to load profile");
     } finally {
       setLoading(false);
     }
-  }, []);
+  }
 
   useEffect(() => {
     loadProfile();
-  }, [loadProfile]);
+  }, []);
 
-  const onRefresh = useCallback(async () => {
-    setRefreshing(true);
-    await loadProfile();
-    setRefreshing(false);
-  }, [loadProfile]);
+  const header = useMemo(() => {
+    if (!me) return null;
+
+    const initials = getInitials(me.name);
+    const joinedYear = getJoinedYear(me.createdAt);
+
+    return (
+      <View style={{ paddingHorizontal: 16, paddingTop: 12 }}>
+        {/* Profile Card */}
+        <View
+          style={{
+            backgroundColor: "white",
+            borderRadius: 20,
+            padding: 18,
+            shadowColor: "#000",
+            shadowOpacity: 0.06,
+            shadowRadius: 16,
+            shadowOffset: { width: 0, height: 8 },
+            elevation: 3,
+            borderWidth: 1,
+            borderColor: "#f1f1f4",
+          }}
+        >
+          {/* Avatar */}
+          <View style={{ alignItems: "center" }}>
+            {me.avatarUrl ? (
+              <Image
+                source={{ uri: me.avatarUrl }}
+                style={{
+                  width: 88,
+                  height: 88,
+                  borderRadius: 44,
+                  marginBottom: 8,
+                }}
+              />
+            ) : (
+              <View
+                style={{
+                  width: 88,
+                  height: 88,
+                  borderRadius: 44,
+                  backgroundColor: "#ede9fe",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  marginBottom: 8,
+                }}
+              >
+                <Text style={{ fontSize: 28, fontWeight: "800", color: "#6d28d9" }}>
+                  {initials}
+                </Text>
+              </View>
+            )}
+
+            <Text style={{ fontSize: 18, fontWeight: "800", color: "#111827" }}>
+              {me.name}
+            </Text>
+
+            <Text style={{ fontSize: 12, color: "#6b7280", marginTop: 2 }}>
+              Joined {joinedYear}
+            </Text>
+          </View>
+
+          {/* Stats */}
+          <View
+            style={{
+              flexDirection: "row",
+              marginTop: 16,
+              backgroundColor: "#f7f7fb",
+              borderRadius: 14,
+              overflow: "hidden",
+              borderWidth: 1,
+              borderColor: "#ececf3",
+            }}
+          >
+            <StatBox label="Uploads" value={me.mediaCount} />
+            <Divider />
+            <StatBox label="Likes received" value={me.totalLikesReceived} />
+            <Divider />
+            <StatBox label="Likes given" value={me.totalLikesGiven} />
+          </View>
+        </View>
+
+        {/* Edit Button */}
+        <TouchableOpacity
+          onPress={() => router.push("/profile/edit")}
+          style={{
+            marginTop: 18,
+            alignSelf: "center",
+            backgroundColor: "#ad2bee",
+            paddingHorizontal: 18,
+            paddingVertical: 8,
+            borderRadius: 999,
+            marginBottom: 16,
+            shadowColor: "#000",
+            shadowOpacity: 0.08,
+            shadowRadius: 6,
+            shadowOffset: { width: 0, height: 3 },
+          }}
+        >
+          <Text style={{ color: "white", fontWeight: "700" }}>Edit Profile</Text>
+        </TouchableOpacity>
+
+        {/* Section title */}
+        <View style={{ marginBottom: 10 }}>
+          <Text style={{ fontSize: 16, fontWeight: "800", color: "#111827" }}>
+            Your uploads{" "}
+            <Text style={{ color: "#6b7280", fontWeight: "600" }}>
+              ({media.length})
+            </Text>
+          </Text>
+        </View>
+      </View>
+    );
+  }, [me, media.length]);
 
   if (loading) {
     return (
-      <View style={{ flex: 1, backgroundColor: "#f7f6f8" }}>
-        <StatusBar barStyle="dark-content" />
-        <View style={{ paddingTop: 60, alignItems: "center" }}>
-          <ActivityIndicator size="large" color="#ad2bee" />
-          <Text style={{ marginTop: 10, color: "#777" }}>Loading profile…</Text>
-        </View>
+      <View style={{ flex: 1, backgroundColor: "#f7f6f8", justifyContent: "center" }}>
+        <ActivityIndicator size="large" color="#ad2bee" />
       </View>
     );
   }
 
-  if (error || !user) {
+  if (error || !me) {
     return (
       <View
         style={{
           flex: 1,
           backgroundColor: "#f7f6f8",
-          paddingTop: 60,
-          paddingHorizontal: 20,
+          justifyContent: "center",
           alignItems: "center",
+          padding: 20,
         }}
       >
-        <Text style={{ fontSize: 18, fontWeight: "700", marginBottom: 8 }}>
-          Something went wrong
+        <Text style={{ color: "#ef4444", fontSize: 14, marginBottom: 8 }}>
+          {error || "Something went wrong"}
         </Text>
-        <Text style={{ color: "#666", textAlign: "center", marginBottom: 14 }}>
-          {error}
-        </Text>
-        <TouchableOpacity
-          onPress={loadProfile}
-          style={{
-            backgroundColor: "#ad2bee",
-            paddingVertical: 12,
-            paddingHorizontal: 22,
-            borderRadius: 12,
-          }}
-        >
-          <Text style={{ color: "#fff", fontWeight: "700" }}>Try again</Text>
-        </TouchableOpacity>
 
         <TouchableOpacity
-          onPress={() => router.replace("/auth/login")}
-          style={{ marginTop: 10 }}
-        >
-          <Text style={{ color: "#2459ff", fontWeight: "600" }}>
-            Go to login
-          </Text>
-        </TouchableOpacity>
+  onPress={() => router.push("/profile/edit")}
+  style={{
+    marginTop: 10,
+    alignSelf: "center",
+    backgroundColor: "#ad2bee",
+    paddingHorizontal: 18,
+    paddingVertical: 8,
+    borderRadius: 999,
+  }}
+>
+  <Text style={{ color: "white", fontWeight: "700" }}>Edit Profile</Text>
+</TouchableOpacity>
       </View>
     );
   }
-
-  const media = user.media || [];
 
   return (
     <View style={{ flex: 1, backgroundColor: "#f7f6f8" }}>
@@ -239,200 +266,195 @@ export default function ProfileScreen() {
 
       <FlatList
         data={media}
-        numColumns={COLS}
+        numColumns={2}
         keyExtractor={(item) => item.id}
-        refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
-        }
-        columnWrapperStyle={{ gap: GAP }}
+        ListHeaderComponent={header}
         contentContainerStyle={{
+          paddingBottom: 80,
+        }}
+        columnWrapperStyle={{
           paddingHorizontal: 16,
-          paddingTop: 14,
-          paddingBottom: 90,
           gap: GAP,
         }}
-        ListHeaderComponent={
-          <View style={{ gap: 12, marginBottom: 6 }}>
-            {/* Profile Card */}
-            <View
-              style={{
-                backgroundColor: "#fff",
-                borderRadius: CARD_RADIUS,
-                padding: 16,
-                shadowColor: "#000",
-                shadowOpacity: 0.06,
-                shadowRadius: 14,
-                shadowOffset: { width: 0, height: 6 },
-                elevation: 3,
-              }}
-            >
-              {/* Avatar + Name */}
-              <View
+        renderItem={({ item }) => (
+          <MediaTile item={item} onPress={() => setViewerItem(item)} />
+        )}
+        ListEmptyComponent={
+          <View
+            style={{
+              marginHorizontal: 16,
+              backgroundColor: "white",
+              borderRadius: 16,
+              padding: 20,
+              alignItems: "center",
+              marginTop: 10,
+              borderWidth: 1,
+              borderColor: "#f1f1f4",
+            }}
+          >
+            <Text style={{ fontWeight: "800", color: "#111827", marginBottom: 4 }}>
+              No uploads yet
+            </Text>
+            <Text style={{ color: "#6b7280", fontSize: 12 }}>
+              Upload your first photo or video ✨
+            </Text>
+          </View>
+        }
+      />
+
+      {/* Viewer Modal */}
+      <Modal
+        visible={!!viewerItem}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setViewerItem(null)}
+      >
+        <View style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.9)" }}>
+          {/* close */}
+          <Pressable
+            onPress={() => setViewerItem(null)}
+            style={{
+              position: "absolute",
+              top: 50,
+              left: 16,
+              zIndex: 10,
+              backgroundColor: "rgba(255,255,255,0.12)",
+              width: 40,
+              height: 40,
+              borderRadius: 999,
+              alignItems: "center",
+              justifyContent: "center",
+            }}
+          >
+            <Text style={{ color: "white", fontSize: 22 }}>✕</Text>
+          </Pressable>
+
+          <View
+            style={{
+              flex: 1,
+              justifyContent: "center",
+              paddingHorizontal: 12,
+            }}
+          >
+            {viewerItem && isVideoType(viewerItem.type) ? (
+              <Video
+                source={{ uri: viewerItem.url }}
                 style={{
-                  alignItems: "center",
-                  gap: 6,
-                  paddingTop: 4,
+                  width: "100%",
+                  height: SCREEN_WIDTH,
+                  backgroundColor: "#000",
+                  borderRadius: 14,
                 }}
-              >
-                <Image
-                  source={{ uri: avatarUrl! }}
-                  style={{
-                    width: 86,
-                    height: 86,
-                    borderRadius: 999,
-                    backgroundColor: "#eee",
-                    borderWidth: 3,
-                    borderColor: "#ad2bee1a",
-                  }}
-                />
+                resizeMode={ResizeMode.CONTAIN}
+                useNativeControls
+                shouldPlay
+                isLooping
+              />
+            ) : viewerItem ? (
+              <Image
+                source={{ uri: viewerItem.thumbnailUrl || viewerItem.url }}
+                style={{
+                  width: "100%",
+                  height: SCREEN_WIDTH,
+                  borderRadius: 14,
+                }}
+                resizeMode="contain"
+              />
+            ) : null}
 
-                <Text
-                  style={{
-                    fontSize: 18,
-                    fontWeight: "800",
-                    color: "#161118",
-                    marginTop: 4,
-                    textTransform: "capitalize",
-                  }}
-                >
-                  {user.name}
-                </Text>
-
-                {!!user.email && (
-                  <Text style={{ fontSize: 12, color: "#7c7c8a" }}>
-                    {user.email}
+            {/* meta */}
+            {viewerItem && (
+              <View style={{ marginTop: 12, paddingHorizontal: 4 }}>
+                {!!viewerItem.title && (
+                  <Text style={{ color: "white", fontSize: 16, fontWeight: "800" }}>
+                    {viewerItem.title}
                   </Text>
                 )}
-
-                <Text style={{ fontSize: 12, color: "#7c7c8a" }}>
-                  Joined {getYear(user.createdAt)}
-                </Text>
-              </View>
-
-              {/* Stats */}
-              <View
-                style={{
-                  flexDirection: "row",
-                  backgroundColor: "#f7f6f8",
-                  borderRadius: 14,
-                  marginTop: 14,
-                  paddingVertical: 10,
-                  paddingHorizontal: 6,
-                }}
-              >
-                <StatBox label="Uploads" value={user.mediaCount} />
-                <Divider />
-                <StatBox label="Likes received" value={formatLikes(user.totalLikesReceived)} />
-                <Divider />
-                <StatBox label="Likes given" value={formatLikes(user.totalLikesGiven)} />
-              </View>
-            </View>
-
-            {/* Section title */}
-            <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
-              <Text
-                style={{
-                  fontSize: 18,
-                  fontWeight: "800",
-                  color: "#161118",
-                }}
-              >
-                Your uploads
-              </Text>
-              <Text style={{ fontSize: 13, color: "#7c7c8a" }}>
-                ({media.length})
-              </Text>
-            </View>
-
-            {/* Empty State */}
-            {media.length === 0 && (
-              <View
-                style={{
-                  backgroundColor: "#fff",
-                  borderRadius: 16,
-                  padding: 20,
-                  alignItems: "center",
-                  gap: 10,
-                  shadowColor: "#000",
-                  shadowOpacity: 0.04,
-                  shadowRadius: 10,
-                  shadowOffset: { width: 0, height: 4 },
-                  elevation: 2,
-                }}
-              >
-                <View
-                  style={{
-                    width: 72,
-                    height: 72,
-                    borderRadius: 999,
-                    backgroundColor: "#ad2bee14",
-                    alignItems: "center",
-                    justifyContent: "center",
-                  }}
-                >
-                  <Text style={{ fontSize: 28 }}>📸</Text>
-                </View>
-                <Text style={{ fontWeight: "800", color: "#161118" }}>
-                  No media yet
-                </Text>
-                <Text
-                  style={{
-                    fontSize: 12,
-                    color: "#7c7c8a",
-                    textAlign: "center",
-                    maxWidth: 220,
-                  }}
-                >
-                  Upload your first photo or video and it will show here.
-                </Text>
-
-                <TouchableOpacity
-                  onPress={() => router.push("/(tabs)/upload")}
-                  style={{
-                    marginTop: 4,
-                    backgroundColor: "#ad2bee",
-                    paddingVertical: 10,
-                    paddingHorizontal: 18,
-                    borderRadius: 12,
-                  }}
-                >
-                  <Text style={{ color: "#fff", fontWeight: "800" }}>
-                    Upload now
+                {!!viewerItem.description && (
+                  <Text style={{ color: "#d1d5db", marginTop: 4 }}>
+                    {viewerItem.description}
                   </Text>
-                </TouchableOpacity>
+                )}
               </View>
             )}
           </View>
-        }
-        renderItem={({ item }) => <MediaTile item={item} />}
-        showsVerticalScrollIndicator={false}
-      />
+        </View>
+      </Modal>
     </View>
   );
 }
 
-// ============================
-// Small UI parts
-// ============================
-function StatBox({ label, value }: { label: string; value: string | number }) {
+// -------- small components --------
+
+function StatBox({ label, value }: { label: string; value: number }) {
   return (
-    <View style={{ flex: 1, alignItems: "center", gap: 2 }}>
-      <Text style={{ fontSize: 16, fontWeight: "800", color: "#161118" }}>
+    <View style={{ flex: 1, alignItems: "center", paddingVertical: 12 }}>
+      <Text style={{ fontSize: 16, fontWeight: "900", color: "#111827" }}>
         {value}
       </Text>
-      <Text style={{ fontSize: 11, color: "#7c7c8a" }}>{label}</Text>
+      <Text style={{ fontSize: 11, color: "#6b7280", marginTop: 2 }}>
+        {label}
+      </Text>
     </View>
   );
 }
 
 function Divider() {
+  return <View style={{ width: 1, backgroundColor: "#e5e7eb" }} />;
+}
+
+function MediaTile({ item, onPress }: { item: MediaItem; onPress: () => void }) {
+  const video = isVideoType(item.type);
+  const uri = item.thumbnailUrl || item.url;
+
   return (
-    <View
+    <TouchableOpacity
+      onPress={onPress}
+      activeOpacity={0.85}
       style={{
-        width: 1,
-        backgroundColor: "#e8e6ee",
-        marginVertical: 4,
+        width: TILE_SIZE,
+        height: TILE_SIZE,
+        borderRadius: 16,
+        overflow: "hidden",
+        backgroundColor: "#e5e7eb",
+        marginBottom: GAP,
+        shadowColor: "#000",
+        shadowOpacity: 0.06,
+        shadowRadius: 10,
+        shadowOffset: { width: 0, height: 6 },
+        elevation: 2,
       }}
-    />
+    >
+      <Image
+        source={{ uri }}
+        style={{ width: "100%", height: "100%" }}
+        resizeMode="cover"
+      />
+
+      {video && (
+        <View
+          style={{
+            position: "absolute",
+            inset: 0,
+            alignItems: "center",
+            justifyContent: "center",
+            backgroundColor: "rgba(0,0,0,0.18)",
+          }}
+        >
+          <View
+            style={{
+              width: 52,
+              height: 52,
+              borderRadius: 26,
+              backgroundColor: "rgba(255,255,255,0.9)",
+              alignItems: "center",
+              justifyContent: "center",
+            }}
+          >
+            <Text style={{ fontSize: 20 }}>▶</Text>
+          </View>
+        </View>
+      )}
+    </TouchableOpacity>
   );
 }
