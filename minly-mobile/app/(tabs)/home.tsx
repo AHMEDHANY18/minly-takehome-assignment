@@ -12,6 +12,7 @@ import {
 import { ResizeMode, Video } from "expo-av";
 import axios from "axios";
 import * as SecureStore from "expo-secure-store";
+import { red } from "react-native-reanimated/lib/typescript/Colors";
 
 const API_URL = "http://192.168.1.7:4000/v1";
 const screenWidth = Dimensions.get("window").width;
@@ -80,7 +81,7 @@ function MediaCard({ item, onToggleLike }: any) {
         />
 
         <View>
-          <Text style={{ fontWeight: "bold", fontSize: 15 }}>
+          <Text style={{ fontWeight: "bold", fontSize: 20 }}>
             {item.uploader?.name}
           </Text>
           <Text style={{ fontSize: 12, color: "#7c7c8a" }}>
@@ -115,7 +116,7 @@ function MediaCard({ item, onToggleLike }: any) {
 
       {/* Content */}
       <View style={{ padding: 14 }}>
-        <Text style={{ fontWeight: "bold", fontSize: 16, marginBottom: 4 }}>
+        <Text style={{ fontWeight: "bold", fontSize: 16, marginBottom: 4, color:"red"}}>
           {item.title || "Untitled media"}
         </Text>
 
