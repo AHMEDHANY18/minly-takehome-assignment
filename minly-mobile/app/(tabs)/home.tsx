@@ -9,6 +9,8 @@ import {
   Dimensions,
   RefreshControl,
 } from "react-native";
+import MaskedView from "@react-native-masked-view/masked-view";
+import { LinearGradient } from "expo-linear-gradient";
 import { ResizeMode, Video } from "expo-av";
 import axios from "axios";
 import * as SecureStore from "expo-secure-store";
@@ -226,18 +228,41 @@ export default function FeedScreen() {
   if (loading) {
     return (
       <View style={{ flex: 1, backgroundColor: "#f7f6f8", paddingTop: 40 }}>
-        <Text
-          style={{
-            fontSize: 28,
-            fontWeight: "bold",
-            marginBottom: 20,
-            paddingHorizontal: 16,
-            color: "#161118",
-          }}
+        {/* 🔥 Gradient Title */}
+        <MaskedView
+          maskElement={
+            <Text
+              style={{
+                fontSize: 28,
+                fontWeight: "bold",
+                paddingHorizontal: 16,
+                marginBottom: 20,
+              }}
+            >
+              Global Feed
+            </Text>
+          }
         >
-          Global Feed
-        </Text>
+          <LinearGradient
+            colors={["#9b5cff", "#d471ff"]} // purple → pink
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+          >
+            <Text
+              style={{
+                fontSize: 28,
+                fontWeight: "bold",
+                paddingHorizontal: 16,
+                marginBottom: 20,
+                opacity: 0, // مهم علشان يبان الجريدينت
+              }}
+            >
+              Global Feed
+            </Text>
+          </LinearGradient>
+        </MaskedView>
 
+        {/* Loader */}
         <ActivityIndicator
           size="large"
           color="#ad2bee"
@@ -249,17 +274,52 @@ export default function FeedScreen() {
 
   return (
     <View style={{ flex: 1, backgroundColor: "#f7f6f8", paddingTop: 40 }}>
+{/* Header */}
+<View style={{ paddingHorizontal: 16, marginBottom: 12 }}>
+  {/* Gradient Title */}
+  <MaskedView
+    maskElement={
       <Text
         style={{
           fontSize: 28,
           fontWeight: "bold",
-          marginBottom: 20,
-          paddingHorizontal: 16,
-          color: "#161118",
         }}
       >
         Global Feed
       </Text>
+    }
+  >
+    <LinearGradient
+      colors={["#9b5cff", "#d471ff"]} // purple → pink
+      start={{ x: 0, y: 0 }}
+      end={{ x: 1, y: 1 }}
+    >
+      <Text
+        style={{
+          fontSize: 28,
+          fontWeight: "bold",
+          opacity: 0, // مهم علشان الماسك
+        }}
+      >
+        Global Feed
+      </Text>
+    </LinearGradient>
+  </MaskedView>
+
+  {/* 🔥 Gradient Line Under Title */}
+  <LinearGradient
+    colors={["#9b5cff", "#d471ff", "#ff7ad9"]}
+    start={{ x: 0, y: 0 }}
+    end={{ x: 1, y: 0 }}
+    style={{
+      height: 4,
+      borderRadius: 999,
+      marginTop: 6,
+      width: 140, // طول الخط (غيره براحتك)
+      opacity: 0.9,
+    }}
+  />
+</View>
 
       <FlatList
         data={items}
