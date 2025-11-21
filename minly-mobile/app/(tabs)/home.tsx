@@ -14,7 +14,7 @@ import axios from "axios";
 import * as SecureStore from "expo-secure-store";
 import { router } from "expo-router"; // ✅ NEW
 
-const API_URL = "http://192.168.1.7:4000/v1";
+const API_URL = "http://192.168.1.40:4000/v1";
 const screenWidth = Dimensions.get("window").width;
 
 // =====================

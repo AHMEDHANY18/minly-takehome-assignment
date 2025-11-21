@@ -16,7 +16,7 @@ import * as SecureStore from "expo-secure-store";
 import { Video, ResizeMode } from "expo-av";
 import { router } from "expo-router";
 
-const API_URL = "http://192.168.1.7:4000/v1";
+const API_URL = "http://192.168.1.40:4000/v1";
 const { width: SCREEN_WIDTH } = Dimensions.get("window");
 const GAP = 12;
 const TILE_SIZE = (SCREEN_WIDTH - 16 * 2 - GAP) / 2;
