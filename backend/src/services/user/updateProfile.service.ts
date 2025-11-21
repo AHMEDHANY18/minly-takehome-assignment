@@ -26,7 +26,6 @@ export async function updateProfileService(
 
   // 2) upload avatar if file exists
   if (file) {
-    console.log("🚀 ~ file:", file)
     if (avatarUrl) {
       const key = extractS3Key(avatarUrl);
       await deleteFromS3(key);
@@ -37,7 +36,6 @@ export async function updateProfileService(
       file,
       kind: "avatar",
     });
-    console.log("🚀 ~ uploadResult:", uploadResult)
 
     avatarUrl = uploadResult.url;
   }

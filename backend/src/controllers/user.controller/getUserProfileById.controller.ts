@@ -11,7 +11,6 @@ export async function getUserProfileByIdController(
     const userId = req.params.id;
 
     const profile = await getUserProfileByIdService(userId);
-    console.log("🚀 ~ profile:", profile)
 
     return res.status(200).json({
       status: "success",
