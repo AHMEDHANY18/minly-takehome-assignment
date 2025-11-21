@@ -4,6 +4,7 @@ import { deleteFromS3 } from "../../utilities/storage/deleteFromS3";
 import { extractS3Key } from "../../utilities/storage/extractS3Key";
 
 interface UpdateProfileData {
+  email?: string;
   name?: string;
 }
 
@@ -46,6 +47,9 @@ export async function updateProfileService(
 
   if (data.name !== undefined) {
     updateData.name = data.name;
+  }
+  if (data.email !== undefined) {
+    updateData.email = data.email;
   }
 
   if (avatarUrl !== user.avatarUrl) {

@@ -72,7 +72,7 @@ export default function RegisterScreen() {
       console.log("💾 Token saved after register:", token);
       console.log("👤 User:", user);
 
-      router.replace("/(tabs)");
+      router.replace("/(tabs)/home");
     } catch (err: any) {
       console.log("❌ Register error:", err);
       setError(

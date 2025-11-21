@@ -9,11 +9,11 @@ export async function updateProfileController(
 ) {
   try {
     const userId = req.user!.id;
-    const { name } = req.body; // 👈 بس name
+    const { name,email } = req.body; // 👈 بس name
 
     const updatedUser = await updateProfileService(
       userId,
-      { name },   // 👈 شيل bio
+      { name,email },   // 👈 شيل bio
       req.file
     );
     console.log("🚀 ~ updatedUser:", updatedUser)

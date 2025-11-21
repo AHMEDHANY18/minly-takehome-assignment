@@ -68,7 +68,7 @@ export default function LoginScreen() {
       console.log("💾 Token saved:", token);
       console.log("👤 User:", user);
 
-      router.replace("/(tabs)");
+      router.replace("/(tabs)/home");
     } catch (err: any) {
       console.log("❌ Login error:", err);
       setError(
