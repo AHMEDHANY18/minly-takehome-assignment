@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   View,
   Text,
@@ -10,6 +10,9 @@ import {
   Modal,
   Pressable,
   StatusBar,
+  RefreshControl,
+  TextInput, // ✅ NEW
+  Alert,     // ✅ NEW (optional but nice)
 } from "react-native";
 import axios from "axios";
 import * as SecureStore from "expo-secure-store";
@@ -67,29 +70,39 @@ export default function ProfileScreen() {
   const [me, setMe] = useState<MeResponse | null>(null);
   const [media, setMedia] = useState<MediaItem[]>([]);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   // viewer modal
   const [viewerItem, setViewerItem] = useState<MediaItem | null>(null);
 
-  async function loadProfile() {
+  // ✅ 3-dots ActionSheet states
+  const [menuItem, setMenuItem] = useState<MediaItem | null>(null);
+  const [menuVisible, setMenuVisible] = useState(false);
+
+  // ✅ Edit modal states
+  const [editVisible, setEditVisible] = useState(false);
+  const [editTitle, setEditTitle] = useState("");
+  const [editDescription, setEditDescription] = useState("");
+  const [actionLoading, setActionLoading] = useState(false);
+
+  // support silent refresh
+  async function loadProfile(options?: { showLoader?: boolean }) {
+    const showLoader = options?.showLoader ?? true;
+
     try {
-      setLoading(true);
+      if (showLoader) setLoading(true);
       setError(null);
 
       const token = await SecureStore.getItemAsync("token");
-      console.log("🔍 TOKEN (profile):", token);
 
       const res = await axios.get(`${API_URL}/user/me`, {
         headers: {
-          Authorization: token || "", // نفس Postman عندك
-          // لو غيرت الباك لـ Bearer استخدم:
-          // Authorization: `Bearer ${token}`
+          Authorization: token || "",
         },
       });
 
       const userData: MeResponse = res.data?.data;
-      console.log("✅ /user/me response:", userData);
 
       setMe(userData);
       setMedia(userData?.media || []);
@@ -97,13 +110,132 @@ export default function ProfileScreen() {
       console.log("❌ Profile error:", err?.response?.data || err);
       setError(err?.response?.data?.message || "Failed to load profile");
     } finally {
-      setLoading(false);
+      if (showLoader) setLoading(false);
     }
   }
 
   useEffect(() => {
     loadProfile();
   }, []);
+
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true);
+    await loadProfile({ showLoader: false });
+    setRefreshing(false);
+  }, []);
+
+  // ✅ open 3-dots menu
+  const openMenu = useCallback((item: MediaItem) => {
+    setMenuItem(item);
+    setMenuVisible(true);
+  }, []);
+
+  const closeMenu = useCallback(() => {
+    setMenuVisible(false);
+  }, []);
+
+  // ✅ open edit modal
+  const openEdit = useCallback(() => {
+    if (!menuItem) return;
+    setEditTitle(menuItem.title || "");
+    setEditDescription(menuItem.description || "");
+    setEditVisible(true);
+    setMenuVisible(false);
+  }, [menuItem]);
+
+  const closeEdit = useCallback(() => {
+    setEditVisible(false);
+  }, []);
+
+  // ✅ call PATCH /media/:id
+  const saveEdit = useCallback(async () => {
+    if (!menuItem) return;
+
+    try {
+      setActionLoading(true);
+      const token = await SecureStore.getItemAsync("token");
+
+      const payload = {
+        title: editTitle.trim() || null,
+        description: editDescription.trim() || null,
+      };
+
+      await axios.patch(`${API_URL}/media/${menuItem.id}`, payload, {
+        headers: { Authorization: token || "" },
+      });
+
+      // update local state
+      setMedia((prev) =>
+        prev.map((m) =>
+          m.id === menuItem.id
+            ? { ...m, title: payload.title, description: payload.description }
+            : m
+        )
+      );
+
+      // if viewer open on same item update it too
+      setViewerItem((prev) =>
+        prev?.id === menuItem.id
+          ? { ...prev, title: payload.title, description: payload.description }
+          : prev
+      );
+
+      setEditVisible(false);
+    } catch (err: any) {
+      console.log("❌ Edit error:", err?.response?.data || err);
+      Alert.alert("Error", err?.response?.data?.message || "Failed to update media");
+    } finally {
+      setActionLoading(false);
+    }
+  }, [menuItem, editTitle, editDescription]);
+
+  // ✅ call DELETE /media/:id
+  const confirmDelete = useCallback(() => {
+    if (!menuItem) return;
+
+    Alert.alert(
+      "Delete media?",
+      "Are you sure you want to delete this media?",
+      [
+        { text: "Cancel", style: "cancel" },
+        { text: "Delete", style: "destructive", onPress: deleteMedia },
+      ]
+    );
+  }, [menuItem]);
+
+  const deleteMedia = useCallback(async () => {
+    if (!menuItem) return;
+
+    try {
+      setActionLoading(true);
+      const token = await SecureStore.getItemAsync("token");
+
+      await axios.delete(`${API_URL}/media/${menuItem.id}`, {
+        headers: { Authorization: token || "" },
+      });
+
+      // remove locally
+      setMedia((prev) => prev.filter((m) => m.id !== menuItem.id));
+
+      // update me.mediaCount
+      setMe((prev) =>
+        prev
+          ? { ...prev, mediaCount: Math.max(0, prev.mediaCount - 1) }
+          : prev
+      );
+
+      // close viewer if open on same item
+      setViewerItem((prev) => (prev?.id === menuItem.id ? null : prev));
+
+      setMenuVisible(false);
+      setMenuItem(null);
+    } catch (err: any) {
+      console.log("❌ Delete error:", err?.response?.data || err);
+      Alert.alert("Error", err?.response?.data?.message || "Failed to delete media");
+    } finally {
+      setActionLoading(false);
+    }
+  }, [menuItem]);
 
   const header = useMemo(() => {
     if (!me) return null;
@@ -152,7 +284,13 @@ export default function ProfileScreen() {
                   marginBottom: 8,
                 }}
               >
-                <Text style={{ fontSize: 28, fontWeight: "800", color: "#6d28d9" }}>
+                <Text
+                  style={{
+                    fontSize: 28,
+                    fontWeight: "800",
+                    color: "#6d28d9",
+                  }}
+                >
                   {initials}
                 </Text>
               </View>
@@ -204,7 +342,9 @@ export default function ProfileScreen() {
             shadowOffset: { width: 0, height: 3 },
           }}
         >
-          <Text style={{ color: "white", fontWeight: "700" }}>Edit Profile</Text>
+          <Text style={{ color: "white", fontWeight: "700" }}>
+            Edit Profile
+          </Text>
         </TouchableOpacity>
 
         {/* Section title */}
@@ -222,7 +362,13 @@ export default function ProfileScreen() {
 
   if (loading) {
     return (
-      <View style={{ flex: 1, backgroundColor: "#f7f6f8", justifyContent: "center" }}>
+      <View
+        style={{
+          flex: 1,
+          backgroundColor: "#f7f6f8",
+          justifyContent: "center",
+        }}
+      >
         <ActivityIndicator size="large" color="#ad2bee" />
       </View>
     );
@@ -244,18 +390,20 @@ export default function ProfileScreen() {
         </Text>
 
         <TouchableOpacity
-  onPress={() => router.push("/profile/edit")}
-  style={{
-    marginTop: 10,
-    alignSelf: "center",
-    backgroundColor: "#ad2bee",
-    paddingHorizontal: 18,
-    paddingVertical: 8,
-    borderRadius: 999,
-  }}
->
-  <Text style={{ color: "white", fontWeight: "700" }}>Edit Profile</Text>
-</TouchableOpacity>
+          onPress={() => router.push("/profile/edit")}
+          style={{
+            marginTop: 10,
+            alignSelf: "center",
+            backgroundColor: "#ad2bee",
+            paddingHorizontal: 18,
+            paddingVertical: 8,
+            borderRadius: 999,
+          }}
+        >
+          <Text style={{ color: "white", fontWeight: "700" }}>
+            Edit Profile
+          </Text>
+        </TouchableOpacity>
       </View>
     );
   }
@@ -269,16 +417,22 @@ export default function ProfileScreen() {
         numColumns={2}
         keyExtractor={(item) => item.id}
         ListHeaderComponent={header}
-        contentContainerStyle={{
-          paddingBottom: 80,
-        }}
-        columnWrapperStyle={{
-          paddingHorizontal: 16,
-          gap: GAP,
-        }}
+        contentContainerStyle={{ paddingBottom: 80 }}
+        columnWrapperStyle={{ paddingHorizontal: 16, gap: GAP }}
         renderItem={({ item }) => (
-          <MediaTile item={item} onPress={() => setViewerItem(item)} />
+          <MediaTile
+            item={item}
+            onPress={() => setViewerItem(item)}
+            onOpenMenu={() => openMenu(item)}
+          />
         )}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            tintColor="#ad2bee"
+          />
+        }
         ListEmptyComponent={
           <View
             style={{
@@ -292,7 +446,13 @@ export default function ProfileScreen() {
               borderColor: "#f1f1f4",
             }}
           >
-            <Text style={{ fontWeight: "800", color: "#111827", marginBottom: 4 }}>
+            <Text
+              style={{
+                fontWeight: "800",
+                color: "#111827",
+                marginBottom: 4,
+              }}
+            >
               No uploads yet
             </Text>
             <Text style={{ color: "#6b7280", fontSize: 12 }}>
@@ -302,6 +462,153 @@ export default function ProfileScreen() {
         }
       />
 
+      {/* ✅ Action Sheet Modal (3 dots menu) */}
+      <Modal
+        visible={menuVisible}
+        transparent
+        animationType="fade"
+        onRequestClose={closeMenu}
+      >
+        <Pressable
+          onPress={closeMenu}
+          style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.35)" }}
+        >
+          <Pressable
+            onPress={() => {}}
+            style={{
+              position: "absolute",
+              bottom: 0,
+              left: 0,
+              right: 0,
+              backgroundColor: "white",
+              padding: 16,
+              borderTopLeftRadius: 18,
+              borderTopRightRadius: 18,
+            }}
+          >
+            <Text style={{ fontWeight: "800", fontSize: 16, marginBottom: 10 }}>
+              Media actions
+            </Text>
+
+            <ActionButton label="Edit title & description" onPress={openEdit} />
+            <ActionButton
+              label="Delete media"
+              onPress={confirmDelete}
+              destructive
+            />
+            <ActionButton label="Cancel" onPress={closeMenu} muted />
+          </Pressable>
+        </Pressable>
+      </Modal>
+
+      {/* ✅ Edit Modal */}
+      <Modal
+        visible={editVisible}
+        transparent
+        animationType="slide"
+        onRequestClose={closeEdit}
+      >
+        <Pressable
+          onPress={closeEdit}
+          style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.4)", justifyContent: "center", padding: 16 }}
+        >
+          <Pressable
+            onPress={() => {}}
+            style={{
+              backgroundColor: "white",
+              borderRadius: 18,
+              padding: 16,
+            }}
+          >
+            <Text style={{ fontSize: 16, fontWeight: "900", marginBottom: 12 }}>
+              Edit media
+            </Text>
+
+            <Text style={{ fontSize: 12, color: "#6b7280", marginBottom: 6 }}>
+              Title
+            </Text>
+            <TextInput
+              value={editTitle}
+              onChangeText={setEditTitle}
+              placeholder="Enter title..."
+              style={{
+                borderWidth: 1,
+                borderColor: "#eee",
+                borderRadius: 12,
+                paddingHorizontal: 12,
+                paddingVertical: 10,
+                marginBottom: 12,
+                fontSize: 14,
+              }}
+            />
+
+            <Text style={{ fontSize: 12, color: "#6b7280", marginBottom: 6 }}>
+              Description
+            </Text>
+            <TextInput
+              value={editDescription}
+              onChangeText={setEditDescription}
+              placeholder="Enter description..."
+              multiline
+              style={{
+                borderWidth: 1,
+                borderColor: "#eee",
+                borderRadius: 12,
+                paddingHorizontal: 12,
+                paddingVertical: 10,
+                minHeight: 90,
+                fontSize: 14,
+                textAlignVertical: "top",
+              }}
+            />
+
+            <View
+              style={{
+                flexDirection: "row",
+                gap: 8,
+                marginTop: 12,
+              }}
+            >
+              <TouchableOpacity
+                onPress={closeEdit}
+                style={{
+                  flex: 1,
+                  paddingVertical: 12,
+                  borderRadius: 12,
+                  backgroundColor: "#f3f4f6",
+                  alignItems: "center",
+                }}
+                disabled={actionLoading}
+              >
+                <Text style={{ fontWeight: "800", color: "#111827" }}>
+                  Cancel
+                </Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                onPress={saveEdit}
+                style={{
+                  flex: 1,
+                  paddingVertical: 12,
+                  borderRadius: 12,
+                  backgroundColor: "#ad2bee",
+                  alignItems: "center",
+                }}
+                disabled={actionLoading}
+              >
+                {actionLoading ? (
+                  <ActivityIndicator color="white" />
+                ) : (
+                  <Text style={{ fontWeight: "800", color: "white" }}>
+                    Save
+                  </Text>
+                )}
+              </TouchableOpacity>
+            </View>
+          </Pressable>
+        </Pressable>
+      </Modal>
+
       {/* Viewer Modal */}
       <Modal
         visible={!!viewerItem}
@@ -310,7 +617,6 @@ export default function ProfileScreen() {
         onRequestClose={() => setViewerItem(null)}
       >
         <View style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.9)" }}>
-          {/* close */}
           <Pressable
             onPress={() => setViewerItem(null)}
             style={{
@@ -362,7 +668,6 @@ export default function ProfileScreen() {
               />
             ) : null}
 
-            {/* meta */}
             {viewerItem && (
               <View style={{ marginTop: 12, paddingHorizontal: 4 }}>
                 {!!viewerItem.title && (
@@ -380,11 +685,62 @@ export default function ProfileScreen() {
           </View>
         </View>
       </Modal>
+
+      {/* small loading overlay for delete */}
+      <Modal visible={actionLoading && menuVisible} transparent animationType="none">
+        <View
+          style={{
+            flex: 1,
+            backgroundColor: "rgba(0,0,0,0.35)",
+            justifyContent: "center",
+            alignItems: "center",
+          }}
+        >
+          <ActivityIndicator size="large" color="#fff" />
+        </View>
+      </Modal>
     </View>
   );
 }
 
 // -------- small components --------
+
+function ActionButton({
+  label,
+  onPress,
+  destructive,
+  muted,
+}: {
+  label: string;
+  onPress: () => void;
+  destructive?: boolean;
+  muted?: boolean;
+}) {
+  return (
+    <TouchableOpacity
+      onPress={onPress}
+      style={{
+        paddingVertical: 12,
+        borderRadius: 12,
+        marginBottom: 8,
+        backgroundColor: muted ? "#f3f4f6" : "#fafafa",
+        borderWidth: 1,
+        borderColor: "#eee",
+        alignItems: "center",
+      }}
+      activeOpacity={0.85}
+    >
+      <Text
+        style={{
+          fontWeight: "800",
+          color: destructive ? "#ef4444" : "#111827",
+        }}
+      >
+        {label}
+      </Text>
+    </TouchableOpacity>
+  );
+}
 
 function StatBox({ label, value }: { label: string; value: number }) {
   return (
@@ -403,14 +759,22 @@ function Divider() {
   return <View style={{ width: 1, backgroundColor: "#e5e7eb" }} />;
 }
 
-function MediaTile({ item, onPress }: { item: MediaItem; onPress: () => void }) {
+function MediaTile({
+  item,
+  onPress,
+  onOpenMenu,
+}: {
+  item: MediaItem;
+  onPress: () => void;
+  onOpenMenu: () => void;
+}) {
   const video = isVideoType(item.type);
   const uri = item.thumbnailUrl || item.url;
 
   return (
     <TouchableOpacity
       onPress={onPress}
-      activeOpacity={0.85}
+      activeOpacity={0.9}
       style={{
         width: TILE_SIZE,
         height: TILE_SIZE,
@@ -430,6 +794,27 @@ function MediaTile({ item, onPress }: { item: MediaItem; onPress: () => void }) 
         style={{ width: "100%", height: "100%" }}
         resizeMode="cover"
       />
+
+      {/* ✅ 3 dots button */}
+      <TouchableOpacity
+        onPress={onOpenMenu}
+        activeOpacity={0.8}
+        style={{
+          position: "absolute",
+          top: 8,
+          right: 8,
+          backgroundColor: "rgba(0,0,0,0.45)",
+          width: 28,
+          height: 28,
+          borderRadius: 999,
+          alignItems: "center",
+          justifyContent: "center",
+        }}
+      >
+        <Text style={{ color: "white", fontSize: 16, fontWeight: "900" }}>
+          ⋯
+        </Text>
+      </TouchableOpacity>
 
       {video && (
         <View
