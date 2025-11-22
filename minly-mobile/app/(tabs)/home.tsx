@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from "react";
+import React, { useEffect, useState, useCallback } from "react";
 import {
   View,
   Text,
@@ -12,17 +12,12 @@ import {
 import MaskedView from "@react-native-masked-view/masked-view";
 import { LinearGradient } from "expo-linear-gradient";
 import { ResizeMode, Video } from "expo-av";
-import axios from "axios";
-import * as SecureStore from "expo-secure-store";
-import { router } from "expo-router"; // ✅ NEW
+import { router } from "expo-router";
+import { MediaAPI } from "../../api/media.api";
+import type { MediaItem } from "../../types/media";
 
-// const API_URL = "http://192.168.1.40:4000/v1";
-const API_URL = "https://minly-takehome-assignment.onrender.com/v1";
 const screenWidth = Dimensions.get("window").width;
 
-// =====================
-// Helpers
-// =====================
 function formatTimeAgo(dateStr: string) {
   const date = new Date(dateStr);
   const diffMs = Date.now() - date.getTime();
@@ -43,10 +38,13 @@ function formatLikes(n: number) {
   return (n / 1_000_000).toFixed(1).replace(/\.0$/, "") + "M";
 }
 
-// =====================
-// Media Card
-// =====================
-function MediaCard({ item, onToggleLike }: any) {
+const MediaCard = React.memo(function MediaCard({
+  item,
+  onToggleLike,
+}: {
+  item: MediaItem;
+  onToggleLike: (item: MediaItem) => void;
+}) {
   const isVideo = item.type === "VIDEO" || item.type === "video";
   const imageUrl = item.thumbnailUrl || item.url;
 
@@ -56,12 +54,11 @@ function MediaCard({ item, onToggleLike }: any) {
       item.uploader?.name || "User"
     )}`;
 
-  // ✅ NEW: go to user profile
-  function goToProfile() {
+  const goToProfile = useCallback(() => {
     const userId = item.uploader?.id;
     if (!userId) return;
     router.push(`/profile/${userId}`);
-  }
+  }, [item.uploader?.id]);
 
   return (
     <View
@@ -76,7 +73,6 @@ function MediaCard({ item, onToggleLike }: any) {
         shadowRadius: 8,
       }}
     >
-      {/* ✅ Header clickable */}
       <TouchableOpacity
         onPress={goToProfile}
         activeOpacity={0.8}
@@ -102,7 +98,6 @@ function MediaCard({ item, onToggleLike }: any) {
         </View>
       </TouchableOpacity>
 
-      {/* Media */}
       {isVideo ? (
         <Video
           source={{ uri: item.url }}
@@ -126,7 +121,6 @@ function MediaCard({ item, onToggleLike }: any) {
         />
       )}
 
-      {/* Content */}
       <View style={{ padding: 14 }}>
         <Text style={{ fontWeight: "bold", fontSize: 16, marginBottom: 4 }}>
           {item.title || "Untitled media"}
@@ -138,7 +132,6 @@ function MediaCard({ item, onToggleLike }: any) {
           </Text>
         )}
 
-        {/* Likes */}
         <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
           <TouchableOpacity onPress={() => onToggleLike(item)}>
             <Text
@@ -147,7 +140,7 @@ function MediaCard({ item, onToggleLike }: any) {
                 color: item.isLikedByCurrentUser ? "#e11d48" : "#7c7c8a",
               }}
             >
-              {item.isLikedByCurrentUser ? "❤️" : "🤍"}
+              {item.isLikedByCurrentUser ? "❤️" : "♡"}
             </Text>
           </TouchableOpacity>
 
@@ -158,27 +151,20 @@ function MediaCard({ item, onToggleLike }: any) {
       </View>
     </View>
   );
-}
+});
 
-// =====================
-// Screen
-// =====================
 export default function FeedScreen() {
-  const [items, setItems] = useState<any[]>([]);
+  const [items, setItems] = useState<MediaItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
 
   const loadFeed = useCallback(async () => {
     try {
-      const res = await axios.get(`${API_URL}/media`, {
-        params: { page: 1, limit: 20 },
-      });
-
-      const data = res.data?.data || [];
+      const res = await MediaAPI.getFeed(1, 20);
+      const data = res.data?.data || res.data?.items || [];
       setItems(data);
     } catch (err: any) {
-      console.log("❌ Feed error:", err?.message);
-      console.log("❌ Feed error data:", err?.response?.data);
+      console.log("Feed error:", err?.message, err?.response?.data);
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -189,47 +175,42 @@ export default function FeedScreen() {
     loadFeed();
   }, [loadFeed]);
 
-  async function toggleLike(item: any) {
-    // optimistic
-    setItems((prev) =>
-      prev.map((x) =>
-        x.id === item.id
-          ? {
-              ...x,
-              isLikedByCurrentUser: !x.isLikedByCurrentUser,
-              likesCount: x.likesCount + (x.isLikedByCurrentUser ? -1 : 1),
-            }
-          : x
-      )
-    );
-
-    try {
-      const token = await SecureStore.getItemAsync("token");
-
-      const res = await axios.post(
-        `${API_URL}/like/${item.id}`,
-        {},
-        {
-          headers: {
-            Authorization: token || "",
-          },
-        }
+  const onToggleLike = useCallback(
+    async (item: MediaItem) => {
+      setItems((prev) =>
+        prev.map((x) =>
+          x.id === item.id
+            ? {
+                ...x,
+                isLikedByCurrentUser: !x.isLikedByCurrentUser,
+                likesCount: x.likesCount + (x.isLikedByCurrentUser ? -1 : 1),
+              }
+            : x
+        )
       );
 
-      console.log("✅ Like response:", res.data);
-    } catch (err: any) {
-      console.log("❌ Like error status:", err?.response?.status);
-      console.log("❌ Like error data:", err?.response?.data || err);
+      try {
+        await MediaAPI.toggleLike(item.id);
+      } catch (err) {
+        console.log("Like error:", err?.response?.data || err);
+        loadFeed();
+      }
+    },
+    [loadFeed]
+  );
 
-      // rollback
-      loadFeed();
-    }
-  }
+  const renderItem = useCallback(
+    ({ item }: { item: MediaItem }) => (
+      <MediaCard item={item} onToggleLike={onToggleLike} />
+    ),
+    [onToggleLike]
+  );
+
+  const keyExtractor = useCallback((x: MediaItem) => x.id, []);
 
   if (loading) {
     return (
       <View style={{ flex: 1, backgroundColor: "#f7f6f8", paddingTop: 40 }}>
-        {/* 🔥 Gradient Title */}
         <MaskedView
           maskElement={
             <Text
@@ -245,7 +226,7 @@ export default function FeedScreen() {
           }
         >
           <LinearGradient
-            colors={["#9b5cff", "#d471ff"]} // purple → pink
+            colors={["#9b5cff", "#d471ff"]}
             start={{ x: 0, y: 0 }}
             end={{ x: 1, y: 1 }}
           >
@@ -255,7 +236,7 @@ export default function FeedScreen() {
                 fontWeight: "bold",
                 paddingHorizontal: 16,
                 marginBottom: 20,
-                opacity: 0, // مهم علشان يبان الجريدينت
+                opacity: 0,
               }}
             >
               Global Feed
@@ -263,7 +244,6 @@ export default function FeedScreen() {
           </LinearGradient>
         </MaskedView>
 
-        {/* Loader */}
         <ActivityIndicator
           size="large"
           color="#ad2bee"
@@ -275,59 +255,54 @@ export default function FeedScreen() {
 
   return (
     <View style={{ flex: 1, backgroundColor: "#f7f6f8", paddingTop: 40 }}>
-{/* Header */}
-<View style={{ paddingHorizontal: 16, marginBottom: 12 }}>
-  {/* Gradient Title */}
-  <MaskedView
-    maskElement={
-      <Text
-        style={{
-          fontSize: 28,
-          fontWeight: "bold",
-        }}
-      >
-        Global Feed
-      </Text>
-    }
-  >
-    <LinearGradient
-      colors={["#9b5cff", "#d471ff"]} // purple → pink
-      start={{ x: 0, y: 0 }}
-      end={{ x: 1, y: 1 }}
-    >
-      <Text
-        style={{
-          fontSize: 28,
-          fontWeight: "bold",
-          opacity: 0, // مهم علشان الماسك
-        }}
-      >
-        Global Feed
-      </Text>
-    </LinearGradient>
-  </MaskedView>
+      <View style={{ paddingHorizontal: 16, marginBottom: 12 }}>
+        <MaskedView
+          maskElement={
+            <Text
+              style={{
+                fontSize: 28,
+                fontWeight: "bold",
+              }}
+            >
+              Global Feed
+            </Text>
+          }
+        >
+          <LinearGradient
+            colors={["#9b5cff", "#d471ff"]}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+          >
+            <Text
+              style={{
+                fontSize: 28,
+                fontWeight: "bold",
+                opacity: 0,
+              }}
+            >
+              Global Feed
+            </Text>
+          </LinearGradient>
+        </MaskedView>
 
-  {/* 🔥 Gradient Line Under Title */}
-  <LinearGradient
-    colors={["#9b5cff", "#d471ff", "#ff7ad9"]}
-    start={{ x: 0, y: 0 }}
-    end={{ x: 1, y: 0 }}
-    style={{
-      height: 4,
-      borderRadius: 999,
-      marginTop: 6,
-      width: 140, // طول الخط (غيره براحتك)
-      opacity: 0.9,
-    }}
-  />
-</View>
+        <LinearGradient
+          colors={["#9b5cff", "#d471ff", "#ff7ad9"]}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 0 }}
+          style={{
+            height: 4,
+            borderRadius: 999,
+            marginTop: 6,
+            width: 140,
+            opacity: 0.9,
+          }}
+        />
+      </View>
 
       <FlatList
         data={items}
-        renderItem={({ item }) => (
-          <MediaCard item={item} onToggleLike={toggleLike} />
-        )}
-        keyExtractor={(x) => x.id}
+        renderItem={renderItem}
+        keyExtractor={keyExtractor}
         showsVerticalScrollIndicator={false}
         contentContainerStyle={{ paddingBottom: 50, paddingHorizontal: 16 }}
         refreshControl={
@@ -337,8 +312,13 @@ export default function FeedScreen() {
               setRefreshing(true);
               loadFeed();
             }}
+            tintColor="#ad2bee"
           />
         }
+        removeClippedSubviews
+        initialNumToRender={4}
+        maxToRenderPerBatch={6}
+        windowSize={5}
       />
     </View>
   );

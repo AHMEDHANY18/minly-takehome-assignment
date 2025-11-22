@@ -1,5 +1,5 @@
 import { useLocalSearchParams } from "expo-router";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import {
   View,
   Text,
@@ -11,55 +11,39 @@ import {
   Modal,
   Pressable,
 } from "react-native";
-import axios from "axios";
 import { Video, ResizeMode } from "expo-av";
+import { UserAPI } from "../../api/user.api";
+import type { MediaItem } from "../../types/media";
+import type { MeData } from "../../api/user.api";
 
-const API_URL = "https://minly-takehome-assignment.onrender.com/v1";
 const { width: SCREEN_WIDTH } = Dimensions.get("window");
 const GAP = 12;
 const TILE_SIZE = (SCREEN_WIDTH - 16 * 2 - GAP) / 2;
 
-type User = {
-  id: string;
-  name: string;
-  avatarUrl?: string | null;
-  createdAt: string;
-  mediaCount: number;
-  totalLikesReceived: number;
-  totalLikesGiven: number;
-  media?: MediaItem[];
-};
-
-type MediaItem = {
-  id: string;
-  url: string;
-  thumbnailUrl?: string;
-  type: string;
-  [key: string]: any;
-};
-
 export default function UserProfileScreen() {
-  const { id } = useLocalSearchParams<{ id: string }>(); // ← userId
-  const [user, setUser] = useState<User | null>(null);
+  const { id } = useLocalSearchParams<{ id: string }>();
+  const [user, setUser] = useState<MeData | null>(null);
   const [media, setMedia] = useState<MediaItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [viewerItem, setViewerItem] = useState<MediaItem | null>(null);
 
-  async function loadProfile() {
+  const loadProfile = useCallback(async () => {
+    if (!id) return;
     try {
-      const res = await axios.get(`${API_URL}/user/${id}`);
-      setUser(res.data.data as User);
-      setMedia((res.data.data.media ?? []) as MediaItem[]);
+      const res = await UserAPI.getById(String(id));
+      const payload = res.data.data;
+      setUser(payload);
+      setMedia(payload.media ?? []);
     } catch (err: any) {
-      console.log("❌ user profile error:", err?.response?.data || err);
+      console.log("user profile error:", err?.response?.data || err);
     } finally {
       setLoading(false);
     }
-  }
+  }, [id]);
 
   useEffect(() => {
     loadProfile();
-  }, [id]);
+  }, [loadProfile]);
 
   if (loading) {
     return (
@@ -151,9 +135,11 @@ export default function UserProfileScreen() {
         renderItem={({ item }) => (
           <MediaTile item={item} onPress={() => setViewerItem(item)} />
         )}
+        removeClippedSubviews
+        initialNumToRender={6}
+        windowSize={5}
       />
 
-      {/* Viewer Modal */}
       <Modal visible={!!viewerItem} transparent animationType="fade">
         <Pressable
           onPress={() => setViewerItem(null)}
@@ -170,7 +156,7 @@ export default function UserProfileScreen() {
             alignItems: "center",
           }}
         >
-          <Text style={{ color: "white", fontSize: 24 }}>✕</Text>
+          <Text style={{ color: "white", fontSize: 24 }}>←</Text>
         </Pressable>
 
         <View style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.9)", justifyContent: "center" }}>
@@ -194,12 +180,7 @@ export default function UserProfileScreen() {
   );
 }
 
-type StatProps = {
-  label: string;
-  value: number;
-};
-
-function Stat({ label, value }: StatProps) {
+function Stat({ label, value }: { label: string; value: number }) {
   return (
     <View style={{ flex: 1, paddingVertical: 12, alignItems: "center" }}>
       <Text style={{ fontSize: 16, fontWeight: "900" }}>{value}</Text>
@@ -208,12 +189,7 @@ function Stat({ label, value }: StatProps) {
   );
 }
 
-type MediaTileProps = {
-  item: MediaItem;
-  onPress: () => void;
-};
-
-function MediaTile({ item, onPress }: MediaTileProps) {
+function MediaTile({ item, onPress }: { item: MediaItem; onPress: () => void }) {
   const isVideo = item.type?.toUpperCase() === "VIDEO";
 
   return (

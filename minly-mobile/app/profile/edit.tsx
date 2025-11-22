@@ -1,5 +1,5 @@
 // app/profile/edit.tsx
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import {
   View,
   Text,
@@ -12,18 +12,7 @@ import {
 } from "react-native";
 import { router } from "expo-router";
 import * as ImagePicker from "expo-image-picker";
-import { api } from "../lib/api"; // عدّل المسار لو حطيته في مكان تاني
-
-type MeResponse = {
-  status: "success";
-  data: {
-    id: string;
-    name: string;
-    email?: string | null;
-    avatarUrl?: string | null;
-    createdAt: string;
-  };
-};
+import { UserAPI, type MeData } from "../../api/user.api";
 
 export default function EditProfileScreen() {
   const [loading, setLoading] = useState(true);
@@ -35,27 +24,27 @@ export default function EditProfileScreen() {
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
   const [pickedAvatar, setPickedAvatar] = useState<any>(null);
 
-  async function loadMe() {
+  const loadMe = useCallback(async () => {
     try {
       setLoading(true);
-      const res = await api.get<MeResponse>("/user/me");
+      const res = await UserAPI.getMe();
       const me = res.data.data;
       setName(me.name || "");
       setEmail(me.email || "");
       setAvatarUrl(me.avatarUrl || null);
     } catch (err: any) {
-      console.log("❌ loadMe error:", err?.response?.data || err);
+      console.log("loadMe error:", err?.response?.data || err);
       Alert.alert("Error", "Failed to load profile");
     } finally {
       setLoading(false);
     }
-  }
+  }, []);
 
   useEffect(() => {
     loadMe();
-  }, []);
+  }, [loadMe]);
 
-  async function pickAvatar() {
+  const pickAvatar = useCallback(async () => {
     const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (!perm.granted) {
       Alert.alert("Permission needed", "Allow access to photos to change avatar.");
@@ -63,7 +52,7 @@ export default function EditProfileScreen() {
     }
 
     const res = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images, // الجديد بدل MediaTypeOptions
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
       allowsEditing: true,
       aspect: [1, 1],
       quality: 0.9,
@@ -74,9 +63,9 @@ export default function EditProfileScreen() {
       setPickedAvatar(asset);
       setAvatarUrl(asset.uri);
     }
-  }
+  }, []);
 
-  async function saveProfile() {
+  const saveProfile = useCallback(async () => {
     if (!name.trim()) {
       Alert.alert("Validation", "Name is required.");
       return;
@@ -90,12 +79,8 @@ export default function EditProfileScreen() {
       if (email.trim()) form.append("email", email.trim());
 
       if (pickedAvatar) {
-        const fileName =
-          pickedAvatar.fileName ||
-          `avatar_${Date.now()}.jpg`;
-
-        const mimeType =
-          pickedAvatar.mimeType || "image/jpeg";
+        const fileName = pickedAvatar.fileName || `avatar_${Date.now()}.jpg`;
+        const mimeType = pickedAvatar.mimeType || "image/jpeg";
 
         form.append("file", {
           uri: pickedAvatar.uri,
@@ -104,52 +89,17 @@ export default function EditProfileScreen() {
         } as any);
       }
 
-      // Debug logs
-      console.log("📦 UpdateProfile FormData:", form);
-      console.log("🖼 pickedAvatar:", pickedAvatar);
-
-      // request
-      let res;
-      try {
-        res = await api.patch("/user", form, {
-          headers: { "Content-Type": "multipart/form-data" },
-          transformRequest: (d) => d,
-        });
-      } catch (e: any) {
-        // fallback لو الباك عايز Bearer
-        if (e?.response?.status === 401) {
-          const token = (await import("expo-secure-store")).default
-            ? null
-            : null; // dummy to satisfy TS in some env
-          // هنجيب التوكين ونجرّب Bearer مرة واحدة
-          const realToken = await (await import("expo-secure-store")).getItemAsync("token");
-          if (realToken && !realToken.startsWith("Bearer ")) {
-            res = await api.patch("/user", form, {
-              headers: {
-                "Content-Type": "multipart/form-data",
-                Authorization: `Bearer ${realToken}`,
-              },
-              transformRequest: (d) => d,
-            });
-          } else {
-            throw e;
-          }
-        } else {
-          throw e;
-        }
-      }
-
-      console.log("✅ update profile response:", res?.data);
+      await UserAPI.updateMe(form);
 
       Alert.alert("Success", "Profile updated!");
-      router.back(); // يرجع لصفحة الـ profile
+      router.back();
     } catch (err: any) {
-      console.log("❌ update profile error:", err?.response?.data || err);
+      console.log("update profile error:", err?.response?.data || err);
       Alert.alert("Error", err?.response?.data?.message || "Update failed");
     } finally {
       setSaving(false);
     }
-  }
+  }, [name, email, pickedAvatar]);
 
   if (loading) {
     return (
@@ -167,7 +117,6 @@ export default function EditProfileScreen() {
         padding: 20,
       }}
     >
-      {/* Top bar */}
       <View
         style={{
           flexDirection: "row",
@@ -185,7 +134,6 @@ export default function EditProfileScreen() {
         <View style={{ width: 24 }} />
       </View>
 
-      {/* Avatar */}
       <View
         style={{
           backgroundColor: "white",
@@ -242,7 +190,6 @@ export default function EditProfileScreen() {
         </Text>
       </View>
 
-      {/* Inputs */}
       <View
         style={{
           backgroundColor: "white",
@@ -300,7 +247,6 @@ export default function EditProfileScreen() {
         </View>
       </View>
 
-      {/* Save button */}
       <TouchableOpacity
         onPress={saveProfile}
         disabled={saving}

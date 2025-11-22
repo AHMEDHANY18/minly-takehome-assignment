@@ -1,10 +1,8 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { View, Text, TextInput, Pressable, ActivityIndicator, ScrollView } from "react-native";
 import { Link, router, useLocalSearchParams } from "expo-router";
 import * as SecureStore from "expo-secure-store";
-import axios from "axios";
-
-const API_URL = "https://minly-takehome-assignment.onrender.com/v1";
+import { AuthAPI } from "../../api/auth.api";
 
 export default function RegisterScreen() {
   const params = useLocalSearchParams<{ email?: string }>();
@@ -25,7 +23,7 @@ export default function RegisterScreen() {
     if (initialEmail) setEmail(initialEmail);
   }, [initialEmail]);
 
-  async function handleRegister() {
+  const handleRegister = useCallback(async () => {
     setError(null);
 
     if (!name || !email || !password || !confirmPassword) {
@@ -41,25 +39,20 @@ export default function RegisterScreen() {
     setLoading(true);
 
     try {
-      // 1) نعمل register
-      const res = await axios.post(`${API_URL}/auth/register`, {
+      const res = await AuthAPI.register({
         name,
         email,
         password,
-        confirmPassword, // لو الباكند محتاجها
+        confirmPassword,
       });
+      const body = res.data;
 
-      const body: any = res.data;
       let token = body.token ?? body.data?.token;
       let user = body.user ?? body.data?.user;
 
-      // 2) fallback: لو الـ backend بيرجع user بس من غير token
       if (!token) {
-        const loginRes = await axios.post(`${API_URL}/auth/login`, {
-          email,
-          password,
-        });
-        const loginBody: any = loginRes.data;
+        const loginRes = await AuthAPI.login({ email, password });
+        const loginBody = loginRes.data;
         token = loginBody.token ?? loginBody.data?.token;
         user = loginBody.user ?? loginBody.data?.user;
       }
@@ -69,12 +62,12 @@ export default function RegisterScreen() {
       }
 
       await SecureStore.setItemAsync("token", token);
-      console.log("💾 Token saved after register:", token);
-      console.log("👤 User:", user);
+      console.log("Token saved after register:", token);
+      console.log("User:", user);
 
       router.replace("/(tabs)/home");
     } catch (err: any) {
-      console.log("❌ Register error:", err);
+      console.log("Register error:", err);
       setError(
         err?.response?.data?.message ||
           "Failed to sign up. Please try again."
@@ -82,7 +75,7 @@ export default function RegisterScreen() {
     } finally {
       setLoading(false);
     }
-  }
+  }, [name, email, password, confirmPassword]);
 
   return (
     <ScrollView
@@ -108,7 +101,6 @@ export default function RegisterScreen() {
           elevation: 6,
         }}
       >
-        {/* Title */}
         <Text
           style={{
             fontSize: 26,
@@ -121,7 +113,6 @@ export default function RegisterScreen() {
           Minly
         </Text>
 
-        {/* Full Name */}
         <View style={{ marginBottom: 14 }}>
           <Text
             style={{
@@ -151,7 +142,6 @@ export default function RegisterScreen() {
           />
         </View>
 
-        {/* Email */}
         <View style={{ marginBottom: 14 }}>
           <Text
             style={{
@@ -183,7 +173,6 @@ export default function RegisterScreen() {
           />
         </View>
 
-        {/* Password */}
         <View style={{ marginBottom: 14 }}>
           <Text
             style={{
@@ -227,13 +216,12 @@ export default function RegisterScreen() {
               }}
             >
               <Text style={{ fontSize: 16, color: "#9ca3af" }}>
-              {showPassword ? "👁" : "🔒"}
+                {showPassword ? "👁" : "👁️‍🗨️"}
               </Text>
             </Pressable>
           </View>
         </View>
 
-        {/* Confirm Password */}
         <View style={{ marginBottom: 8 }}>
           <Text
             style={{
@@ -277,13 +265,12 @@ export default function RegisterScreen() {
               }}
             >
               <Text style={{ fontSize: 16, color: "#9ca3af" }}>
-                {showConfirm ? "👁" : "🔒"}
+                {showConfirm ? "👁" : "👁️‍🗨️"}
               </Text>
             </Pressable>
           </View>
         </View>
 
-        {/* Error */}
         {error ? (
           <Text
             style={{
@@ -297,7 +284,6 @@ export default function RegisterScreen() {
           </Text>
         ) : null}
 
-        {/* Sign up */}
         <Pressable
           onPress={handleRegister}
           disabled={loading}
@@ -331,7 +317,6 @@ export default function RegisterScreen() {
           )}
         </Pressable>
 
-        {/* Footer */}
         <View style={{ marginTop: 18, alignItems: "center" }}>
           <Text style={{ fontSize: 11, color: "#6b7280" }}>
             Already have an account?{" "}

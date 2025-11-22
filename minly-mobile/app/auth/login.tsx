@@ -1,13 +1,10 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { View, Text, TextInput, Pressable, ActivityIndicator } from "react-native";
 import { Link, router, useLocalSearchParams } from "expo-router";
 import * as SecureStore from "expo-secure-store";
-import axios from "axios";
-
-const API_URL = "https://minly-takehome-assignment.onrender.com/v1";
+import { AuthAPI } from "../../api/auth.api";
 
 export default function LoginScreen() {
-  // لو جاي من register ومعاه email
   const params = useLocalSearchParams<{ email?: string }>();
   const initialEmail = params?.email ? String(params.email) : "";
 
@@ -22,7 +19,7 @@ export default function LoginScreen() {
     if (initialEmail) setEmail(initialEmail);
   }, [initialEmail]);
 
-  async function handleLogin() {
+  const handleLogin = useCallback(async () => {
     if (!email || !password) {
       setError("Please fill in both email and password.");
       return;
@@ -32,30 +29,15 @@ export default function LoginScreen() {
     setError(null);
 
     try {
-      console.log("▶️ Checking email...", email);
-
-      // 1) شيك الأول هل الإيميل موجود
-      const checkRes = await axios.post(`${API_URL}/auth/check-email`, { email });
-      const checkData: any = checkRes.data;
-      const exists: boolean =
-        checkData?.exists ?? checkData?.result ?? !!checkData;
+      const checkRes = await AuthAPI.checkEmail(email);
+      const exists = checkRes.data?.exists ?? false;
 
       if (!exists) {
-        // لو الإيميل مش موجود → روح على register ومعاك الإيميل
-        console.log("📩 Email not found, redirecting to register...");
         router.push({ pathname: "/auth/register", params: { email } });
         return;
       }
 
-      console.log("✅ Email exists, continue login...");
-
-      // 2) لو الإيميل موجود → Login عادي
-      const res = await axios.post(`${API_URL}/auth/login`, {
-        email,
-        password,
-      });
-
-      console.log("✅ Login Response:", res.data);
+      const res = await AuthAPI.login({ email, password });
 
       const token = res.data?.token ?? res.data?.data?.token;
       const user = res.data?.user ?? res.data?.data?.user;
@@ -65,12 +47,12 @@ export default function LoginScreen() {
       }
 
       await SecureStore.setItemAsync("token", token);
-      console.log("💾 Token saved:", token);
-      console.log("👤 User:", user);
+      console.log("Token saved:", token);
+      console.log("User:", user);
 
       router.replace("/(tabs)/home");
     } catch (err: any) {
-      console.log("❌ Login error:", err);
+      console.log("Login error:", err);
       setError(
         err?.response?.data?.message ||
           "Incorrect email or password."
@@ -78,7 +60,7 @@ export default function LoginScreen() {
     } finally {
       setLoading(false);
     }
-  }
+  }, [email, password]);
 
   return (
     <View
@@ -103,7 +85,6 @@ export default function LoginScreen() {
           elevation: 6,
         }}
       >
-        {/* Title */}
         <Text
           style={{
             fontSize: 26,
@@ -116,7 +97,6 @@ export default function LoginScreen() {
           Minly
         </Text>
 
-        {/* Email */}
         <View style={{ marginBottom: 14 }}>
           <Text
             style={{
@@ -148,7 +128,6 @@ export default function LoginScreen() {
           />
         </View>
 
-        {/* Password */}
         <View style={{ marginBottom: 8 }}>
           <Text
             style={{
@@ -177,7 +156,7 @@ export default function LoginScreen() {
                 borderColor: "#e2e8f0",
                 fontSize: 14,
                 color: "#0f172a",
-                paddingRight: 44, // مساحة للأيقونة
+                paddingRight: 44,
               }}
               placeholder="Enter your password"
               placeholderTextColor="#9ca3af"
@@ -186,7 +165,6 @@ export default function LoginScreen() {
               secureTextEntry={!showPassword}
             />
 
-            {/* Eye toggle (بسيطة بدون أي مكتبة) */}
             <Pressable
               onPress={() => setShowPassword((p) => !p)}
               style={{
@@ -198,13 +176,12 @@ export default function LoginScreen() {
               }}
             >
               <Text style={{ fontSize: 16, color: "#9ca3af" }}>
-                {showPassword ?  "👁" : "🔒"}
+                {showPassword ? "👁" : "👁️‍🗨️"}
               </Text>
             </Pressable>
           </View>
         </View>
 
-        {/* Error */}
         {error ? (
           <Text
             style={{
@@ -218,7 +195,6 @@ export default function LoginScreen() {
           </Text>
         ) : null}
 
-        {/* Login button */}
         <Pressable
           onPress={handleLogin}
           disabled={loading}
@@ -252,7 +228,6 @@ export default function LoginScreen() {
           )}
         </Pressable>
 
-        {/* Footer */}
         <View style={{ marginTop: 18, alignItems: "center" }}>
           <Text style={{ fontSize: 11, color: "#6b7280" }}>
             Don’t have an account?{" "}

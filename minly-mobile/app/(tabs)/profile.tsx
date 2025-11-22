@@ -14,37 +14,15 @@ import {
   TextInput, // ✅ NEW
   Alert,     // ✅ NEW (optional but nice)
 } from "react-native";
-import axios from "axios";
-import * as SecureStore from "expo-secure-store";
 import { Video, ResizeMode } from "expo-av";
 import { router } from "expo-router";
-
-const API_URL = "https://minly-takehome-assignment.onrender.com/v1";
+import { UserAPI } from "../../api/user.api";
+import { MediaAPI } from "../../api/media.api";
+import type { MediaItem } from "../../types/media";
+import type { MeData } from "../../api/user.api";
 const { width: SCREEN_WIDTH } = Dimensions.get("window");
 const GAP = 12;
 const TILE_SIZE = (SCREEN_WIDTH - 16 * 2 - GAP) / 2;
-
-type MediaItem = {
-  id: string;
-  url: string;
-  thumbnailUrl: string | null;
-  type: "IMAGE" | "VIDEO" | "image" | "video";
-  title: string | null;
-  description: string | null;
-  likesCount: number;
-  createdAt: string;
-};
-
-type MeResponse = {
-  id: string;
-  name: string;
-  avatarUrl: string | null;
-  mediaCount: number;
-  totalLikesReceived: number;
-  totalLikesGiven: number;
-  createdAt: string;
-  media: MediaItem[];
-};
 
 function getInitials(name?: string) {
   if (!name) return "U";
@@ -67,7 +45,7 @@ function isVideoType(t: MediaItem["type"]) {
 }
 
 export default function ProfileScreen() {
-  const [me, setMe] = useState<MeResponse | null>(null);
+  const [me, setMe] = useState<MeData | null>(null);
   const [media, setMedia] = useState<MediaItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -94,15 +72,8 @@ export default function ProfileScreen() {
       if (showLoader) setLoading(true);
       setError(null);
 
-      const token = await SecureStore.getItemAsync("token");
-
-      const res = await axios.get(`${API_URL}/user/me`, {
-        headers: {
-          Authorization: token || "",
-        },
-      });
-
-      const userData: MeResponse = res.data?.data;
+      const res = await UserAPI.getMe();
+      const userData = res.data?.data;
 
       setMe(userData);
       setMedia(userData?.media || []);
@@ -153,16 +124,12 @@ export default function ProfileScreen() {
 
     try {
       setActionLoading(true);
-      const token = await SecureStore.getItemAsync("token");
-
       const payload = {
         title: editTitle.trim() || null,
         description: editDescription.trim() || null,
       };
 
-      await axios.patch(`${API_URL}/media/${menuItem.id}`, payload, {
-        headers: { Authorization: token || "" },
-      });
+      await MediaAPI.updateMedia(menuItem.id, payload);
 
       // update local state
       setMedia((prev) =>
@@ -208,11 +175,7 @@ export default function ProfileScreen() {
 
     try {
       setActionLoading(true);
-      const token = await SecureStore.getItemAsync("token");
-
-      await axios.delete(`${API_URL}/media/${menuItem.id}`, {
-        headers: { Authorization: token || "" },
-      });
+      await MediaAPI.deleteMedia(menuItem.id);
 
       // remove locally
       setMedia((prev) => prev.filter((m) => m.id !== menuItem.id));

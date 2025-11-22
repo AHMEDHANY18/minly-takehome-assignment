@@ -1,22 +1,3 @@
-// app/lib/api.ts
-import axios from "axios";
-import * as SecureStore from "expo-secure-store";
 
-const API_URL = "https://minly-takehome-assignment.onrender.com/v1";
-
-export const api = axios.create({
-  baseURL: API_URL,
-  timeout: 20000,
-});
-
-// Auto attach token if exists
-api.interceptors.request.use(async (config) => {
-  const token = await SecureStore.getItemAsync("token");
-
-  if (token) {
-    // نفس Postman بتاعك: Authorization: <token>
-    config.headers.Authorization = token;
-  }
-
-  return config;
-});
+// Centralized API client re-export for existing imports
+export { apiClient as api } from "../../api/apiClient";
