@@ -21,6 +21,7 @@ import {
 
   export function ThemeProvider({ children }: { children: ReactNode }) {
     const [theme, setTheme] = useState<Theme>(() => {
+      if (typeof window === "undefined") return "light";
       const stored = localStorage.getItem("theme");
       return (stored as Theme) || "light";
     });

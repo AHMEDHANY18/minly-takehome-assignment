@@ -10,7 +10,7 @@ export default function MainLayout() {
       "/": "Global Feed",
       "/upload": "Upload",
       "/profile": "Profile",
-    }[pathname] || "Minly";
+    }[pathname] || (pathname.startsWith("/users/") ? "User Profile" : "Minly");
 
   const isHome = pathname === "/";
 

@@ -21,8 +21,13 @@ export default function LoginPage() {
     try {
       // 1) شيك الأول هل الإيميل موجود ولا لأ 👇
       const checkRes = await AuthAPI.checkEmail(email);
+      const payload = checkRes.data as Partial<{
+        exists: boolean;
+        result: boolean;
+        data: { exists?: boolean };
+      }>;
       const exists =
-        (checkRes.data as any).exists ?? (checkRes.data as any).result ?? checkRes.data;
+        payload.exists ?? payload.result ?? payload.data?.exists ?? false;
 
       if (!exists) {
         // لو الإيميل مش موجود → روح على صفحة التسجيل ومعاك الإيميل
@@ -32,7 +37,7 @@ export default function LoginPage() {
 
       // 2) لو الإيميل موجود فعلاً → كمّل login عادي 👇
       const res = await AuthAPI.login({ email, password });
-      const body: any = res.data;
+      const body = res.data;
 
       const token = body.token ?? body.data?.token;
       const user = body.user ?? body.data?.user;

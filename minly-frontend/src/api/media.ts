@@ -1,7 +1,7 @@
 // src/api/media.ts
+import type { AxiosResponse } from "axios";
 import { api } from "./axios";
 
-// نفس الشكل اللي ال backend بيرجعه
 export type MediaItem = {
   id: string;
   url: string;
@@ -28,44 +28,44 @@ export type MediaItem = {
   isLikedByCurrentUser?: boolean;
 };
 
+type MediaListResponse = { data?: MediaItem[]; items?: MediaItem[] };
+type ToggleLikeResponse = { status?: string };
+
 export const MediaAPI = {
   /** Global feed */
-  getFeed(page: number, limit: number) {
-    return api.get("/media", {
-      params: { page, limit },
-    });
+  getFeed(page: number, limit: number): Promise<AxiosResponse<MediaListResponse>> {
+    return api.get<MediaListResponse>("/media", { params: { page, limit } });
   },
 
-  /** ميديا يوزر معيّن (للـ Profile) */
-  getUserMedia(userId: string, page = 1, limit = 50) {
-    return api.get("/media", {
-      // لو ال backend عندك عامل فلتر بالـ uploaderId ده هيشتغل
+  /** Profile media list */
+  getUserMedia(userId: string, page = 1, limit = 50): Promise<AxiosResponse<MediaListResponse>> {
+    return api.get<MediaListResponse>("/media", {
       params: { page, limit, uploaderId: userId },
     });
   },
 
-  /** رفع صورة / فيديو من صفحة Upload */
-  uploadMedia(params: { file: File; title?: string; description?: string }) {
+  /** Upload */
+  uploadMedia(params: { file: File; title?: string; description?: string }): Promise<AxiosResponse<MediaItem>> {
     const form = new FormData();
     form.append("file", params.file);
     if (params.title) form.append("title", params.title);
     if (params.description) form.append("description", params.description);
 
-    return api.post("/media", form, {
+    return api.post<MediaItem>("/media", form, {
       headers: { "Content-Type": "multipart/form-data" },
     });
   },
 
-  /** (اختياري) لايك للأمام */
-  toggleLike(mediaId: string) {
-    return api.post(`/like/${mediaId}`);
+  /** Like toggle */
+  toggleLike(mediaId: string): Promise<AxiosResponse<ToggleLikeResponse>> {
+    return api.post<ToggleLikeResponse>(`/like/${mediaId}`);
   },
-  deleteMedia(id: string) {
+
+  deleteMedia(id: string): Promise<AxiosResponse<void>> {
     return api.delete(`/media/${id}`);
   },
 
-  updateMedia(id: string, body: { title?: string; description?: string }) {
-    return api.patch(`/media/${id}`, body);
+  updateMedia(id: string, body: { title?: string; description?: string }): Promise<AxiosResponse<MediaItem>> {
+    return api.patch<MediaItem>(`/media/${id}`, body);
   },
-
 };

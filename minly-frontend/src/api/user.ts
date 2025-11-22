@@ -1,4 +1,5 @@
 // src/api/user.ts
+import type { AxiosResponse } from "axios";
 import { api } from "./axios";
 import type { MediaItem } from "./media";
 
@@ -14,23 +15,25 @@ export type MeData = {
   media: MediaItem[];
 };
 
+type UserResponse = { status: string; data: MeData };
+
 export const UserAPI = {
-  // GET /v1/user/me  (baseURL غالبًا فيه /v1 بالفعل)
-  getMe() {
-    return api.get<{ status: string; data: MeData }>("/user/me");
+  getMe(): Promise<AxiosResponse<UserResponse>> {
+    return api.get<UserResponse>("/user/me");
   },
-  getById(userId: string) {
-    return api.get<{ status: string; data: MeData }>(`/user/${userId}`);
+  getById(userId: string): Promise<AxiosResponse<UserResponse>> {
+    return api.get<UserResponse>(`/user/${userId}`);
   },
-  // PATCH /v1/user  (update profile: name, email, file)
-  updateMe(params: { name?: string; email?: string; file?: File }) {
+  updateMe(params: { name?: string; email?: string; file?: File }): Promise<
+    AxiosResponse<UserResponse>
+  > {
     const form = new FormData();
 
     if (params.name) form.append("name", params.name);
     if (params.email) form.append("email", params.email);
     if (params.file) form.append("file", params.file);
 
-    return api.patch<{ status: string; data: MeData }>("/user", form, {
+    return api.patch<UserResponse>("/user", form, {
       headers: { "Content-Type": "multipart/form-data" },
     });
   },

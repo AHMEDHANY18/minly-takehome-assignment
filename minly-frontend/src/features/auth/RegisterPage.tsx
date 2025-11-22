@@ -8,8 +8,7 @@ export default function RegisterPage() {
   const location = useLocation();
   const setUser = useUserStore((s) => s.setUser);
 
-  // لو جاي من صفحة اللوجين وفيها ايميل
-  const initialEmail = (location.state as any)?.email ?? "";
+  const initialEmail = (location.state as { email?: string } | null)?.email ?? "";
 
   const [name, setName] = useState("");
   const [email, setEmail] = useState(initialEmail);
@@ -34,24 +33,20 @@ export default function RegisterPage() {
     setLoading(true);
 
     try {
-        const res = await AuthAPI.register({
-            name,
-            email,
-            password,
-            confirmPassword, // 👈 زوّد دي
-          });
-      const body: any = res.data;
+      const res = await AuthAPI.register({
+        name,
+        email,
+        password,
+        confirmPassword,
+      });
+      const body = res.data;
 
-      // نحاول ندعم اكتر من شكل للـ response
       const token = body.token ?? body.data?.token;
       const user = body.user ?? body.data?.user;
 
-      // لو الـ backend بيرجع بس user بدون token:
-      // ممكن نعمل بعد التسجيل مباشرة login بنفس البيانات
       if (!token || !user) {
-        // fallback: جرّب تعمل login مباشرة
         const loginRes = await AuthAPI.login({ email, password });
-        const loginBody: any = loginRes.data;
+        const loginBody = loginRes.data;
         const loginToken = loginBody.token ?? loginBody.data?.token;
         const loginUser = loginBody.user ?? loginBody.data?.user;
 
@@ -82,13 +77,11 @@ export default function RegisterPage() {
   return (
     <div className="min-h-screen bg-[#f7f5ff] flex items-center justify-center px-4">
       <div className="w-full max-w-sm bg-white rounded-3xl shadow-[0_16px_40px_rgba(15,23,42,0.1)] px-6 py-8 sm:px-8 sm:py-10">
-        {/* Title */}
         <h1 className="text-center text-2xl font-semibold text-slate-900 mb-8">
           Minly
         </h1>
 
         <form onSubmit={handleSubmit} className="space-y-4">
-          {/* Full Name */}
           <div>
             <label className="block text-xs font-medium text-slate-700 mb-1.5">
               Full Name
@@ -103,7 +96,6 @@ export default function RegisterPage() {
             />
           </div>
 
-          {/* Email */}
           <div>
             <label className="block text-xs font-medium text-slate-700 mb-1.5">
               Email Address
@@ -119,7 +111,6 @@ export default function RegisterPage() {
             />
           </div>
 
-          {/* Password */}
           <div>
             <label className="block text-xs font-medium text-slate-700 mb-1.5">
               Password
@@ -164,7 +155,6 @@ export default function RegisterPage() {
             </div>
           </div>
 
-          {/* Confirm Password */}
           <div>
             <label className="block text-xs font-medium text-slate-700 mb-1.5">
               Confirm Password
@@ -209,14 +199,12 @@ export default function RegisterPage() {
             </div>
           </div>
 
-          {/* Error message */}
           {error && (
             <p className="text-[11px] text-[#e5533d]">
               {error}
             </p>
           )}
 
-          {/* Sign up button */}
           <button
             type="submit"
             disabled={loading}
