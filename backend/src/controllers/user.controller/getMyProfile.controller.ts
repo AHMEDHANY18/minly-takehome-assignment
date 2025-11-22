@@ -9,7 +9,14 @@ export async function getMyProfileController(
   next: NextFunction
 ) {
   try {
-    const userId = req.user!.id;
+    const userId = req.user?.id;
+
+    if (!userId) {
+      return res.status(401).json({
+        status: "error",
+        message: "Unauthorized",
+      });
+    }
 
     const profile = await getMyProfileService(userId);
 

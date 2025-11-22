@@ -10,14 +10,14 @@ export async function loginService(email: string, password: string) {
 
   if (!user) {
     const err: any = new Error("Invalid email or password");
-    err.statusCode = 400;
+    err.status = 400;
     throw err;
   }
 
   const isMatch = await bcrypt.compare(password, user.passwordHash);
   if (!isMatch) {
     const err: any = new Error("Invalid email or password");
-    err.statusCode = 400;
+    err.status = 400;
     throw err;
   }
 

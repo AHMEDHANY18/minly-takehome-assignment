@@ -8,12 +8,21 @@ export async function updateProfileController(
   next: NextFunction
 ) {
   try {
-    const userId = req.user!.id;
-    const { name,email } = req.body; // 👈 بس name
+
+    const userId = req.user?.id;
+
+    if (!userId) {
+      return res.status(401).json({
+        status: "error",
+        message: "Unauthorized",
+      });
+    }
+
+    const { name, email } = req.body; // dY`^ O"O3 name
 
     const updatedUser = await updateProfileService(
       userId,
-      { name,email },   // 👈 شيل bio
+      { name, email }, // dY`^ O'USU, bio
       req.file
     );
 

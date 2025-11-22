@@ -1,7 +1,6 @@
 import { MediaRepository } from "../../repositories/media.repository";
 import { extractS3Key } from "../../utilities/storage/extractS3Key";
 import { deleteFromS3 } from "../../utilities/storage/deleteFromS3";
-import { prisma } from "../../config/prisma";
 
 export async function deleteMediaService(mediaId: string, userId: string) {
   // 1. Get basic info
@@ -20,9 +19,7 @@ export async function deleteMediaService(mediaId: string, userId: string) {
   }
 
   // 2. Count likes for that media BEFORE deleting
-  const likesCount = await prisma.like.count({
-    where: { mediaId: mediaId },
-  });
+  const likesCount = await MediaRepository.countLikesForMedia(mediaId);
 
   // 3. Delete from S3
   try {
@@ -32,16 +29,11 @@ export async function deleteMediaService(mediaId: string, userId: string) {
     console.error("S3 Delete Warning:", err);
   }
 
-  // 4. Delete Likes + Media (transaction)
-  await MediaRepository.deleteById(mediaId);
-
-  // 5. Update user stats (decrement media & likes)
-  await prisma.user.update({
-    where: { id: userId },
-    data: {
-      mediaCount: { decrement: 1 },
-      totalLikesReceived: { decrement: likesCount },
-    },
+  // 4. Delete Likes + Media + update counters in one transaction
+  await MediaRepository.deleteMediaWithCounters({
+    mediaId,
+    userId,
+    likesToDeduct: likesCount,
   });
 
   return { success: true };

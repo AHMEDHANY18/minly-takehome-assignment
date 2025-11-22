@@ -15,13 +15,30 @@ export const UserRepository = {
     });
   },
 
-  // 🆕 عشان البروفايل
+  // dY+ O1O'OU+ OU,O"OñU^U?OUSU,
   findByIdWithMedia(userId: string) {
     return prisma.user.findUnique({
       where: { id: userId },
-      include: {
+      select: {
+        id: true,
+        name: true,
+        avatarUrl: true,
+        mediaCount: true,
+        totalLikesReceived: true,
+        totalLikesGiven: true,
+        createdAt: true,
         media: {
           orderBy: { createdAt: "desc" },
+          select: {
+            id: true,
+            url: true,
+            thumbnailUrl: true,
+            type: true,
+            title: true,
+            description: true,
+            likesCount: true,
+            createdAt: true,
+          },
         },
       },
     });

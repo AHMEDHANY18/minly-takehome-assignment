@@ -21,17 +21,14 @@ export async function uploadMediaService(params: UploadMediaParams) {
     file,
   });
 
-  // 2) create media DB record
-  const createdMedia = await MediaRepository.createMedia({
+  // 2) create media DB record + increment user count atomically
+  const createdMedia = await MediaRepository.createMediaWithCounter({
     url,
     type: mediaType,
     title,
     description,
     uploaderId: userId,
   });
-
-  // 3) update user's media count
-  await MediaRepository.incrementUserMediaCount(userId);
 
   return createdMedia;
 }

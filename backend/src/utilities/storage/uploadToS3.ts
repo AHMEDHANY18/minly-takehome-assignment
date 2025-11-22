@@ -15,6 +15,10 @@ export interface UploadToS3Params {
 export async function uploadToS3(params: UploadToS3Params): Promise<{ key: string }> {
   const { key, body, contentType } = params;
 
+  if (!s3Client) {
+    throw new Error("S3 is not configured");
+  }
+
   try {
     const command = new PutObjectCommand({
       Bucket: s3Config.bucket,

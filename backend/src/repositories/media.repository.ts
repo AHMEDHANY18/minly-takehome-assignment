@@ -18,6 +18,24 @@ export const MediaRepository = {
     });
   },
 
+  async createMediaWithCounter(data: {
+    url: string;
+    type: "IMAGE" | "VIDEO";
+    title?: string;
+    description?: string;
+    uploaderId: string;
+  }) {
+    const [media] = await prisma.$transaction([
+      prisma.media.create({ data }),
+      prisma.user.update({
+        where: { id: data.uploaderId },
+        data: { mediaCount: { increment: 1 } },
+      }),
+    ]);
+
+    return media;
+  },
+
   async getMediaById(mediaId: string) {
     return prisma.media.findUnique({
       where: { id: mediaId },
@@ -59,8 +77,23 @@ export const MediaRepository = {
       skip,
       take,
       orderBy: { likesCount: "desc" },
-      include: {
-        uploader: true,
+      select: {
+        id: true,
+        url: true,
+        thumbnailUrl: true,
+        type: true,
+        title: true,
+        description: true,
+        uploaderId: true,
+        likesCount: true,
+        createdAt: true,
+        uploader: {
+          select: {
+            id: true,
+            name: true,
+            avatarUrl: true,
+          },
+        },
       },
     });
   },
@@ -72,8 +105,12 @@ export const MediaRepository = {
   async findById(id: string) {
     return prisma.media.findUnique({
       where: { id },
-      include: {
-        uploader: true,
+      select: {
+        id: true,
+        uploaderId: true,
+        likesCount: true,
+        createdAt: true,
+        updatedAt: true,
       },
     });
   },
@@ -130,5 +167,31 @@ export const MediaRepository = {
         description: true,
       },
     });
+  },
+
+  async countLikesForMedia(mediaId: string) {
+    return prisma.like.count({
+      where: { mediaId },
+    });
+  },
+
+  async deleteMediaWithCounters(params: {
+    mediaId: string;
+    userId: string;
+    likesToDeduct: number;
+  }) {
+    const { mediaId, userId, likesToDeduct } = params;
+
+    await prisma.$transaction([
+      prisma.like.deleteMany({ where: { mediaId } }),
+      prisma.media.delete({ where: { id: mediaId } }),
+      prisma.user.update({
+        where: { id: userId },
+        data: {
+          mediaCount: { decrement: 1 },
+          totalLikesReceived: { decrement: likesToDeduct },
+        },
+      }),
+    ]);
   },
 };

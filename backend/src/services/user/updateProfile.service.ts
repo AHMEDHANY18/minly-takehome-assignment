@@ -54,7 +54,21 @@ export async function updateProfileService(
     updateData.avatarUrl = avatarUrl;
   }
 
-  const updatedUser = await UserRepository.updateUser(userId, updateData);
+  if (Object.keys(updateData).length === 0) {
+    return user;
+  }
+
+  let updatedUser;
+  try {
+    updatedUser = await UserRepository.updateUser(userId, updateData);
+  } catch (error: any) {
+    if (error?.code === "P2002" || error?.meta?.target?.includes("email")) {
+      const err: any = new Error("Email already exists");
+      err.status = 400;
+      throw err;
+    }
+    throw error;
+  }
 
   return updatedUser;
 }

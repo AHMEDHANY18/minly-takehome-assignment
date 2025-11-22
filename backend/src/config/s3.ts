@@ -5,22 +5,27 @@ import logger from "./logger";
 const { AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, AWS_REGION, AWS_S3_BUCKET } =
   process.env;
 
-if (!AWS_ACCESS_KEY_ID || !AWS_SECRET_ACCESS_KEY || !AWS_REGION || !AWS_S3_BUCKET) {
-  logger.error("Missing AWS S3 environment variables");
-  throw new Error("AWS S3 environment variables are not set");
+const hasRequiredEnv =
+  !!AWS_ACCESS_KEY_ID && !!AWS_SECRET_ACCESS_KEY && !!AWS_REGION && !!AWS_S3_BUCKET;
+
+if (!hasRequiredEnv) {
+  logger.warn(
+    "Missing AWS S3 environment variables; S3 operations will fail until configured"
+  );
 }
 
-// ✅ S3 client جاهز تستخدمه في أي مكان في المشروع
-export const s3Client = new S3Client({
-  region: AWS_REGION,
-  credentials: {
-    accessKeyId: AWS_ACCESS_KEY_ID,
-    secretAccessKey: AWS_SECRET_ACCESS_KEY,
-  },
-});
+export const s3Client = hasRequiredEnv
+  ? new S3Client({
+      region: AWS_REGION,
+      credentials: {
+        accessKeyId: AWS_ACCESS_KEY_ID as string,
+        secretAccessKey: AWS_SECRET_ACCESS_KEY as string,
+      },
+    })
+  : null;
 
-// ✅ config بسيط نرجع نستخدمه في الخدمات
+// ƒo. config O"O3USOú U+OñOªO1 U+O3O¦OrO_U.UØ U?US OU,OrO_U.OO¦
 export const s3Config = {
-  bucket: AWS_S3_BUCKET,
-  region: AWS_REGION,
+  bucket: AWS_S3_BUCKET || "",
+  region: AWS_REGION || "",
 };

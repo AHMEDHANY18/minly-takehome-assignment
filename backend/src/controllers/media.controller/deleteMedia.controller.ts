@@ -11,7 +11,14 @@ export async function deleteMediaController(
     const mediaId = req.params.id;
     const userId = req.user?.id;
 
-    const result = await deleteMediaService(mediaId, userId!);
+    if (!userId) {
+      return res.status(401).json({
+        status: "error",
+        message: "Unauthorized",
+      });
+    }
+
+    await deleteMediaService(mediaId, userId);
 
     return res.status(200).json({
       status: "success",

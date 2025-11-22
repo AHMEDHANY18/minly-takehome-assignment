@@ -6,7 +6,8 @@ export function errorHandler(
   res: Response,
   next: NextFunction
 ) {
-  const status = err.status || 500;
+
+  const status = err.status || err.statusCode || 500;
 
   return res.status(status).json({
     status: "error",

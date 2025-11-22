@@ -12,6 +12,7 @@ export async function requireAuth(
 ) {
   try {
     const authHeader = req.headers.authorization;
+    console.log("🚀 ~ authHeader:", authHeader)
 
     if (!authHeader) {
       return res.status(401).json({
@@ -23,6 +24,7 @@ export async function requireAuth(
     const token = authHeader
 
     const decoded = await jwtVerify(token);
+    console.log("🚀 ~ decoded:", decoded)
 
     if (!decoded || !decoded.userId) {
       return res.status(401).json({

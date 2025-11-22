@@ -9,7 +9,14 @@ export async function updateMediaController(
 ) {
   try {
     const mediaId = req.params.id;
-    const userId = req.user!.id;
+    const userId = req.user?.id;
+
+    if (!userId) {
+      return res.status(401).json({
+        status: "error",
+        message: "Unauthorized",
+      });
+    }
 
     const { title, description } = req.body;
 
