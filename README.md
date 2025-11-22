@@ -74,7 +74,7 @@ MINLY-TAKEHOME-ASSIGNMENT/
 ![ERD Diagram](<./diagrams/ERD Digram.png>)
 
 ### Use Case
-![Use Case Diagram](<./diagrams/UseCase Digram.png>)
+![Use Case Diagram](<./diagrams/useCase Digram.png>)
 
 ### Sequence Diagrams
 **User Registration**
@@ -96,7 +96,7 @@ MINLY-TAKEHOME-ASSIGNMENT/
 ![Unlike Media Sequence](<./diagrams/Unlike Media – Sequence Diagram.png>)
 
 **View Profile**
-![View Profile Sequence](<./diagrams/View Profile – Sequnce Diagram.png>)
+![View Profile Sequence](<./diagrams/View Profile – Sequence Diagram.png>)
 
 ---
 
