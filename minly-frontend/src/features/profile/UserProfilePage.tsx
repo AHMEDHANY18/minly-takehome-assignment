@@ -19,9 +19,8 @@ export default function UserProfilePage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // ✅ NEW: selected media to open in modal
+  // ✅ Selected media for modal
   const [selected, setSelected] = useState<MediaItem | null>(null);
-
   const closeModal = useCallback(() => setSelected(null), []);
 
   useEffect(() => {
@@ -157,6 +156,10 @@ export default function UserProfilePage() {
                 {items.map((m) => {
                   const isVideo = m.type === "VIDEO" || m.type === "video";
 
+                  // ✅ لو فيديو ومفيش thumbnailUrl نعمل placeholder
+                  const thumb =
+                    m.thumbnailUrl || (!isVideo ? m.url : null);
+
                   return (
                     <button
                       key={m.id}
@@ -164,23 +167,40 @@ export default function UserProfilePage() {
                       onClick={() => setSelected(m)}
                       className="group relative aspect-square rounded-2xl overflow-hidden bg-[#e5e1f5] text-left"
                     >
-                      <img
-                        src={m.thumbnailUrl || m.url}
-                        alt={m.title || "Media"}
-                        className="h-full w-full object-cover"
-                        loading="lazy"
-                      />
+                      {thumb ? (
+                        <img
+                          src={thumb}
+                          alt={m.title || "Media"}
+                          className="h-full w-full object-cover"
+                          loading="lazy"
+                        />
+                      ) : (
+                        <div className="h-full w-full flex items-center justify-center bg-gradient-to-br from-[#8b5cf6] via-[#a78bfa] to-[#ddd6fe]">
+                          <div className="flex flex-col items-center gap-2 text-white/90">
+                            <div className="flex h-12 w-12 items-center justify-center rounded-full bg-white/20 backdrop-blur-sm">
+                              <span className="material-symbols-outlined text-[28px]">
+                                play_arrow
+                              </span>
+                            </div>
+                            <span className="text-xs font-semibold tracking-wide">
+                              Video
+                            </span>
+                          </div>
+                        </div>
+                      )}
 
+                      {/* Play overlay on hover */}
                       {isVideo && (
-                        <div className="absolute inset-0 flex items-center justify-center bg-black/20">
-                          <div className="flex h-8 w-8 items-center justify-center rounded-full bg-white/70 backdrop-blur-sm">
-                            <span className="material-symbols-outlined text-[18px]">
+                        <div className="absolute inset-0 flex items-center justify-center bg-black/10 opacity-0 group-hover:opacity-100 transition">
+                          <div className="flex h-9 w-9 items-center justify-center rounded-full bg-white/70 backdrop-blur-sm">
+                            <span className="material-symbols-outlined text-[20px]">
                               play_arrow
                             </span>
                           </div>
                         </div>
                       )}
 
+                      {/* Likes hover layer */}
                       <div className="pointer-events-none absolute inset-0 flex items-end justify-start bg-black/0 opacity-0 transition duration-150 group-hover:bg-black/40 group-hover:opacity-100">
                         <div className="m-2 flex items-center gap-1 rounded-full bg-black/60 px-2.5 py-1 text-[11px] font-semibold text-white">
                           <span className="material-symbols-outlined text-[14px]">
@@ -194,7 +214,7 @@ export default function UserProfilePage() {
                 })}
               </div>
 
-              {/* ✅ Modal Viewer for Image/Video */}
+              {/* ✅ Modal Viewer */}
               {selected && (
                 <div
                   className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4"
