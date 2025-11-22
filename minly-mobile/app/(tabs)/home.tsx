@@ -15,6 +15,7 @@ import { ResizeMode, Video } from "expo-av";
 import { router } from "expo-router";
 import { MediaAPI } from "../../api/media.api";
 import type { MediaItem } from "../../types/media";
+import { AxiosError } from "axios";
 
 const screenWidth = Dimensions.get("window").width;
 
@@ -160,7 +161,7 @@ export default function FeedScreen() {
 
   const loadFeed = useCallback(async () => {
     try {
-      const res = await MediaAPI.getFeed(1, 20);
+      const res = await MediaAPI.getFeed(1, 50);
       const data = res.data?.data || res.data?.items || [];
       setItems(data);
     } catch (err: any) {
@@ -192,9 +193,11 @@ export default function FeedScreen() {
       try {
         await MediaAPI.toggleLike(item.id);
       } catch (err) {
-        console.log("Like error:", err?.response?.data || err);
+        const error = err as AxiosError;
+        console.log("Like error:", error.response?.data || error.message);
         loadFeed();
       }
+
     },
     [loadFeed]
   );
