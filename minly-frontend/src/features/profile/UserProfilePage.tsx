@@ -44,7 +44,6 @@ export default function UserProfilePage() {
         if (active) setLoading(false);
       }
     }
-
     load();
     return () => {
       active = false;
