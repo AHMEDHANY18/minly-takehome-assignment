@@ -27,7 +27,8 @@ export default function UserProfilePage() {
       try {
         setLoading(true);
         setError(null);
-        const res = await UserAPI.getById(userId);
+        // const res = await UserAPI.getById(userId);
+        const res = await UserAPI.getById(userId!);
         const data = res.data.data;
         if (!active) return;
         setUser(data);
