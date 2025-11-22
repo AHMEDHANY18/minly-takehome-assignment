@@ -5,7 +5,7 @@ import {
   type ChangeEvent,
   type FormEvent,
 } from "react";
-import { useNavigate } from "react-router-dom";
+// import { useNavigate } from "react-router-dom";
 import type { MediaItem } from "../../api/media";
 import { MediaAPI } from "../../api/media";
 import { UserAPI, type MeData } from "../../api/user";
@@ -17,7 +17,7 @@ function formatCount(n: number) {
 }
 
 export default function ProfilePage() {
-  const navigate = useNavigate();
+  // const navigate = useNavigate();
 
   const [me, setMe] = useState<MeData | null>(null);
   const [items, setItems] = useState<MediaItem[]>([]);
