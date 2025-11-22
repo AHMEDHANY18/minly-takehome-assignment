@@ -1,159 +1,76 @@
 ## 🛰 API Overview
 
-All clients (Web + Mobile) communicate with a single monolithic backend via a REST API.
+All clients (Web + Mobile) communicate with a single REST API.
 
-- **Base URL (local dev):** `http://localhost:4000`
-- **Base URL (production):** `https://your-backend-domain.com` (to be set in env / config)
+- **Base URL (local dev):** `http://localhost:4000/v1`
+- **Base URL (production):** `https://minly-takehome-assignment.onrender.com/v1`
 
-All protected routes require:
+Protected routes require:
 
+```txt
+Authorization:<JWT_TOKEN>
 ```
-Authorization: Bearer <JWT_TOKEN>
-```
+
+Full interactive documentation:
+https://documenter.getpostman.com/view/33115360/2sB3dHVY7T
 
 ---
 
-## 🔐 Authentication APIs
+## 🔐 Auth (Why?)
+> To securely identify users and protect write operations like upload, like, and delete.
 
-### 1. `POST /auth/register`
+```md
+- `POST /auth/register`
+  Creates a new user and initializes their profile.
 
-Create a new user account.
+- `POST /auth/login`
+  Issues a JWT token used for authenticated actions.
 
-**Headers:**
-
-- `Content-Type: application/json`
-
-**Request Body:**
-
-```json
-{
-  "name": "Ahmed Hany",
-  "email": "ahmed@example.com",
-  "password": "StrongPassword123"
-}
-```
-
-**Responses:**
-
-- `201 Created` – User created successfully
-
-```json
-{
-  "user": {
-    "id": "uuid",
-    "name": "Ahmed Hany",
-    "email": "ahmed@example.com",
-    "avatarUrl": null,
-    "createdAt": "2025-11-18T10:00:00.000Z"
-  },
-  "token": "jwt-token-here"
-}
-```
-
-- `400 Bad Request`
-
-```json
-{
-  "error": {
-    "code": "VALIDATION_ERROR",
-    "message": "Email is invalid"
-  }
-}
-```
-
-- `409 Conflict`
-
-```json
-{
-  "error": {
-    "code": "EMAIL_ALREADY_EXISTS",
-    "message": "User with this email already exists"
-  }
-}
+- `GET /auth/me` (protected)
+  Returns the currently authenticated user (used by web/mobile on app load).
 ```
 
 ---
 
-### 2. `POST /auth/login`
+## 📸 Media (Why?)
+> Media is the core domain object. These endpoints power the feed, profiles, and uploads.
 
-Authenticate a user.
+```md
+- `GET /media?page=1&limit=20`
+  Public global feed sorted by newest (supports pagination for scalability).
 
-**Headers:**
+- `GET /media/:id`
+  Fetch a single media item for detail screens.
 
-- `Content-Type: application/json`
+- `POST /media` (protected, multipart/form-data)
+  Uploads image/video to S3 and stores metadata in PostgreSQL.
 
-```json
-{
-  "email": "ahmed@example.com",
-  "password": "StrongPassword123"
-}
-```
-
-**200 OK**
-
-```json
-{
-  "user": {
-    "id": "uuid",
-    "name": "Ahmed Hany",
-    "email": "ahmed@example.com",
-    "avatarUrl": null,
-    "createdAt": "2025-11-18T10:00:00.000Z"
-  },
-  "token": "jwt-token-here"
-}
+- `DELETE /media/:id` (protected, owner only)
+  Enforces ownership and safely removes media + related likes.
 ```
 
 ---
 
-## 📸 Media APIs
+## ❤️ Likes (Why?)
+> Engagement metric. Toggle design simplifies client logic and prevents duplicate likes.
 
-### 3. `GET /media`
-
-Paginated media list.
-
----
-
-### 4. `GET /media/:id`
-
-Returns media details.
-
----
-
-### 5. `POST /media`
-
-Upload media (image/video).
-
----
-
-### 6. `DELETE /media/:id`
-
-Delete user-owned media.
-
----
-
-## ❤️ Like APIs
-
-### 7. `POST /media/:id/like`
-
-### 8. `POST /media/:id/unlike`
-
----
-
-## 👤 Profile API
-
-### 9. `GET /me/profile`
-
----
-
-## 🩺 Health Check
-
-### 10. `GET /health`
-
-```json
-{
-  "status": "ok",
-  "uptime": 1234,
-  "timestamp": "2025-11-18T10:00:00.000Z"
-}
+```md
+- `POST /media/:id/like` (protected)
+  Toggle behavior: like if not liked, unlike if already liked.
 ```
+
+---
+
+## 👤 Profile (Why?)
+> Allows users to view identity, uploads, and activity — essential for social UX.
+
+```md
+- `GET /users/:id`
+  Fetches public profile information.
+
+- `GET /users/:id/media`
+  Returns media uploads for a specific user (used in profile grid).
+```
+
+---
+
