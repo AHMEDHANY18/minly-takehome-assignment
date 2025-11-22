@@ -115,7 +115,6 @@ export const MediaRepository = {
     });
   },
 
-  // ❌ Removed the duplicate (broken) deleteById from here
 
   async findByIdDetailed(id: string) {
     return prisma.media.findUnique({

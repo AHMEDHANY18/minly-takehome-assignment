@@ -18,11 +18,11 @@ export async function updateProfileController(
       });
     }
 
-    const { name, email } = req.body; // dY`^ O"O3 name
+    const { name, email } = req.body;
 
     const updatedUser = await updateProfileService(
       userId,
-      { name, email }, // dY`^ O'USU, bio
+      { name, email }, 
       req.file
     );
 

@@ -15,7 +15,6 @@ export const UserRepository = {
     });
   },
 
-  // dY+ O1O'OU+ OU,O"OñU^U?OUSU,
   findByIdWithMedia(userId: string) {
     return prisma.user.findUnique({
       where: { id: userId },

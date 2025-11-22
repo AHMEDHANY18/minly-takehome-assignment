@@ -37,4 +37,4 @@ export const mediaUpload = multer({
     fileSize: MAX_MEDIA_SIZE_BYTES,
   },
   fileFilter,
-}).single("file"); // 👈 اسم الفيلد اللي الفرونت هيبعتها
+}).single("file"); 

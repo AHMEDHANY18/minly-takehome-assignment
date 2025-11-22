@@ -10,19 +10,16 @@ import { uploadImage } from "../../middleware/upload/imageUpload";
 
 const router = Router();
 
-// ƒo. O"OñU^U?OUSU, "OœU+O"
 router.get("/me", requireAuth, getMyProfileController);
 
-// ƒo. O¦O-O_USO® OU,O"OñU^U?OUSU, (OU,U,US O1U.U,U+OUØ U,O"U, UŸO_UØ)
 router.patch(
   "/",
   requireAuth,
-  uploadImage, // Restrict avatar uploads to images
+  uploadImage,
   validate(updateProfileSchema),
   updateProfileController
 );
 
-// ƒo. O"OñU^U?OUSU, OœUS O-O_ O"OU,U? id
 router.get("/:id", validate(getUserProfileByIdSchema), getUserProfileByIdController);
 
 export default router;

@@ -24,7 +24,6 @@ export const s3Client = hasRequiredEnv
     })
   : null;
 
-// ƒo. config O"O3USOú U+OñOªO1 U+O3O¦OrO_U.UØ U?US OU,OrO_U.OO¦
 export const s3Config = {
   bucket: AWS_S3_BUCKET || "",
   region: AWS_REGION || "",
