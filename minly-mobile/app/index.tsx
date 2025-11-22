@@ -30,11 +30,9 @@ export default function Index() {
     );
   }
 
-  // لو مفيش توكن → روح للّوجين
   if (!token) {
     return <Redirect href="/auth/login" />;
   }
 
-  // لو فيه توكن → روح على التابات
   return <Redirect href="/(tabs)/home" />;
 }
