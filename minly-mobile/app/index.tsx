@@ -36,5 +36,5 @@ export default function Index() {
   }
 
   // لو فيه توكن → روح على التابات
-  return <Redirect href="/(tabs)" />;
+  return <Redirect href="/(tabs)/home" />;
 }
