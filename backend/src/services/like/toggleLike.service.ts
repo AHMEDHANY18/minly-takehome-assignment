@@ -1,11 +1,21 @@
 import { MediaRepository } from "../../repositories/media.repository";
 import { LikeRepository } from "../../repositories/like.repository";
+import { UserRepository } from "../../repositories/user.repository";
+import { error } from "console";
 
 export async function toggleLikeService(mediaId: string, userId: string) {
+
+
   if (!userId) {
     const error: any = new Error("Unauthorized");
     error.status = 401;
     throw error;
+  }
+
+  const getUser= await UserRepository.findById(userId);
+  if (!getUser) {
+    //throw
+    throw error
   }
 
   // 1) تأكد إن الميديا موجودة

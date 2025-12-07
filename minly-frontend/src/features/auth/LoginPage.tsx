@@ -4,7 +4,7 @@ import { AuthAPI } from "../../api/auth";
 import { useUserStore } from "../../store/user.store";
 
 export default function LoginPage() {
-  const navigate = useNavigate();
+  const navigate = useNavigate(); 
   const setUser = useUserStore((s) => s.setUser);
 
   const [email, setEmail] = useState("");

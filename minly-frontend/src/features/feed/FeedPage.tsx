@@ -2,6 +2,7 @@
 import { memo, useEffect, useMemo, useState, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { MediaAPI, type MediaItem } from "../../api/media";
+import InfiniteScroll from "react-infinite-scroll-component";
 
 function formatTimeAgo(dateStr: string) {
   const date = new Date(dateStr);
@@ -22,7 +23,7 @@ function formatLikes(n: number) {
   if (n < 1_000_000) return (n / 1_000).toFixed(1).replace(/\.0$/, "") + "k";
   return (n / 1_000_000).toFixed(1).replace(/\.0$/, "") + "M";
 }
-
+//بيمنع الكارت إنه يعمل re-render بدون داعي
 const MediaCard = memo(function MediaCard({ item }: { item: MediaItem }) {
   const navigate = useNavigate();
   const [liked, setLiked] = useState(item.isLikedByCurrentUser ?? false);
@@ -115,7 +116,7 @@ const MediaCard = memo(function MediaCard({ item }: { item: MediaItem }) {
             </p>
 
             {visibleDesc && (
-              <p className="mt-1 text-base text-[#7c6189] break-words">
+              <p className="mt-1 text-base text-[#7c6189] wrap-break-words">
                 {visibleDesc}
               </p>
             )}
@@ -162,49 +163,72 @@ const MediaCard = memo(function MediaCard({ item }: { item: MediaItem }) {
 
 export default function FeedPage() {
   const [items, setItems] = useState<MediaItem[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [page, setPage] = useState(1);
+  const [hasMore, setHasMore] = useState(true);
+  const [loading, setLoading] = useState(false); // تحميل الصفحات التالية
+  const [initialLoading, setInitialLoading] = useState(true); // أول لود بس
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    let active = true;
-    async function loadFeed() {
+  const LIMIT = 10;
+
+  const fetchPage = useCallback(
+    async (pageToFetch: number) => {
       try {
         setLoading(true);
         setError(null);
 
-        const res = await MediaAPI.getFeed(1, 50);
+        const res = await MediaAPI.getFeed(pageToFetch, LIMIT);
         const data = res.data.data ?? res.data.items ?? [];
-        if (active) setItems(data);
+
+        if (pageToFetch === 1) {
+          setItems(data);
+        } else {
+          setItems((prev) => [...prev, ...data]);
+        }
+
+        if (data.length < LIMIT) {
+          setHasMore(false);
+        }
       } catch (err: any) {
         console.error(err);
-        if (active) {
-          setError(
-            err?.response?.data?.message ||
-              "Failed to load feed. Please try again."
-          );
-        }
+        setError(
+          err?.response?.data?.message || "Failed to load feed. Please try again."
+        );
       } finally {
-        if (active) setLoading(false);
+        setLoading(false);
+        setInitialLoading(false);
       }
-    }
+    },
+    [LIMIT]
+  );
 
-    loadFeed();
-    return () => {
-      active = false;
-    };
-  }, []);
+  // أول لود
+  useEffect(() => {
+    fetchPage(1);
+  }, [fetchPage]);
 
-  if (loading) {
+  // الدالة اللي InfiniteScroll هيناديها
+  const loadMore = () => {
+    if (loading || !hasMore) return;
+    const nextPage = page + 1;
+    setPage(nextPage);
+    fetchPage(nextPage);
+  };
+
+  // حالة أول تحميل
+  if (initialLoading && !items.length) {
     return (
       <p className="text-center text-sm text-[#7c6189]">Loading feed...</p>
     );
   }
 
-  if (error) {
+  // حالة الخطأ
+  if (error && !items.length) {
     return <p className="text-center text-sm text-red-500">{error}</p>;
   }
 
-  if (!items.length) {
+  // مفيش ميديا خالص بعد أول تحميل
+  if (!items.length && !initialLoading) {
     return (
       <div className="flex flex-col items-center gap-6 rounded-xl bg-white p-8 shadow-[0_4px_12px_rgba(0,0,0,0.05)]">
         <div className="flex size-32 items-center justify-center rounded-full bg-[#ad2bee]/10">
@@ -223,10 +247,34 @@ export default function FeedPage() {
   }
 
   return (
-    <div className="flex flex-col gap-6">
-      {items.map((item) => (
-        <MediaCard key={item.id} item={item} />
-      ))}
-    </div>
+    <>
+      {error && (
+        <p className="mb-2 text-center text-xs text-red-500">
+          {error}
+        </p>
+      )}
+
+      <InfiniteScroll
+        dataLength={items.length}
+        next={loadMore}
+        hasMore={hasMore}
+        loader={
+          <p className="py-4 text-center text-sm text-[#7c6189]">
+            Loading more...
+          </p>
+        }
+        endMessage={
+          <p className="py-4 text-center text-xs text-[#7c6189]">
+            You&apos;ve reached the end of the feed.
+          </p>
+        }
+      >
+        <div className="flex flex-col gap-6">
+          {items.map((item) => (
+            <MediaCard key={item.id} item={item} />
+          ))}
+        </div>
+      </InfiniteScroll>
+    </>
   );
 }

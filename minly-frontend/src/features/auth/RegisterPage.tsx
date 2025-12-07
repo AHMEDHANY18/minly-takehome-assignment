@@ -5,7 +5,7 @@ import { useUserStore } from "../../store/user.store";
 
 export default function RegisterPage() {
   const navigate = useNavigate();
-  const location = useLocation();
+  const location = useLocation(); //get the email from checkEmail
   const setUser = useUserStore((s) => s.setUser);
 
   const initialEmail = (location.state as { email?: string } | null)?.email ?? "";

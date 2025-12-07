@@ -32,6 +32,7 @@ export async function requireAuth(
     }
 
     req.user = { id: decoded.userId };
+    
 
     next();
   } catch (err) {

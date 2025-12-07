@@ -23,10 +23,13 @@ export async function updateProfileService(
   }
 
   let avatarUrl = user.avatarUrl;
+  console.log("🚀 ~ avatarUrl:", avatarUrl)
 
   // 2) upload avatar if file exists
   if (file) {
+    console.log("🚀 ~ file:", file)
     if (avatarUrl) {
+      console.log("🚀 ~ avatarUrl:", avatarUrl)
       const key = extractS3Key(avatarUrl);
       await deleteFromS3(key);
     }
@@ -62,6 +65,7 @@ export async function updateProfileService(
   try {
     updatedUser = await UserRepository.updateUser(userId, updateData);
   } catch (error: any) {
+    //race
     if (error?.code === "P2002" || error?.meta?.target?.includes("email")) {
       const err: any = new Error("Email already exists");
       err.status = 400;

@@ -32,6 +32,7 @@ export async function registerService(
     });
   } catch (error: any) {
     if (
+      //Race Condition
       error instanceof Prisma.PrismaClientKnownRequestError &&
       error.code === "P2002"
     ) {

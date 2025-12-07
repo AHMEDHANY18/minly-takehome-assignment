@@ -3,6 +3,7 @@ import { MediaRepository } from "../../repositories/media.repository";
 interface GetFeedParams {
   page?: number;
   limit?: number;
+  user:string
 }
 
 export async function getFeedService(params: GetFeedParams) {
@@ -14,18 +15,31 @@ export async function getFeedService(params: GetFeedParams) {
 
   const skip = (page - 1) * limit;
 
-  const [items, total] = await Promise.all([
-    MediaRepository.findManyForFeed(skip, limit),
-    MediaRepository.countAll(),
-  ]);
+  const { user } = params;
 
-  return {
-    items,
-    pagination: {
-      page,
-      limit,
-      total,
-      totalPages: Math.ceil(total / limit),
-    },
-  };
+  if (user) {
+    // 👇 نسخة personalized فيها isLiked
+    const [rawItems, total] = await Promise.all([
+      MediaRepository.findManyForFeedWithUserLikes(skip, limit, user),
+      MediaRepository.countAll(),
+    ]);
+
+    const items = rawItems.map((item: any) => {
+      const { likes, ...rest } = item;
+      return {
+        ...rest,
+        isLiked: likes && likes.length > 0,
+      };
+    });
+
+    return {
+      items,
+      pagination: {
+        page,
+        limit,
+        total,
+        totalPages: Math.ceil(total / limit),
+      },
+    };
+  }
 }

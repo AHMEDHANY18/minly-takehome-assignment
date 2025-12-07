@@ -84,7 +84,7 @@ export default function UploadPage() {
     <div className="px-1 pb-6">
       <form onSubmit={handleSubmit} className="space-y-5">
         <div className="mt-3 bg-white rounded-3xl shadow p-4">
-          <div className="aspect-[3/4] w-full bg-[#f0edf7] rounded-3xl overflow-hidden">
+          <div className="aspect-3/4 w-full bg-[#f0edf7] rounded-3xl overflow-hidden">
             {previewUrl ? (
               isVideo ? (
                 <video
@@ -166,7 +166,7 @@ export default function UploadPage() {
           <button
             type="submit"
             disabled={submitting}
-            className="flex-1 py-2 rounded-xl bg-gradient-to-r from-[#ff3fd1] to-[#a855ff] text-white disabled:opacity-70"
+            className="flex-1 py-2 rounded-xl bg-linear-to-r from-[#ff3fd1] to-[#a855ff] text-white disabled:opacity-70"
           >
             {submitting ? "Uploading..." : "Upload"}
           </button>

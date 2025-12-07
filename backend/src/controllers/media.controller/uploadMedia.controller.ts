@@ -1,6 +1,7 @@
 import { Response, NextFunction } from "express";
 import { AuthRequest } from "../../middleware/auth/requireAuth";
 import { uploadMediaService } from "../../services/media/UploadMedia.service";
+import { UserRepository } from "../../repositories/user.repository";
 
 export async function uploadMediaController(
   req: AuthRequest,
@@ -8,8 +9,7 @@ export async function uploadMediaController(
   next: NextFunction
 ) {
   try {
-    const userId = req.user?.id; 
-
+    const userId = req.user?.id;
     if (!userId) {
       return res.status(401).json({
         status: "error",
@@ -17,6 +17,14 @@ export async function uploadMediaController(
       });
     }
 
+    const getUser = await UserRepository.findById(userId);
+    if (!getUser) {
+      return res.status(401).json({
+        status: "error",
+        message: "user not found",
+      });
+    }
+    ///////
     if (!req.file) {
       return res.status(400).json({
         status: "error",

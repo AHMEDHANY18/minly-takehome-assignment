@@ -98,6 +98,41 @@ export const MediaRepository = {
     });
   },
 
+  async findManyForFeedWithUserLikes(
+    skip: number,
+    take: number,
+    userId: string
+  ) {
+    return prisma.media.findMany({
+      skip,
+      take,
+      orderBy: { likesCount: "desc" },
+      select: {
+        id: true,
+        url: true,
+        thumbnailUrl: true,
+        type: true,
+        title: true,
+        description: true,
+        uploaderId: true,
+        likesCount: true,
+        createdAt: true,
+        uploader: {
+          select: {
+            id: true,
+            name: true,
+            avatarUrl: true,
+          },
+        },
+        // هنا الـ join / include على likes
+        likes: {
+          where: { userId }, // يرجّع likes بتاعة اليوزر ده بس
+          select: { id: true }, // مش محتاجين أكتر من كده
+        },
+      },
+    });
+  },
+
   async countAll() {
     return prisma.media.count();
   },
