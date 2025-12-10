@@ -26,7 +26,7 @@ function formatLikes(n: number) {
 //بيمنع الكارت إنه يعمل re-render بدون داعي
 const MediaCard = memo(function MediaCard({ item }: { item: MediaItem }) {
   const navigate = useNavigate();
-  const [liked, setLiked] = useState(item.isLikedByCurrentUser ?? false);
+  const [liked, setLiked] = useState(item.isLiked);
   const [likes, setLikes] = useState(item.likesCount);
   const [expanded, setExpanded] = useState(false);
 
@@ -34,7 +34,7 @@ const MediaCard = memo(function MediaCard({ item }: { item: MediaItem }) {
   const imageUrl = item.thumbnailUrl || item.url;
   const avatarUrl =
     item.uploader.avatarUrl ||
-    "https://ui-avatars.com/api/?name=" +
+    "https://ui-avatars.com/api/?name=" 
       encodeURIComponent(item.uploader.name);
 
   const description = item.description || "";

@@ -12,6 +12,7 @@ export type MediaItem = {
   likesCount: number;
   createdAt: string;
   updatedAt?: string;
+  isLiked?: boolean;
 
   uploader: {
     id: string;
