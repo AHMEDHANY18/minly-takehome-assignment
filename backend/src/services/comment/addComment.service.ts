@@ -1,3 +1,4 @@
+import { prisma } from "../../config/prisma";
 import { CommentRepository } from "../../repositories/comment.repository";
 import { MediaRepository } from "../../repositories/media.repository";
 
@@ -24,6 +25,14 @@ export async function createCommentService(
     userId,
     mediaId,
     text,
+  });
+
+  // 3) Increment Media.commentCount
+  await prisma.media.update({
+    where: { id: mediaId },
+    data: {
+      commentCount: { increment: 1 },
+    },
   });
 
   return {
