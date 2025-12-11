@@ -9,8 +9,13 @@ export const CommentRepository = {
         userId,
         mediaId,
         text,
-        parentCommentId: null, // main comment
+        parentCommentId: null,
       },
+    });
+  },
+  async getCommentById(id: string) {
+    return prisma.threadedComment.findUnique({
+      where: { id },
     });
   },
 

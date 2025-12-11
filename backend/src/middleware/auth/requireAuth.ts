@@ -1,5 +1,6 @@
 import { Request, Response, NextFunction } from "express";
 import { jwtVerify } from "../../utilities/encryption/jwtVerify";
+import { prisma } from "../../config/prisma";
 
 export interface AuthRequest extends Request {
   user?: { id: string };
@@ -30,9 +31,18 @@ export async function requireAuth(
         message: "Invalid or expired token",
       });
     }
+    const user = await prisma.user.findUnique({
+      where: { id: decoded.userId },
+    });
 
+    if (!user) {
+      return res.status(401).json({
+        status: "error",
+        message: "User does not exist",
+      });
+    }
     req.user = { id: decoded.userId };
-    
+
 
     next();
   } catch (err) {
