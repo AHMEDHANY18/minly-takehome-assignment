@@ -1,7 +1,7 @@
 import { Router } from "express";
 import { requireAuth } from "../../middleware/auth/requireAuth";
 import { validate } from "../../middleware/validate";
-import { createCommentController } from "../../controllers/comment.controller";
+import { createCommentController, deleteCommentController } from "../../controllers/comment.controller";
 
 const router = Router();
 router.post(
@@ -9,5 +9,8 @@ router.post(
     requireAuth,
     createCommentController
   );
+
+  router.delete("/:commentId", requireAuth, deleteCommentController);
+
 
 export default router;

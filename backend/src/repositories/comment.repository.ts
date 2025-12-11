@@ -13,12 +13,24 @@ export const CommentRepository = {
       },
     });
   },
-  async getCommentById(id: string) {
+  async findCommentById(commentId: string) {
     return prisma.threadedComment.findUnique({
-      where: { id },
+      where: { id: commentId },
     });
   },
 
+  async deleteComment(commentId: string) {
+    return prisma.threadedComment.delete({
+      where: { id: commentId },
+    });
+  },
+
+  // احذف كل replies المرتبطة بـ Comment رئيسي
+  async deleteReplies(parentCommentId: string) {
+    return prisma.threadedComment.deleteMany({
+      where: { parentCommentId },
+    });
+  },
   async createReply(params: { userId: string; parentCommentId: string; text: string }) {
     const { userId, parentCommentId, text } = params;
 
