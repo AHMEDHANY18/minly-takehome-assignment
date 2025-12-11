@@ -25,6 +25,8 @@ export const UserRepository = {
         mediaCount: true,
         totalLikesReceived: true,
         totalLikesGiven: true,
+        followerCount: true,
+        followingCount: true,
         createdAt: true,
         media: {
           orderBy: { createdAt: "desc" },

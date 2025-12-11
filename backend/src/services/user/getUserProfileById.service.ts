@@ -10,15 +10,5 @@ export async function getUserProfileByIdService(userId: string) {
     throw error;
   }
 
-  // منرجعش email / passwordHash
-  return {
-    id: user.id,
-    name: user.name,
-    avatarUrl: user.avatarUrl,
-    mediaCount: user.mediaCount,
-    totalLikesReceived: user.totalLikesReceived,
-    totalLikesGiven: user.totalLikesGiven,
-    createdAt: user.createdAt,
-    media: user.media, // فيها كل الصور والفيديوهات بتاعته
-  };
+  return user
 }

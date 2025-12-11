@@ -4,6 +4,7 @@ import mediaRoutes from "./media.router";
 import userRoutes from "./user.router";
 import likeRoutes from "./like.router";
 import commentRoutes from "./comment.router";
+import followRoutes from "./follow.router";
 
 const router = Router({ mergeParams: true });
 
@@ -13,5 +14,6 @@ router.use("/media", mediaRoutes);
 router.use("/user", userRoutes);
 router.use("/like", likeRoutes);
 router.use("/comment", commentRoutes);
+router.use("/follow", followRoutes);
 
 export default router;

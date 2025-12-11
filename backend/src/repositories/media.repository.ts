@@ -25,6 +25,7 @@ export const MediaRepository = {
     description?: string;
     uploaderId: string;
   }) {
+    //Weak Consistency
     const [media] = await prisma.$transaction([
       prisma.media.create({ data }),
       prisma.user.update({
