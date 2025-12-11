@@ -117,6 +117,13 @@ export const MediaRepository = {
         uploaderId: true,
         likesCount: true,
         createdAt: true,
+        commentCount: true,
+        comments: {
+          orderBy: { createdAt: "desc" },
+          include: {
+            user: { select: { id: true, name: true, avatarUrl: true } },
+          },
+        },
         uploader: {
           select: {
             id: true,
