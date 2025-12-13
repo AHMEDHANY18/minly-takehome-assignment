@@ -5,6 +5,7 @@ import userRoutes from "./user.router";
 import likeRoutes from "./like.router";
 import commentRoutes from "./comment.router";
 import followRoutes from "./follow.router";
+import bookmarkRoutes from "./bookmark.router";
 
 const router = Router({ mergeParams: true });
 
@@ -15,5 +16,6 @@ router.use("/user", userRoutes);
 router.use("/like", likeRoutes);
 router.use("/comment", commentRoutes);
 router.use("/follow", followRoutes);
+router.use("/bookmark", bookmarkRoutes);
 
 export default router;
