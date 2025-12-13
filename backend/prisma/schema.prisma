@@ -7,236 +7,33 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-//
-// =====================
-//        USER
-// =====================
-//
-
 model User {
-  id           String  @id @default(uuid())
-  name         String
-  email        String  @unique
-  passwordHash String
-  avatarUrl    String?
-  mediaCount   Int     @default(0)
-
-  followerCount  Int @default(0)
-  followingCount Int @default(0)
-
-  totalLikesReceived Int @default(0)
-  totalLikesGiven    Int @default(0)
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  media    Media[]
-  likes    Like[]
-  comments ThreadedComment[]
-
-  followers Follower[] @relation("UserFollowers")
-  following Follower[] @relation("UserFollowing")
-
-  bookmarks Bookmark[]
-  stats     UserStats?
-
-  sentMessages  Message[]                 @relation("SentMessages")
-  conversations ConversationParticipant[]
-
-  blocksInitiated Block[] @relation("UserBlocker")
-  blocksReceived  Block[] @relation("UserBlocked")
-
-  oauthAccounts OAuthAccount[]
-
-  // THIS IS IMPORTANT (Fixes your error)
-  notificationsCreated  Notification[] @relation("NotificationActor")
-  notificationsReceived Notification[] @relation("NotificationTarget")
-}
-
-//
-// =====================
-//        MEDIA
-// =====================
-//
-
-model Media {
-  id           String    @id @default(uuid())
-  url          String
-  thumbnailUrl String?
-  type         MediaType
-  title        String?
-  description  String?
-  uploaderId   String
-  likesCount   Int       @default(0)
-  commentCount Int       @default(0)   // ← NEW
-  createdAt    DateTime  @default(now())
-  updatedAt    DateTime  @updatedAt
-
-  uploader      User              @relation(fields: [uploaderId], references: [id])
-  likes         Like[]
-  comments      ThreadedComment[]
-  bookmarks     Bookmark[]
-  notifications Notification[]
-}
-
-//
-// =====================
-//        LIKE
-// =====================
-//
-
-model Like {
   id        String   @id @default(uuid())
-  userId    String
-  mediaId   String
-  createdAt DateTime @default(now())
-
-  media Media @relation(fields: [mediaId], references: [id])
-  user  User  @relation(fields: [userId], references: [id])
-
-  @@unique([userId, mediaId])
+  email                 String                    @unique
+  name                  String
+  avatarUrl             String?
+  oauthAccounts         OAuthAccount[]
+  mediaCount            Int                       @default(0)
+  followerCount         Int                       @default(0)
+  followingCount        Int                       @default(0)
+  totalLikesReceived    Int                       @default(0)
+  totalLikesGiven       Int                       @default(0)
+  createdAt             DateTime                  @default(now())
+  updatedAt             DateTime                  @updatedAt
+  blocksReceived        Block[]                   @relation("UserBlocked")
+  blocksInitiated       Block[]                   @relation("UserBlocker")
+  bookmarks             Bookmark[]
+  conversations         ConversationParticipant[]
+  following             Follower[]                @relation("UserFollowing")
+  followers             Follower[]                @relation("UserFollowers")
+  likes                 Like[]
+  media                 Media[]
+  sentMessages          Message[]                 @relation("SentMessages")
+  notificationsCreated  Notification[]            @relation("NotificationActor")
+  notificationsReceived Notification[]            @relation("NotificationTarget")
+  comments              ThreadedComment[]
+  stats                 UserStats?
 }
-
-//
-// ================================
-//     COMMENTS + REPLIES
-// ================================
-//
-
-model ThreadedComment {
-  id              String  @id @default(uuid())
-  userId          String
-  mediaId         String
-  text            String
-  parentCommentId String?
-
-  createdAt DateTime @default(now())
-
-  media Media @relation(fields: [mediaId], references: [id])
-  user  User  @relation(fields: [userId], references: [id])
-
-  parentComment ThreadedComment?  @relation("CommentReplies", fields: [parentCommentId], references: [id])
-  replies       ThreadedComment[] @relation("CommentReplies")
-
-  notifications Notification[]
-
-  @@index([mediaId])
-}
-
-//
-// =====================
-//       FOLLOWERS
-// =====================
-//
-
-model Follower {
-  id          String   @id @default(uuid())
-  followerId  String
-  followingId String
-  createdAt   DateTime @default(now())
-
-  follower  User @relation("UserFollowing", fields: [followerId], references: [id])
-  following User @relation("UserFollowers", fields: [followingId], references: [id])
-
-  notifications Notification[]
-
-  @@unique([followerId, followingId])
-  @@index([followerId])
-  @@index([followingId])
-}
-
-//
-// =====================
-//      NOTIFICATIONS
-// =====================
-//
-
-model Notification {
-  id String @id @default(uuid())
-
-  type NotificationType
-
-  actorId      String
-  targetUserId String
-
-  mediaId   String?
-  commentId String?
-  followId  String?
-
-  isRead    Boolean  @default(false)
-  createdAt DateTime @default(now())
-
-  actor      User @relation("NotificationActor", fields: [actorId], references: [id])
-  targetUser User @relation("NotificationTarget", fields: [targetUserId], references: [id])
-
-  media   Media?           @relation(fields: [mediaId], references: [id])
-  comment ThreadedComment? @relation(fields: [commentId], references: [id])
-  follow  Follower?        @relation(fields: [followId], references: [id])
-
-  @@index([targetUserId])
-  @@index([actorId])
-  @@index([mediaId])
-}
-
-//
-// =====================
-//      BOOKMARKS
-// =====================
-//
-
-model Bookmark {
-  id        String   @id @default(uuid())
-  userId    String
-  mediaId   String
-  createdAt DateTime @default(now())
-
-  user  User  @relation(fields: [userId], references: [id])
-  media Media @relation(fields: [mediaId], references: [id])
-
-  @@unique([userId, mediaId])
-}
-
-//
-// =====================
-//     USER STATS SNAPSHOT
-// =====================
-//
-
-model UserStats {
-  id        String   @id @default(uuid())
-  userId    String   @unique
-  posts     Int      @default(0)
-  followers Int      @default(0)
-  following Int      @default(0)
-  likes     Int      @default(0)
-  updatedAt DateTime @updatedAt
-
-  user User @relation(fields: [userId], references: [id])
-}
-
-//
-// =====================
-//          BLOCK
-// =====================
-//
-
-model Block {
-  id        String   @id @default(uuid())
-  blockerId String
-  blockedId String
-  createdAt DateTime @default(now())
-
-  blocker User @relation("UserBlocker", fields: [blockerId], references: [id])
-  blocked User @relation("UserBlocked", fields: [blockedId], references: [id])
-
-  @@unique([blockerId, blockedId])
-}
-
-//
-// =====================
-//      OAUTH ACCOUNTS
-// =====================
-//
 
 model OAuthAccount {
   id         String   @id @default(uuid())
@@ -248,50 +45,151 @@ model OAuthAccount {
   user User @relation(fields: [userId], references: [id])
 
   @@unique([provider, providerId])
+  @@unique([userId, provider])
+  @@index([userId])
 }
 
-//
-// =====================
-//      MESSAGING (DM)
-// =====================
-//
+model Media {
+  id            String            @id @default(uuid())
+  url           String
+  thumbnailUrl  String?
+  type          MediaType
+  title         String?
+  description   String?
+  uploaderId    String
+  likesCount    Int               @default(0)
+  commentCount  Int               @default(0)
+  createdAt     DateTime          @default(now())
+  updatedAt     DateTime          @updatedAt
+  bookmarks     Bookmark[]
+  likes         Like[]
+  uploader      User              @relation(fields: [uploaderId], references: [id])
+  notifications Notification[]
+  comments      ThreadedComment[]
+}
+
+model Like {
+  id        String   @id @default(uuid())
+  userId    String
+  mediaId   String
+  createdAt DateTime @default(now())
+  media     Media    @relation(fields: [mediaId], references: [id])
+  user      User     @relation(fields: [userId], references: [id])
+
+  @@unique([userId, mediaId])
+}
+
+model ThreadedComment {
+  id              String            @id @default(uuid())
+  userId          String
+  mediaId         String
+  text            String
+  parentCommentId String?
+  createdAt       DateTime          @default(now())
+  notifications   Notification[]
+  media           Media             @relation(fields: [mediaId], references: [id])
+  parentComment   ThreadedComment?  @relation("CommentReplies", fields: [parentCommentId], references: [id])
+  replies         ThreadedComment[] @relation("CommentReplies")
+  user            User              @relation(fields: [userId], references: [id])
+
+  @@index([mediaId])
+}
+
+model Follower {
+  id            String         @id @default(uuid())
+  followerId    String
+  followingId   String
+  createdAt     DateTime       @default(now())
+  follower      User           @relation("UserFollowing", fields: [followerId], references: [id])
+  following     User           @relation("UserFollowers", fields: [followingId], references: [id])
+  notifications Notification[]
+
+  @@unique([followerId, followingId])
+  @@index([followerId])
+  @@index([followingId])
+}
+
+model Notification {
+  id           String           @id @default(uuid())
+  type         NotificationType
+  actorId      String
+  targetUserId String
+  mediaId      String?
+  commentId    String?
+  followId     String?
+  isRead       Boolean          @default(false)
+  createdAt    DateTime         @default(now())
+  actor        User             @relation("NotificationActor", fields: [actorId], references: [id])
+  comment      ThreadedComment? @relation(fields: [commentId], references: [id])
+  follow       Follower?        @relation(fields: [followId], references: [id])
+  media        Media?           @relation(fields: [mediaId], references: [id])
+  targetUser   User             @relation("NotificationTarget", fields: [targetUserId], references: [id])
+
+  @@index([targetUserId])
+  @@index([actorId])
+  @@index([mediaId])
+}
+
+model Bookmark {
+  id        String   @id @default(uuid())
+  userId    String
+  mediaId   String
+  createdAt DateTime @default(now())
+  media     Media    @relation(fields: [mediaId], references: [id])
+  user      User     @relation(fields: [userId], references: [id])
+
+  @@unique([userId, mediaId])
+}
+
+model UserStats {
+  id        String   @id @default(uuid())
+  userId    String   @unique
+  posts     Int      @default(0)
+  followers Int      @default(0)
+  following Int      @default(0)
+  likes     Int      @default(0)
+  updatedAt DateTime @updatedAt
+  user      User     @relation(fields: [userId], references: [id])
+}
+
+model Block {
+  id        String   @id @default(uuid())
+  blockerId String
+  blockedId String
+  createdAt DateTime @default(now())
+  blocked   User     @relation("UserBlocked", fields: [blockedId], references: [id])
+  blocker   User     @relation("UserBlocker", fields: [blockerId], references: [id])
+
+  @@unique([blockerId, blockedId])
+}
 
 model Conversation {
-  id        String   @id @default(uuid())
-  createdAt DateTime @default(now())
-
+  id           String                    @id @default(uuid())
+  createdAt    DateTime                  @default(now())
   participants ConversationParticipant[]
   messages     Message[]
 }
 
 model ConversationParticipant {
-  id             String @id @default(uuid())
+  id             String       @id @default(uuid())
   conversationId String
   userId         String
-
-  conversation Conversation @relation(fields: [conversationId], references: [id])
-  user         User         @relation(fields: [userId], references: [id])
+  conversation   Conversation @relation(fields: [conversationId], references: [id])
+  user           User         @relation(fields: [userId], references: [id])
 
   @@unique([conversationId, userId])
 }
 
 model Message {
-  id             String   @id @default(uuid())
+  id             String       @id @default(uuid())
   conversationId String
   senderId       String
   text           String?
   mediaUrl       String?
-  createdAt      DateTime @default(now())
-
-  conversation Conversation @relation(fields: [conversationId], references: [id])
-  sender       User         @relation("SentMessages", fields: [senderId], references: [id])
+  createdAt      DateTime     @default(now())
+  conversation   Conversation @relation(fields: [conversationId], references: [id])
+  sender         User         @relation("SentMessages", fields: [senderId], references: [id])
 }
-
-//
-// =====================
-//        ENUMS
-// =====================
-//
 
 enum MediaType {
   IMAGE

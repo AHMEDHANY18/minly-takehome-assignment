@@ -1,10 +1,8 @@
+// src/middleware/auth/requireAuth.ts
 import { Request, Response, NextFunction } from "express";
-import { jwtVerify } from "../../utilities/encryption/jwtVerify";
-import { prisma } from "../../config/prisma";
-
-export interface AuthRequest extends Request {
-  user?: { id: string };
-}
+import { verifyCognitoToken } from "../../services/auth/cognito/cognito.verify";
+import { UserRepository } from "../../repositories/user.repository";
+import { AuthRequest } from "./types";
 
 export async function requireAuth(
   req: AuthRequest,
@@ -12,43 +10,41 @@ export async function requireAuth(
   next: NextFunction
 ) {
   try {
-    const authHeader = req.headers.authorization;
-
-    if (!authHeader) {
-      return res.status(401).json({
-        status: "error",
-        message: "You don't have permission",
-      });
+    /**
+     * 1) Read Authorization header
+     */
+    const auth = req.headers.authorization;
+    if (!auth || !auth.startsWith("Bearer ")) {
+      return res.status(401).json({ message: "Unauthorized" });
     }
 
-    const token = authHeader
+    const token = auth.split(" ")[1];
 
-    const decoded = await jwtVerify(token);
+    /**
+     * 2) Verify Cognito token (JWT)
+     */
+    const payload = await verifyCognitoToken(token);
 
-    if (!decoded || !decoded.userId) {
-      return res.status(401).json({
-        status: "error",
-        message: "Invalid or expired token",
-      });
+    if (!payload?.sub) {
+      return res.status(401).json({ message: "Invalid token payload" });
     }
-    const user = await prisma.user.findUnique({
-      where: { id: decoded.userId },
-    });
+
+    /**
+     * 3) Resolve user via OAuthAccount (cognito sub)
+     */
+    const user = await UserRepository.findByCognitoSub(payload.sub);
 
     if (!user) {
-      return res.status(401).json({
-        status: "error",
-        message: "User does not exist",
-      });
+      return res.status(401).json({ message: "User not linked" });
     }
-    req.user = { id: decoded.userId };
 
+    /**
+     * 4) Attach user to request
+     */
+    req.user = user;
 
     next();
   } catch (err) {
-    return res.status(401).json({
-      status: "error",
-      message: "Invalid or expired token",
-    });
+    return res.status(401).json({ message: "Invalid token" });
   }
 }

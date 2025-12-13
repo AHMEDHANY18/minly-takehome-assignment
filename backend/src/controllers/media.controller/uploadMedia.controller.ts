@@ -1,7 +1,6 @@
 import { Response, NextFunction } from "express";
-import { AuthRequest } from "../../middleware/auth/requireAuth";
 import { uploadMediaService } from "../../services/media/UploadMedia.service";
-import { UserRepository } from "../../repositories/user.repository";
+import { AuthRequest } from "../../middleware/auth/types";
 
 export async function uploadMediaController(
   req: AuthRequest,
@@ -9,22 +8,15 @@ export async function uploadMediaController(
   next: NextFunction
 ) {
   try {
-    const userId = req.user?.id;
-    if (!userId) {
+    const user = req.user;
+
+    if (!user) {
       return res.status(401).json({
         status: "error",
         message: "Unauthorized",
       });
     }
 
-    const getUser = await UserRepository.findById(userId);
-    if (!getUser) {
-      return res.status(401).json({
-        status: "error",
-        message: "user not found",
-      });
-    }
-    ///////
     if (!req.file) {
       return res.status(400).json({
         status: "error",
@@ -34,8 +26,15 @@ export async function uploadMediaController(
 
     const { title, description, type } = req.body;
 
+    if (!type || !["IMAGE", "VIDEO"].includes(type)) {
+      return res.status(400).json({
+        status: "error",
+        message: "Invalid media type",
+      });
+    }
+
     const media = await uploadMediaService({
-      userId,
+      userId: user.id,
       file: req.file,
       title,
       description,
