@@ -11,6 +11,8 @@ import { updateMediaSchema } from "../../validation/media/updateMedia.schema";
 import { updateMediaController } from "../../controllers/media.controller/updateMedia.controller";
 import { deleteMediaSchema } from "../../validation/media/deleteMedia.schema";
 import { createMediaSchema } from "../../validation/media/createMedia.schema";
+import { presignMediaUploadController } from "../../controllers/media.controller/presignMedia.controller";
+import { finalizeMediaUploadController } from "../../controllers/media.controller/finalizeMedia.controller";
 
 const router = Router();
 
@@ -24,4 +26,6 @@ router.delete("/:id", requireAuth, validate(deleteMediaSchema), deleteMediaContr
 
 router.patch("/:id", requireAuth, validate(updateMediaSchema), updateMediaController);
 
+router.post("/presign", requireAuth, presignMediaUploadController);
+router.post("/finalize", requireAuth, finalizeMediaUploadController);
 export default router;

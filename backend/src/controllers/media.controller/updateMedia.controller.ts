@@ -1,6 +1,6 @@
 import { Response, NextFunction } from "express";
-import { AuthRequest } from "../../middleware/auth/requireAuth";
 import { updateMediaService } from "../../services/media/updateMedia.service";
+import { AuthRequest } from "../../middleware/auth/types";
 
 export async function updateMediaController(
   req: AuthRequest,

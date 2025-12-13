@@ -1,6 +1,6 @@
 import { Request, Response, NextFunction } from "express";
 import { getFeedService } from "../../services/media/getFeed.service";
-import { AuthRequest } from "../../middleware/auth/requireAuth";
+import { AuthRequest } from "../../middleware/auth/types";
 
 export async function getFeedController(
   req: AuthRequest,
