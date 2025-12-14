@@ -125,7 +125,7 @@ model Notification {
   media        Media?           @relation(fields: [mediaId], references: [id])
   targetUser   User             @relation("NotificationTarget", fields: [targetUserId], references: [id])
 
-  @@index([targetUserId])
+  @@index([targetUserId, createdAt])
   @@index([actorId])
   @@index([mediaId])
 }

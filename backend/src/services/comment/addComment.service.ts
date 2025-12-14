@@ -1,7 +1,7 @@
 import { prisma } from "../../config/prisma";
 import { CommentRepository } from "../../repositories/comment.repository";
 import { MediaRepository } from "../../repositories/media.repository";
-
+import { NotificationRepository } from "../../repositories/notification.repository";
 
 export async function createCommentService(
   mediaId: string,
@@ -21,19 +21,31 @@ export async function createCommentService(
     throw err;
   }
 
+  // 1) Create comment
   const comment = await CommentRepository.createComment({
     userId,
     mediaId,
     text,
   });
 
-  // 3) Increment Media.commentCount
+  // 2) Increment Media.commentCount
   await prisma.media.update({
     where: { id: mediaId },
     data: {
       commentCount: { increment: 1 },
     },
   });
+
+  // 🔔 3) Create + Emit Notification (REAL-TIME)
+  if (media.uploaderId !== userId) {
+    await NotificationRepository.create({
+      type: "COMMENT",
+      actorId: userId,
+      targetUserId: media.uploaderId,
+      mediaId: mediaId,
+      commentId: comment.id,
+    });
+  }
 
   return {
     id: comment.id,

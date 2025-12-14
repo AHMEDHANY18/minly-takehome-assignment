@@ -1,7 +1,7 @@
 import { Response, NextFunction } from "express";
-import { AuthRequest } from "../../middleware/auth/requireAuth";
 import { createCommentService } from "../../services/comment/addComment.service";
 import { replyCommentService } from "../../services/comment/replyComment.service";
+import { AuthRequest } from "../../middleware/auth/types";
 
 export async function createCommentController(
   req: AuthRequest,

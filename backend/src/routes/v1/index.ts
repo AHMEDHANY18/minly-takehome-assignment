@@ -6,6 +6,7 @@ import likeRoutes from "./like.router";
 import commentRoutes from "./comment.router";
 import followRoutes from "./follow.router";
 import bookmarkRoutes from "./bookmark.router";
+import notificationRoutes from "./notification.router";
 
 const router = Router({ mergeParams: true });
 
@@ -17,5 +18,6 @@ router.use("/like", likeRoutes);
 router.use("/comment", commentRoutes);
 router.use("/follow", followRoutes);
 router.use("/bookmark", bookmarkRoutes);
+router.use("/notification", notificationRoutes);
 
 export default router;

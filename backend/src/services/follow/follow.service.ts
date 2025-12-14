@@ -1,6 +1,7 @@
 // src/services/follow/follow.service.ts
 import { FollowerRepository } from "../../repositories/follow.repository";
 import { UserRepository } from "../../repositories/user.repository";
+import { NotificationRepository } from "../../repositories/notification.repository";
 
 export async function toggleFollowService(
   followerId: string,
@@ -28,8 +29,20 @@ export async function toggleFollowService(
   // FOLLOW
   // -----------------------------
   if (!existing) {
-    await FollowerRepository.createFollow(followerId, followingId);
+    const follow = await FollowerRepository.createFollow(
+      followerId,
+      followingId
+    );
+
     await FollowerRepository.incrementCounters(followerId, followingId);
+
+    // 🔔 REAL-TIME NOTIFICATION (FOLLOW)
+    await NotificationRepository.create({
+      type: "FOLLOW",
+      actorId: followerId,
+      targetUserId: followingId,
+      followId: follow.id,
+    });
 
     return {
       isFollowing: true,
@@ -38,7 +51,7 @@ export async function toggleFollowService(
   }
 
   // -----------------------------
-  // UNFOLLOW
+  // UNFOLLOW (NO NOTIFICATION)
   // -----------------------------
   await FollowerRepository.deleteFollow(followerId, followingId);
   await FollowerRepository.decrementCounters(followerId, followingId);
