@@ -9,11 +9,13 @@ import { errorHandler } from "./middleware/errorHandler";
 import logger, { stream } from "./config/logger";
 import { config } from "./config";
 import router from "./routes";
+import cookieParser from "cookie-parser";
 
 const app = express();
 
 /* ---------------- Security ---------------- */
 
+app.use(cookieParser());
 app.use(helmet());
 app.use(cors(config.cors));
 app.use(preventHPP);

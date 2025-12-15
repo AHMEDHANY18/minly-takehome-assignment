@@ -1,50 +1,31 @@
-// src/middleware/auth/requireAuth.ts
-import { Request, Response, NextFunction } from "express";
+import { Response, NextFunction } from "express";
 import { verifyCognitoToken } from "../../services/auth/cognito/cognito.verify";
 import { UserRepository } from "../../repositories/user.repository";
 import { AuthRequest } from "./types";
 
-export async function requireAuth(
-  req: AuthRequest,
-  res: Response,
-  next: NextFunction
-) {
+export async function requireAuth(req: AuthRequest, res: Response, next: NextFunction) {
   try {
-    /**
-     * 1) Read Authorization header
-     */
+    const clientId = process.env.COGNITO_CLIENT_ID!;
+
+    // Prefer Bearer (useful for mobile), fallback to cookie (web BFF)
     const auth = req.headers.authorization;
-    if (!auth || !auth.startsWith("Bearer ")) {
-      return res.status(401).json({ message: "Unauthorized" });
-    }
+    const bearer =
+      auth && auth.startsWith("Bearer ") ? auth.split(" ")[1] : undefined;
 
-    const token = auth.split(" ")[1];
+    const token = bearer || req.cookies?.access_token;
+    if (!token) return res.status(401).json({ message: "Unauthorized" });
 
-    /**
-     * 2) Verify Cognito token (JWT)
-     */
-    const payload = await verifyCognitoToken(token);
+    const payload = await verifyCognitoToken<any>(token, {
+      expectedUse: "access",
+      clientId,
+    });
 
-    if (!payload?.sub) {
-      return res.status(401).json({ message: "Invalid token payload" });
-    }
-
-    /**
-     * 3) Resolve user via OAuthAccount (cognito sub)
-     */
     const user = await UserRepository.findByCognitoSub(payload.sub);
+    if (!user) return res.status(401).json({ message: "User not linked" });
 
-    if (!user) {
-      return res.status(401).json({ message: "User not linked" });
-    }
-
-    /**
-     * 4) Attach user to request
-     */
     req.user = user;
-
-    next();
-  } catch (err) {
+    return next();
+  } catch {
     return res.status(401).json({ message: "Invalid token" });
   }
 }
