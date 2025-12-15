@@ -1,7 +1,7 @@
 import { prisma } from "../../config/prisma";
 import { BookmarkRepository } from "../../repositories/bookmark.repository";
 
-interface ToggleBookmarkInput {
+interface ToggleBookmarkInputDto {
   userId: string;
   mediaId: string;
 }
@@ -9,7 +9,7 @@ interface ToggleBookmarkInput {
 export async function toggleBookmarkService({
   userId,
   mediaId,
-}: ToggleBookmarkInput) {
+}: ToggleBookmarkInputDto) {
   // 1) تأكد إن الميديا موجودة
   const media = await prisma.media.findUnique({
     where: { id: mediaId },
