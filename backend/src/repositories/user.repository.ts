@@ -1,4 +1,5 @@
 // src/repositories/user.repository.ts
+import { MediaType } from "@prisma/client";
 import { prisma } from "../config/prisma";
 
 export type OAuthProvider = "cognito" | "google" | "password";
@@ -256,6 +257,66 @@ export const UserRepository = {
         followerCount: true,
         followingCount: true,
         mediaCount: true,
+      },
+    });
+  },
+
+  findProfileHeaderById(userId: string, opts: { includeEmail: boolean }) {
+    return prisma.user.findUnique({
+      where: { id: userId },
+      select: {
+        id: true,
+        name: true,
+        avatarUrl: true,
+        ...(opts.includeEmail ? { email: true } : {}),
+
+        mediaCount: true,
+        totalLikesReceived: true,
+        totalLikesGiven: true,
+        followerCount: true,
+        followingCount: true,
+        createdAt: true,
+      },
+    });
+  },
+
+  listUserMedia(params: {
+    userId: string;
+    skip: number;
+    take: number;
+    type?: MediaType;
+  }) {
+    const { userId, skip, take, type } = params;
+
+    return prisma.media.findMany({
+      where: {
+        uploaderId: userId,
+        ...(type ? { type } : {}),
+      },
+      orderBy: { createdAt: "desc" },
+      skip,
+      take,
+      select: {
+        id: true,
+        url: true,
+        thumbnailUrl: true,
+        type: true,
+        title: true,
+        description: true,
+        likesCount: true,
+        commentCount: true,
+        createdAt: true,
+      },
+    });
+  },
+
+  countUserMedia(params: { userId: string; type?: MediaType }) {
+    const { userId, type } = params;
+
+    return prisma.media.count({
+      where: {
+        uploaderId: userId,
+        ...(type ? { type } : {}),
       },
     });
   },
