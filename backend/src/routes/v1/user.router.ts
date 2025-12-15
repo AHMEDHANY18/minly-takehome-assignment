@@ -7,9 +7,11 @@ import { getMyProfileController } from "../../controllers/user.controller/getMyP
 import { getUserProfileByIdController } from "../../controllers/user.controller/getUserProfileById.controller";
 import { getUserProfileByIdSchema } from "../../validation/user/getUserProfileByIdSchema";
 import { uploadImage } from "../../middleware/upload/imageUpload";
+import { getSuggestedUsersController } from "../../controllers/user.controller/getSuggestedUsers.controller";
 
 const router = Router();
 
+router.get("/suggested", requireAuth, getSuggestedUsersController);
 router.get("/me", requireAuth, getMyProfileController);
 
 router.patch(
@@ -21,5 +23,6 @@ router.patch(
 );
 
 router.get("/:id", validate(getUserProfileByIdSchema), getUserProfileByIdController);
+
 
 export default router;

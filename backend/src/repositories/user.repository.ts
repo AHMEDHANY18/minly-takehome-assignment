@@ -237,4 +237,24 @@ export const UserRepository = {
       },
     });
   },
+
+  async findSuggestedUsers(params: { excludeIds: string[]; limit: number }) {
+    const { excludeIds, limit } = params;
+
+    return prisma.user.findMany({
+      take: limit,
+      where: {
+        id: { notIn: excludeIds },
+      },
+      orderBy: [{ followerCount: "desc" }, { createdAt: "desc" }],
+      select: {
+        id: true,
+        name: true,
+        avatarUrl: true,
+        followerCount: true,
+        followingCount: true,
+        mediaCount: true,
+      },
+    });
+  },
 };
