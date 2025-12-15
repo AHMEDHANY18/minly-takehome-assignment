@@ -13,14 +13,24 @@ import { deleteMediaSchema } from "../../validation/media/deleteMedia.schema";
 import { createMediaSchema } from "../../validation/media/createMedia.schema";
 import { presignMediaUploadController } from "../../controllers/media.controller/presignMedia.controller";
 import { finalizeMediaUploadController } from "../../controllers/media.controller/finalizeMedia.controller";
+import { getMediaCommentsController } from "../../controllers/media.controller/getMediaComments.controller";
+import { getCommentRepliesController } from "../../controllers/comment.controller/getCommentReplies.controller";
 
 const router = Router();
 
 router.post("/", requireAuth, mediaUpload, validate(createMediaSchema), uploadMediaController);
 
-router.get("/:id", validate(getMediaByIdSchema), getMediaByIdController);
+// router.get("/:id", validate(getMediaByIdSchema), getMediaByIdController);
 
-router.get("/", requireAuth,getFeedController);
+// router.get("/", requireAuth,getFeedController);
+
+router.get(
+    "/:mediaId",
+    requireAuth,
+    getMediaCommentsController
+  );
+
+
 
 router.delete("/:id", requireAuth, validate(deleteMediaSchema), deleteMediaController);
 

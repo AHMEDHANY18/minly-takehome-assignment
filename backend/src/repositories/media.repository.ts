@@ -236,4 +236,51 @@ export const MediaRepository = {
       }),
     ]);
   },
+
+  async findTopLevelByMedia(params: {
+    mediaId: string;
+    skip: number;
+    take: number;
+    viewerId: string;
+  }) {
+    const { mediaId, skip, take, viewerId } = params;
+
+    return prisma.threadedComment.findMany({
+      where: {
+        mediaId,
+        parentCommentId: null, // ✅ top-level only
+      },
+      orderBy: { createdAt: "desc" },
+      skip,
+      take,
+      select: {
+        id: true,
+        text: true,
+        createdAt: true,
+        user: {
+          select: {
+            id: true,
+            name: true,
+            avatarUrl: true,
+          },
+        },
+        _count: {
+          select: {
+            replies: true, // عدد الردود
+          },
+        },
+      },
+    });
+  },
+
+  async countTopLevelByMedia(mediaId: string) {
+    return prisma.threadedComment.count({
+      where: {
+        mediaId,
+        parentCommentId: null,
+      },
+    });
+  },
+
+
 };

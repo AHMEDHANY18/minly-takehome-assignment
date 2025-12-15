@@ -59,6 +59,33 @@ export const NotificationRepository = {
         orderBy: { createdAt: "desc" },
         skip,
         take: pagination.limit,
+        include: {
+          actor: {
+            select: {
+              id: true,
+              name: true,
+              avatarUrl: true,
+            },
+          },
+          media: {
+            select: {
+              id: true,
+              thumbnailUrl: true,
+            },
+          },
+          comment: {
+            select: {
+              id: true,
+              text: true,
+            },
+          },
+          follow: {
+            select: {
+              followerId: true,
+              followingId: true,
+            },
+          },
+        },
       }),
       prisma.notification.count({ where }),
     ]);

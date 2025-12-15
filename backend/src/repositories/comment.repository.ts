@@ -51,4 +51,32 @@ export const CommentRepository = {
       },
     });
   },
+
+  async findReplies(params: {
+    commentId: string;
+    viewerId: string;
+    limit: number;
+    cursor: string | null; // createdAt ISO
+  }) {
+    const { commentId, viewerId, limit, cursor } = params;
+
+    return prisma.threadedComment.findMany({
+      where: {
+        parentCommentId: commentId,
+        ...(cursor
+          ? { createdAt: { lt: new Date(cursor) } } // pagination
+          : {}),
+      },
+      orderBy: { createdAt: "desc" }, // newest replies first (زي الانستجرام غالبًا)
+      take: limit,
+      select: {
+        id: true,
+        text: true,
+        createdAt: true,
+        user: {
+          select: { id: true, name: true, avatarUrl: true },
+        },
+      },
+    });
+  },
 };

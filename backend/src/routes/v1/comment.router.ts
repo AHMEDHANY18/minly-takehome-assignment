@@ -2,6 +2,7 @@ import { Router } from "express";
 import { requireAuth } from "../../middleware/auth/requireAuth";
 import { validate } from "../../middleware/validate";
 import { createCommentController, deleteCommentController } from "../../controllers/comment.controller";
+import { getCommentRepliesController } from "../../controllers/comment.controller/getCommentReplies.controller";
 
 const router = Router();
 router.post(
@@ -11,6 +12,8 @@ router.post(
   );
 
   router.delete("/:commentId", requireAuth, deleteCommentController);
+
+  router.get("/:commentId/replies", requireAuth, getCommentRepliesController);
 
 
 export default router;
