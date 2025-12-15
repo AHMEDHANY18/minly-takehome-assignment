@@ -245,6 +245,8 @@ export const UserRepository = {
       take: limit,
       where: {
         id: { notIn: excludeIds },
+        mediaCount: { gt: 0 },
+
       },
       orderBy: [{ followerCount: "desc" }, { createdAt: "desc" }],
       select: {
