@@ -7,6 +7,7 @@ import commentRoutes from "./comment.router";
 import followRoutes from "./follow.router";
 import bookmarkRoutes from "./bookmark.router";
 import notificationRoutes from "./notification.router";
+import feedRoutes from "./feed.router";
 
 const router = Router({ mergeParams: true });
 
@@ -19,5 +20,6 @@ router.use("/comment", commentRoutes);
 router.use("/follow", followRoutes);
 router.use("/bookmark", bookmarkRoutes);
 router.use("/notification", notificationRoutes);
+router.use("/feed", feedRoutes);
 
 export default router;
