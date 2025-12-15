@@ -1,15 +1,34 @@
-import { useState, type FormEvent } from "react";
-import { useNavigate } from "react-router-dom";
+import React, { useState, type FormEvent } from "react";
+import { useLocation, useNavigate } from "react-router-dom";
+import { motion } from "framer-motion";
+import { Mail, Eye, EyeOff, Apple, Play } from "lucide-react";
+
 import { AuthAPI } from "../../api/auth";
 import { useUserStore } from "../../store/user.store";
+import { AuthShell } from "./components/AuthShell";
+import { InputField, SocialButton, Button, Toggle } from "./components/ui";
+
+const GoogleIcon = () => (
+  <svg width="18" height="18" viewBox="0 0 18 18" xmlns="http://www.w3.org/2000/svg">
+    <path d="M17.64 9.2c0-.637-.057-1.251-.164-1.84H9v3.481h4.844a4.14 4.14 0 0 1-1.796 2.716v2.259h2.908c1.702-1.567 2.684-3.875 2.684-6.615z" fill="#4285F4" />
+    <path d="M9 18c2.43 0 4.467-.806 5.956-2.18l-2.908-2.259c-.806.54-1.837.86-3.048.86-2.344 0-4.328-1.584-5.036-3.715H.957v2.332A8.997 8.997 0 0 0 9 18z" fill="#34A853" />
+    <path d="M3.964 10.71A5.41 5.41 0 0 1 3.682 9c0-.593.102-1.17.282-1.71V4.958H.957C.347 6.173 0 7.548 0 9s.348 2.827.957 4.042l3.007-2.332z" fill="#FBBC05" />
+    <path d="M9 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.463.891 11.426 0 9 0A8.997 8.997 0 0 0 .957 4.958L3.964 7.29C4.672 5.159 6.656 3.58 9 3.58z" fill="#EA4335" />
+  </svg>
+);
 
 export default function LoginPage() {
-  const navigate = useNavigate(); 
+  const navigate = useNavigate();
+  const location = useLocation();
   const setUser = useUserStore((s) => s.setUser);
 
-  const [email, setEmail] = useState("");
+  // ✅ خُد الإيميل اللي جاي من Register (لو موجود)
+  const initialEmail = (location.state as { email?: string } | null)?.email ?? "";
+
+  const [email, setEmail] = useState(initialEmail);
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
+
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -19,147 +38,139 @@ export default function LoginPage() {
     setLoading(true);
 
     try {
-      // 1) شيك الأول هل الإيميل موجود ولا لأ 👇
-      const checkRes = await AuthAPI.checkEmail(email);
-      const payload = checkRes.data as Partial<{
-        exists: boolean;
-        result: boolean;
-        data: { exists?: boolean };
-      }>;
-      const exists =
-        payload.exists ?? payload.result ?? payload.data?.exists ?? false;
-
-      if (!exists) {
-        // لو الإيميل مش موجود → روح على صفحة التسجيل ومعاك الإيميل
-        navigate("/register", { state: { email } });
-        return;
-      }
-
-      // 2) لو الإيميل موجود فعلاً → كمّل login عادي 👇
-      const res = await AuthAPI.login({ email, password });
-      const body = res.data;
-
-      const token = body.token ?? body.data?.token;
-      const user = body.user ?? body.data?.user;
-
-      if (!token || !user) {
-        throw new Error("Unexpected login response shape");
-      }
-
-      localStorage.setItem("token", token);
+      const user = await AuthAPI.loginAndLoadUser({ email, password });
       setUser(user);
-      navigate("/");
+      navigate("/", { replace: true });
     } catch (err: any) {
-      console.error(err);
-      setError(
-        err?.response?.data?.message ||
-          "Incorrect email or password."
-      );
+      const code = err?.code;
+
+      if (code === "UserNotFoundException") {
+        navigate("/register", { state: { email } });
+      } else if (code === "UserNotConfirmedException") {
+        setError("Account not confirmed. Please verify your email then try again.");
+      } else {
+        setError(err?.message || "Incorrect email or password.");
+      }
     } finally {
       setLoading(false);
     }
   }
 
   return (
-    <div className="min-h-screen bg-[#f7f5ff] flex items-center justify-center px-4">
-      <div className="w-full max-w-sm bg-white rounded-3xl shadow-[0_16px_40px_rgba(15,23,42,0.1)] px-6 py-8 sm:px-8 sm:py-10">
-        {/* Title */}
-        <h1 className="text-center text-2xl font-semibold text-slate-900 mb-8">
-          Minly
-        </h1>
-
-        <form onSubmit={handleSubmit} className="space-y-5">
-          {/* Email */}
-          <div>
-            <label className="block text-xs font-medium text-slate-700 mb-1.5">
-              Email
-            </label>
-            <input
-              type="email"
-              className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm text-slate-900 outline-none transition focus:bg-white focus:border-[#b845ff] focus:ring-2 focus:ring-[#e3c7ff]"
-              placeholder="Enter your email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              required
-              autoComplete="email"
-            />
+    <AuthShell>
+      <div className="flex flex-col gap-6">
+        {/* Logo */}
+        <div className="flex justify-center items-center gap-2 mb-2">
+          <div className="w-8 h-8 rounded-full bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center text-white shadow-lg shadow-blue-500/30">
+            <Play fill="currentColor" size={12} className="ml-0.5" />
           </div>
+          <span className="text-xl font-bold text-slate-800 tracking-tight">Minly</span>
+        </div>
 
-          {/* Password */}
-          <div>
-            <label className="block text-xs font-medium text-slate-700 mb-1.5">
-              Password
-            </label>
-            <div className="relative">
-              <input
-                type={showPassword ? "text" : "password"}
-                className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 pr-10 text-sm text-slate-900 outline-none transition focus:bg-white focus:border-[#b845ff] focus:ring-2 focus:ring-[#e3c7ff]"
-                placeholder="Enter your password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                required
-                autoComplete="current-password"
-              />
+        {/* Toggle (tabs) */}
+        <Toggle
+  options={["Sign up", "Log in"]}
+  selectedIndex={1}
+  onChange={(idx) => {
+    if (idx === 0) navigate("/register", { state: { email } });
+  }}
+/>
+
+
+        {/* Header */}
+        <div className="text-center space-y-1">
+          <h1 className="text-2xl font-bold text-slate-900">Welcome back</h1>
+          <p className="text-slate-500 text-sm">
+            Enter your details to access your account.
+          </p>
+        </div>
+
+        {/* Form */}
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <InputField
+            label="Email Address"
+            placeholder="you@example.com"
+            type="email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            rightElement={<Mail size={16} />}
+            required
+            autoComplete="email"
+          />
+
+          <InputField
+            label="Password"
+            placeholder="••••••••"
+            type={showPassword ? "text" : "password"}
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            rightElement={
               <button
                 type="button"
-                onClick={() => setShowPassword((prev) => !prev)}
-                className="absolute inset-y-0 right-2 flex items-center px-2 text-slate-400 hover:text-slate-700"
+                onClick={() => setShowPassword((p) => !p)}
+                className="hover:text-slate-600 transition-colors focus:outline-none"
                 aria-label={showPassword ? "Hide password" : "Show password"}
               >
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  className="h-4 w-4"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                >
-                  {showPassword ? (
-                    <>
-                      <path d="M3 3l18 18" />
-                      <path d="M10.584 10.587A3 3 0 0 0 12 15a3 3 0 0 0 2.828-1.993M9.88 5.515A8.46 8.46 0 0 1 12 5c5 0 9 4 10 7-0.352.935-1.005 2.047-1.974 3.09" />
-                      <path d="M6.228 6.228C4.243 7.34 2.95 9.061 2 12c.4 1.184 1.09 2.39 2.045 3.45A11.73 11.73 0 0 0 7 17.8" />
-                    </>
-                  ) : (
-                    <>
-                      <path d="M1 12s3-7 11-7 11 7 11 7-3 7-11 7S1 12 1 12Z" />
-                      <circle cx="12" cy="12" r="3" />
-                    </>
-                  )}
-                </svg>
+                {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
               </button>
-            </div>
+            }
+            required
+            autoComplete="current-password"
+          />
 
-            {/* Error message */}
-            {error && (
-              <p className="mt-1.5 text-[11px] text-[#e5533d]">
-                {error}
-              </p>
-            )}
+          <div className="flex justify-end">
+            <button
+              type="button"
+              className="text-xs font-semibold text-blue-600 hover:text-blue-700 transition"
+              onClick={() => navigate("/forgot-password")}
+            >
+              Forgot password?
+            </button>
           </div>
 
-          {/* Submit button */}
-          <button
-            type="submit"
-            disabled={loading}
-            className="mt-2 w-full rounded-xl bg-[#b845ff] hover:bg-[#a028ff] active:bg-[#8a1ce5] px-4 py-2.5 text-sm font-semibold text-white shadow-[0_10px_25px_rgba(116,48,255,0.45)] transition disabled:opacity-60 disabled:cursor-not-allowed"
-          >
-            {loading ? "Logging in..." : "Log in"}
-          </button>
+          {error && <p className="text-[12px] text-red-500">{error}</p>}
+
+          <div className="pt-2">
+            <Button type="submit" disabled={loading}>
+              {loading ? (
+                <div className="mx-auto w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+              ) : (
+                "Log in"
+              )}
+            </Button>
+          </div>
         </form>
 
-        {/* Footer link */}
-        <p className="mt-5 text-center text-[11px] text-slate-500">
-          Don&apos;t have an account?{" "}
-          <button
-            type="button"
-            className="font-semibold text-[#b845ff] hover:underline"
-            onClick={() => navigate("/register", { state: { email } })}
-          >
-            Create an account
-          </button>
-        </p>
+        {/* Divider */}
+        <div className="relative py-2">
+          <div className="absolute inset-0 flex items-center">
+            <div className="w-full border-t border-slate-100" />
+          </div>
+          <div className="relative flex justify-center text-xs text-slate-400">
+            <span className="bg-white px-4">Or continue with</span>
+          </div>
+        </div>
+
+        {/* Social Buttons (UI فقط) */}
+        <div className="flex gap-4">
+          <SocialButton icon={<GoogleIcon />} label="Google" disabled />
+          <SocialButton icon={<Apple size={18} />} label="Apple" disabled />
+        </div>
+
+        {/* Footer */}
+        <motion.div className="text-center mt-2">
+          <p className="text-sm text-slate-500">
+            Don&apos;t have an account?{" "}
+            <button
+              type="button"
+              onClick={() => navigate("/register", { state: { email } })}
+              className="font-semibold text-blue-700 hover:text-blue-600 transition"
+            >
+              Create one
+            </button>
+          </p>
+        </motion.div>
       </div>
-    </div>
+    </AuthShell>
   );
 }

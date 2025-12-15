@@ -14,19 +14,18 @@ export default function App() {
   const user = useUserStore((s) => s.user);
 
   return (
-    <ThemeProvider>
-      <BrowserRouter>
+    <BrowserRouter>
+      <ThemeProvider>
         <Routes>
           <Route
-            element={
-              user ? <MainLayout /> : <Navigate to="/login" replace />
-            }
+            element={user ? <MainLayout /> : <Navigate to="/login" replace />}
           >
             <Route path="/" element={<FeedPage />} />
             <Route path="/upload" element={<UploadPage />} />
             <Route path="/profile" element={<ProfilePage />} />
             <Route path="/users/:userId" element={<UserProfilePage />} />
           </Route>
+
           <Route
             path="/login"
             element={!user ? <LoginPage /> : <Navigate to="/" replace />}
@@ -35,9 +34,10 @@ export default function App() {
             path="/register"
             element={!user ? <RegisterPage /> : <Navigate to="/" replace />}
           />
+
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
-      </BrowserRouter>
-    </ThemeProvider>
+      </ThemeProvider>
+    </BrowserRouter>
   );
 }
