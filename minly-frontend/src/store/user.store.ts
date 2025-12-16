@@ -4,12 +4,23 @@ export interface User {
   id: string;
   name: string;
   email: string;
-  avatarUrl?: string;
+  avatarUrl?: string | null;
+
+  mediaCount: number;
+  followerCount: number;
+  followingCount: number;
+
+  totalLikesReceived: number;
+  totalLikesGiven: number;
+
+  createdAt: string;
+  updatedAt: string;
 }
+
 
 interface UserStore {
   user: User | null;
-  setUser: (user: User | null) => void;
+  setUser: (user: User) => void;
   clearUser: () => void;
 }
 

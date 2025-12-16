@@ -15,6 +15,18 @@ export type MeResponse = {
     name: string;
     email: string;
     avatarUrl?: string | null;
+
+
+  mediaCount: number;
+  followerCount: number;
+  followingCount: number;
+
+  totalLikesReceived: number;
+  totalLikesGiven: number;
+
+  createdAt: string;
+  updatedAt: string;
+
   };
 };
 

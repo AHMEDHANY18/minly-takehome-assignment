@@ -10,6 +10,7 @@ import { ThemeProvider } from "./components/ThemeProvider";
 import MainLayout from "./layouts/MainLayout";
 import AuthBootstrap from "./features/auth/AuthBootstrap";
 import AuthSuccessPage from "./features/auth/pages/AuthSuccessPage";
+import NotificationsPage from "./features/notifications/NotificationsPage";
 
 export default function App() {
   const user = useUserStore((s) => s.user);
@@ -24,7 +25,13 @@ export default function App() {
           {/* protected area */}
           <Route element={<AuthBootstrap />}>
             <Route element={<MainLayout />}>
-              <Route path="/" element={<FeedPage />} />
+              {/* feeds */}
+              <Route path="/" element={<FeedPage mode="home" />} />
+              <Route path="/explore" element={<FeedPage mode="explore" />} />
+              <Route path="/trending" element={<FeedPage mode="trending" />} />
+              <Route path="/notifications" element={<NotificationsPage />} />
+
+              {/* other pages */}
               <Route path="/upload" element={<UploadPage />} />
               <Route path="/profile" element={<ProfilePage />} />
               <Route path="/users/:userId" element={<UserProfilePage />} />

@@ -1,14 +1,21 @@
+// api/axios.ts
 import axios from "axios";
-
-const API_BASE_URL = "http://localhost:4000/v1";
+import { useUserStore } from "../store/user.store";
+import { useAuthStore } from "../store/auth.store";
 
 export const api = axios.create({
-  baseURL: API_BASE_URL,
-  withCredentials: true, // CRITICAL: send/receive HttpOnly cookies
+  baseURL: import.meta.env.VITE_API_BASE_URL,
+  withCredentials: true,
 });
 
-// Optional: لو عايز تتعامل مع 401 بشكل هادي بدون force redirect من هنا
 api.interceptors.response.use(
-  (r) => r,
-  (error) => Promise.reject(error)
+  (res) => res,
+  (error) => {
+    if (error.response?.status === 401) {
+      useUserStore.getState().clearUser();
+      useAuthStore.getState().setUnauthenticated();
+      window.location.href = "/login";
+    }
+    return Promise.reject(error);
+  }
 );

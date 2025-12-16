@@ -1,39 +1,46 @@
-import { useEffect, useState } from "react";
-import { Outlet, Navigate, useLocation } from "react-router-dom";
+import { Outlet, Navigate } from "react-router-dom";
+import { useEffect } from "react";
 import { AuthAPI } from "../../api/auth";
 import { useUserStore } from "../../store/user.store";
+import { useAuthStore } from "../../store/auth.store";
 
 export default function AuthBootstrap() {
   const setUser = useUserStore((s) => s.setUser);
   const clearUser = useUserStore((s) => s.clearUser);
-  const user = useUserStore((s) => s.user);
 
-  const [status, setStatus] = useState<"loading" | "ready">("loading");
-  const location = useLocation();
+  const {
+    status,
+    setAuthenticated,
+    setUnauthenticated,
+  } = useAuthStore();
 
   useEffect(() => {
-    (async () => {
-      try {
-        const res = await AuthAPI.me();
-        // حسب شكل استجابتك: عدّل السطر ده لو response مختلف
-        const meUser = (res.data as any)?.user ?? (res.data as any)?.data?.user;
-        if (meUser) setUser(meUser);
-        else clearUser();
-      } catch {
+    AuthAPI.me()
+      .then((res) => {
+        setUser(res.data.user);
+        setAuthenticated();
+      })
+      .catch(() => {
         clearUser();
-      } finally {
-        setStatus("ready");
-      }
-    })();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+        setUnauthenticated();
+      });
   }, []);
 
-  if (status === "loading") return <div style={{ padding: 16 }}>Loading...</div>;
+  if (status === "loading") {
+    return <FullPageLoader />;
+  }
 
-  // لو مش logged in -> يروح /login ويحفظ المكان اللي كان فيه
-  if (!user) {
-    return <Navigate to="/login" replace state={{ from: location.pathname }} />;
+  if (status === "unauthenticated") {
+    return <Navigate to="/login" replace />;
   }
 
   return <Outlet />;
+}
+
+function FullPageLoader() {
+  return (
+    <div className="min-h-screen flex items-center justify-center text-gray-500">
+      Loading…
+    </div>
+  );
 }

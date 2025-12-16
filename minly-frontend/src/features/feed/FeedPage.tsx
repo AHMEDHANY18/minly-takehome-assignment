@@ -1,280 +1,455 @@
-// src/features/feed/FeedPage.tsx
-import { memo, useEffect, useMemo, useState, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
-import { MediaAPI, type MediaItem } from "../../api/media";
-import InfiniteScroll from "react-infinite-scroll-component";
+import { useUserStore } from "../../store/user.store";
+import { SocialAPI, type SuggestedUser } from "../../api/social";
+import { useSuggestedUsers } from "./hooks/useSuggestedUsers";
+import type { FeedItem, FeedMode } from "../../api/feed";
+import { useFeed } from "./hooks/useFeed";
+import { useEffect, useState } from "react";
+import { IconBookmark, IconComment, IconHeart, IconSend } from "./icons";
 
-function formatTimeAgo(dateStr: string) {
-  const date = new Date(dateStr);
-  const diffMs = Date.now() - date.getTime();
-  const diffSec = Math.floor(diffMs / 1000);
+export default function FeedPage({ mode = "home" }: { mode?: FeedMode }) {
+  const {
+    items,
+    pagination,
+    meta,
+    initialLoading,
+    loadingMore,
+    error,
+    hasMore,
+    loadMore,
+    reload,
+    updateItem,
+  } = useFeed(mode, 20);
 
-  if (diffSec < 60) return "Just now";
-  const diffMin = Math.floor(diffSec / 60);
-  if (diffMin < 60) return `${diffMin}m ago`;
-  const diffH = Math.floor(diffMin / 60);
-  if (diffH < 24) return `${diffH}h ago`;
-  const diffD = Math.floor(diffH / 24);
-  return `${diffD}d ago`;
-}
+  const followingCountFromMeta =
+    meta && typeof meta === "object" && "followingCount" in meta
+      ? Number(meta.followingCount ?? 0)
+      : 0;
 
-function formatLikes(n: number) {
-  if (n < 1_000) return n.toString();
-  if (n < 1_000_000) return (n / 1_000).toFixed(1).replace(/\.0$/, "") + "k";
-  return (n / 1_000_000).toFixed(1).replace(/\.0$/, "") + "M";
-}
-//بيمنع الكارت إنه يعمل re-render بدون داعي
-const MediaCard = memo(function MediaCard({ item }: { item: MediaItem }) {
-  const navigate = useNavigate();
-  const [liked, setLiked] = useState(item.isLiked);
-  const [likes, setLikes] = useState(item.likesCount);
-  const [expanded, setExpanded] = useState(false);
+  // ✅ local state علشان optimistic update
+  const [followingCount, setFollowingCount] = useState(0);
 
-  const isVideo = item.type === "VIDEO" || item.type === "video";
-  const imageUrl = item.thumbnailUrl || item.url;
-  const avatarUrl =
-    item.uploader.avatarUrl ||
-    "https://ui-avatars.com/api/?name=" 
-      encodeURIComponent(item.uploader.name);
+  // ✅ أول ما meta تتغير (home feed) نحدّث الرقم
+  useEffect(() => {
+    setFollowingCount(followingCountFromMeta);
+  }, [followingCountFromMeta]);
 
-  const description = item.description || "";
-  const MAX_LEN = 120;
-  const shouldTruncate = description.length > MAX_LEN;
-  const visibleDesc = useMemo(() => {
-    if (!description) return "";
-    if (expanded || !shouldTruncate) return description;
-    return description.slice(0, MAX_LEN) + "...";
-  }, [description, expanded, shouldTruncate]);
 
-  const goToProfile = useCallback(() => navigate(`/users/${item.uploader.id}`), [
-    navigate,
-    item.uploader.id,
-  ]);
+  const onToggleLike = async (mediaId: string) => {
+    let snapshot: { isLiked: boolean; likesCount: number } | null = null;
 
-  const toggleLike = useCallback(async () => {
-    const prevLiked = liked;
-    const prevLikes = likes;
-    const nextLiked = !prevLiked;
-
-    setLiked(nextLiked);
-    setLikes((p) => Math.max(p + (nextLiked ? 1 : -1), 0));
+    updateItem(mediaId, (it) => {
+      snapshot = { isLiked: it.isLiked, likesCount: it.likesCount };
+      const nextLiked = !it.isLiked;
+      const nextLikes = Math.max(0, it.likesCount + (nextLiked ? 1 : -1));
+      return { ...it, isLiked: nextLiked, likesCount: nextLikes };
+    });
 
     try {
-      await MediaAPI.toggleLike(item.id);
-    } catch (err) {
-      console.error(err);
-      setLiked(prevLiked);
-      setLikes(prevLikes);
+      await SocialAPI.toggleLike(mediaId);
+    } catch {
+      if (snapshot) updateItem(mediaId, (it) => ({ ...it, ...snapshot! }));
     }
-  }, [item.id, liked, likes]);
+  };
+
+  const onToggleBookmark = async (mediaId: string) => {
+    let snapshot: { isBookmarked: boolean } | null = null;
+
+    updateItem(mediaId, (it) => {
+      snapshot = { isBookmarked: it.isBookmarked };
+      return { ...it, isBookmarked: !it.isBookmarked };
+    });
+
+    try {
+      await SocialAPI.toggleBookmark(mediaId);
+    } catch {
+      if (snapshot) updateItem(mediaId, (it) => ({ ...it, ...snapshot! }));
+    }
+  };
 
   return (
-    <article className="flex flex-col overflow-hidden rounded-xl bg-white shadow-[0_4px_12px_rgba(0,0,0,0.05)]">
-      <header
-        className="flex items-center gap-3 p-4 cursor-pointer"
-        onClick={goToProfile}
-      >
-        <img
-          className="size-10 rounded-full object-cover"
-          src={avatarUrl}
-          alt={item.uploader.name}
-          loading="lazy"
-        />
-        <div>
-          <p className="font-bold text-[#161118] capitalize">
-            {item.uploader.name}
-          </p>
-          <p className="text-sm text-[#7c6189]">
-            {formatTimeAgo(item.createdAt)}
-          </p>
-        </div>
-      </header>
+<div className="grid grid-cols-1 lg:grid-cols-[minmax(0,680px)_320px] gap-6">
+<div className="min-w-0 space-y-4">
+        {error && (
+          <div className="rounded-2xl bg-white border border-red-100 p-4 shadow-sm">
+            <div className="text-sm text-red-600 font-semibold">
+              Failed to load feed
+            </div>
+            <div className="text-xs text-gray-500 mt-1">{error}</div>
+            <button
+              onClick={reload}
+              className="mt-3 text-sm font-semibold text-purple-700 hover:underline"
+            >
+              Retry
+            </button>
+          </div>
+        )}
 
-      <div className="relative w-full cursor-pointer" onClick={goToProfile}>
-        {isVideo ? (
+        {initialLoading ? (
+          <FeedSkeleton />
+        ) : items.length === 0 ? (
+          <EmptyFeed />
+        ) : (
+          <div className="space-y-4">
+            {items.map((item) => (
+              <PostCard
+                key={item.id}
+                item={item}
+                onToggleLike={onToggleLike}
+                onToggleBookmark={onToggleBookmark}
+              />
+            ))}
+
+            <div className="py-2 flex justify-center">
+              {hasMore ? (
+                <button
+                  onClick={loadMore}
+                  disabled={loadingMore}
+                  className="h-10 px-5 rounded-xl bg-white border border-gray-200 shadow-sm hover:bg-gray-50 transition text-sm font-semibold disabled:opacity-60"
+                >
+                  {loadingMore ? "Loading…" : "Load more"}
+                </button>
+              ) : (
+                <div className="text-xs text-gray-400">
+                  {pagination
+                    ? `End of feed · page ${pagination.page}/${pagination.totalPages}`
+                    : "End of feed"}
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+      </div>
+
+      <aside className="hidden lg:block">
+      <RightRail
+  followingCount={followingCount}
+  onFollowSuccess={() => setFollowingCount((c) => c + 1)}
+/>      </aside>
+    </div>
+  );
+}
+
+/* -------------------- Post Card -------------------- */
+
+function PostCard({
+  item,
+  onToggleLike,
+  onToggleBookmark,
+}: {
+  item: FeedItem;
+  onToggleLike: (id: string) => void;
+  onToggleBookmark: (id: string) => void;
+}) {
+  return (
+    <div className="rounded-2xl bg-white border border-gray-100 shadow-sm overflow-hidden">
+      <div className="flex items-center justify-between px-4 py-3">
+        <div className="flex items-center gap-3">
+          <Avatar name={item.uploader.name} src={item.uploader.avatarUrl} />
+          <div className="leading-tight">
+            <div className="text-sm font-semibold text-gray-900">
+              {item.uploader.name}
+            </div>
+            <div className="text-xs text-gray-500">
+              {formatTime(item.createdAt)}
+            </div>
+          </div>
+        </div>
+        <button
+          className="h-9 w-9 rounded-full hover:bg-gray-50 transition"
+          aria-label="More"
+        >
+          ⋯
+        </button>
+      </div>
+
+      <div className="relative bg-gray-50">
+        {item.type === "VIDEO" ? (
           <video
-            src={item.url}
+            className="w-full max-h-[520px] object-cover"
             controls
-            className="w-full aspect-square object-cover bg-black"
             preload="metadata"
-          />
+          >
+            <source src={item.url} />
+          </video>
         ) : (
           <img
-            src={imageUrl}
-            alt={item.title || "Media"}
-            className="w-full aspect-square object-cover"
+            src={item.url}
+            alt={item.title ?? "media"}
+            className="w-full max-h-[520px] object-cover"
             loading="lazy"
           />
         )}
       </div>
 
-      <div className="flex flex-col gap-3 p-4">
-        <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between sm:gap-4">
-          <div className="flex-1 min-w-0">
-            <p className="text-lg font-bold text-[#161118] truncate">
-              {item.title || "Untitled media"}
-            </p>
+      <div className="px-4 py-4">
+  {/* Actions row */}
+  <div className="flex items-center gap-6 text-gray-900">
+    <button
+      onClick={() => onToggleLike(item.id)}
+      className={
+        "inline-flex items-center gap-2 hover:opacity-80 transition " +
+        (item.isLiked ? "text-blue-600" : "text-gray-900")
+      }
+      aria-label="Like"
+    >
+<IconHeart filled={item.isLiked} />
+<span className="text-sm font-medium">{item.likesCount}</span>
+    </button>
 
-            {visibleDesc && (
-              <p className="mt-1 text-base text-[#7c6189] wrap-break-words">
-                {visibleDesc}
-              </p>
-            )}
+    <button
+      className="inline-flex items-center gap-2 hover:opacity-80 transition text-gray-900"
+      aria-label="Comments"
+    >
+      <IconComment />
+      <span className="text-sm font-medium">{item.commentCount}</span>
+    </button>
+
+    <button
+      className="inline-flex items-center gap-2 hover:opacity-80 transition text-gray-900"
+      aria-label="Share"
+    >
+      <IconSend />
+    </button>
+
+    <button
+      onClick={() => onToggleBookmark(item.id)}
+      className={
+        "ml-auto inline-flex items-center justify-center hover:opacity-80 transition " +
+        (item.isBookmarked ? "text-blue-600" : "text-gray-900")
+      }
+      aria-label="Bookmark"
+    >
+      <IconBookmark filled={item.isBookmarked} />
+    </button>
+  </div>
+
+  {/* Title + description */}
+  <div className="mt-3">
+    {item.title && (
+      <div className="text-base font-semibold text-gray-900">
+        {item.title}
+      </div>
+    )}
+    {item.description && (
+      <p className="mt-1 text-sm text-gray-600 leading-relaxed">
+        {item.description}
+      </p>
+    )}
+  </div>
+</div>
+    </div>
+  );
+}
+
+/* -------------------- Right Rail -------------------- */
+
+function RightRail({
+  followingCount,
+  onFollowSuccess,
+}: {
+  followingCount: number;
+  onFollowSuccess?: () => void;
+}) {
+  const nav = useNavigate();
+  const user = useUserStore((s) => s.user);
+
+  const { users, loading, removeUser, restoreUser } = useSuggestedUsers();
+
+  // loading state per user
+  const [pending, setPending] = useState<Record<string, boolean>>({});
+
+  const handleFollow = async (u: SuggestedUser, index: number) => {
+    if (pending[u.id]) return;
+
+    // ✅ optimistic: remove instantly
+    setPending((p) => ({ ...p, [u.id]: true }));
+    removeUser(u.id);
+
+    try {
+      await SocialAPI.follow(u.id);
+      onFollowSuccess?.(); // optional: increase followingCount in UI
+    } catch (e) {
+      // ❌ rollback
+      restoreUser(u, index);
+    } finally {
+      setPending((p) => {
+        const copy = { ...p };
+        delete copy[u.id];
+        return copy;
+      });
+    }
+  };
+  const followers = user?.followerCount ?? 0;
+
+  const followingUi =
+    typeof followingCount === "number"
+      ? followingCount
+      : user?.followingCount ?? 0;
+  return (
+    <div className="sticky top-16 space-y-4">
+      <div className="rounded-2xl bg-white border border-gray-100 shadow-sm p-4">
+        <div className="flex flex-col items-center text-center">
+          <div className="h-16 w-16 rounded-full bg-gray-100 grid place-items-center">
+            <Avatar name={user?.name ?? "User"} src={user?.avatarUrl ?? null} size="lg" />
           </div>
+          <div className="mt-3 font-semibold">{user?.name ?? "—"}</div>
+          <div className="text-xs text-gray-500">{user?.email ?? ""}</div>
 
-          {shouldTruncate && (
-            <button
-              className="text-sm font-bold text-[#ad2bee] hover:underline"
-              onClick={() => setExpanded((prev) => !prev)}
-            >
-              {expanded ? "Hide" : "More"}
-            </button>
+          <div className="mt-4 grid grid-cols-2 gap-3 w-full">
+
+
+<Stat label="Followers" value={String(followers)} />
+<Stat label="Following" value={String(followingUi)} />
+          </div>
+        </div>
+      </div>
+
+      <div className="rounded-2xl bg-gradient-to-br from-blue-600 to-indigo-700 text-white shadow-sm p-4">
+        <div className="font-semibold">Share your moment</div>
+        <div className="mt-1 text-sm text-white/85">
+          Upload photos or videos to connect with your community.
+        </div>
+        <button
+          onClick={() => nav("/upload")}
+          className="mt-4 w-full h-10 rounded-xl bg-white text-gray-900 font-semibold text-sm hover:bg-gray-100 transition"
+        >
+          Upload Media
+        </button>
+      </div>
+
+      <div className="rounded-2xl bg-white border border-gray-100 shadow-sm p-4">
+        <div className="flex items-center justify-between">
+          <div className="font-semibold text-sm">Suggested for you</div>
+          <button className="text-xs text-purple-700 hover:underline">See all</button>
+        </div>
+
+        <div className="mt-3 space-y-3">
+          {loading ? (
+            <div className="text-sm text-gray-500">Loading…</div>
+          ) : users.length === 0 ? (
+            <div className="text-sm text-gray-500">No suggestions right now.</div>
+          ) : (
+            users.map((u, idx) => (
+              <div key={u.id} className="flex items-center justify-between">
+                <div className="flex items-center gap-3 min-w-0">
+                  <Avatar name={u.name} src={u.avatarUrl} />
+                  <div className="min-w-0">
+                    <div className="text-sm font-semibold truncate">{u.name}</div>
+                    <div className="text-xs text-gray-500 truncate">
+                      {u.mediaCount} posts · {u.followerCount} followers
+                    </div>
+                  </div>
+                </div>
+
+                <button
+                  onClick={() => handleFollow(u, idx)}
+                  disabled={!!pending[u.id]}
+                  className="text-sm font-semibold text-blue-700 hover:underline disabled:opacity-60"
+                >
+                  {pending[u.id] ? "Following…" : "Follow"}
+                </button>
+              </div>
+            ))
           )}
         </div>
-
-        <div className="mt-1 flex items-center gap-2">
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              toggleLike();
-            }}
-            aria-pressed={liked}
-            className={`flex items-center gap-1 transition ${
-              liked ? "text-[#e11d48]" : "text-[#7c6189] hover:text-[#e11d48]"
-            }`}
-          >
-            <span
-              className={`material-symbols-outlined text-[22px] ${
-                liked ? "filled" : ""
-              }`}
-            >
-              favorite
-            </span>
-          </button>
-
-          <p className="text-sm font-bold tracking-wide text-[#7c6189]">
-            {formatLikes(likes)}
-          </p>
-        </div>
       </div>
-    </article>
+    </div>
   );
-});
+}
 
-export default function FeedPage() {
-  const [items, setItems] = useState<MediaItem[]>([]);
-  const [page, setPage] = useState(1);
-  const [hasMore, setHasMore] = useState(true);
-  const [loading, setLoading] = useState(false); // تحميل الصفحات التالية
-  const [initialLoading, setInitialLoading] = useState(true); // أول لود بس
-  const [error, setError] = useState<string | null>(null);
-
-  const LIMIT = 10;
-
-  const fetchPage = useCallback(
-    async (pageToFetch: number) => {
-      try {
-        setLoading(true);
-        setError(null);
-
-        const res = await MediaAPI.getFeed(pageToFetch, LIMIT);
-        const data = res.data.data ?? res.data.items ?? [];
-
-        if (pageToFetch === 1) {
-          setItems(data);
-        } else {
-          setItems((prev) => [...prev, ...data]);
-        }
-
-        if (data.length < LIMIT) {
-          setHasMore(false);
-        }
-      } catch (err: any) {
-        console.error(err);
-        setError(
-          err?.response?.data?.message || "Failed to load feed. Please try again."
-        );
-      } finally {
-        setLoading(false);
-        setInitialLoading(false);
-      }
-    },
-    [LIMIT]
+function Stat({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="rounded-xl bg-gray-50 border border-gray-100 p-3 text-center">
+      <div className="font-semibold text-gray-900">{value}</div>
+      <div className="text-xs text-gray-500">{label}</div>
+    </div>
   );
+}
 
-  // أول لود
-  useEffect(() => {
-    fetchPage(1);
-  }, [fetchPage]);
+/* -------------------- Shared UI -------------------- */
 
-  // الدالة اللي InfiniteScroll هيناديها
-  const loadMore = () => {
-    if (loading || !hasMore) return;
-    const nextPage = page + 1;
-    setPage(nextPage);
-    fetchPage(nextPage);
-  };
+function Avatar({
+  name,
+  src,
+  size = "md",
+}: {
+  name: string;
+  src?: string | null;
+  size?: "md" | "lg";
+}) {
+  const dim = size === "lg" ? 56 : 36;
+  const initial = (name?.[0] ?? "U").toUpperCase();
 
-  // حالة أول تحميل
-  if (initialLoading && !items.length) {
+  if (src) {
     return (
-      <p className="text-center text-sm text-[#7c6189]">Loading feed...</p>
-    );
-  }
-
-  // حالة الخطأ
-  if (error && !items.length) {
-    return <p className="text-center text-sm text-red-500">{error}</p>;
-  }
-
-  // مفيش ميديا خالص بعد أول تحميل
-  if (!items.length && !initialLoading) {
-    return (
-      <div className="flex flex-col items-center gap-6 rounded-xl bg-white p-8 shadow-[0_4px_12px_rgba(0,0,0,0.05)]">
-        <div className="flex size-32 items-center justify-center rounded-full bg-[#ad2bee]/10">
-          <span className="material-symbols-outlined text-6xl text-[#ad2bee]">
-            photo_camera
-          </span>
-        </div>
-        <div className="flex max-w-xs flex-col items-center gap-2 text-center">
-          <p className="text-lg font-bold text-[#161118]">No media yet.</p>
-          <p className="text-sm font-normal leading-normal text-[#7c6189]">
-            Be the first to upload something and share it with the world!
-          </p>
-        </div>
-      </div>
+      <img
+        src={src}
+        alt={name}
+        style={{ width: dim, height: dim }}
+        className="rounded-full object-cover"
+      />
     );
   }
 
   return (
-    <>
-      {error && (
-        <p className="mb-2 text-center text-xs text-red-500">
-          {error}
-        </p>
-      )}
+    <div
+      style={{ width: dim, height: dim }}
+      className="rounded-full bg-gray-100 border border-gray-200 grid place-items-center text-gray-700 font-semibold"
+    >
+      {initial}
+    </div>
+  );
+}
 
-      <InfiniteScroll
-        dataLength={items.length}
-        next={loadMore}
-        hasMore={hasMore}
-        loader={
-          <p className="py-4 text-center text-sm text-[#7c6189]">
-            Loading more...
-          </p>
-        }
-        endMessage={
-          <p className="py-4 text-center text-xs text-[#7c6189]">
-            You&apos;ve reached the end of the feed.
-          </p>
-        }
-      >
-        <div className="flex flex-col gap-6">
-          {items.map((item) => (
-            <MediaCard key={item.id} item={item} />
-          ))}
+function formatTime(iso: string) {
+  try {
+    const d = new Date(iso);
+    const diff = Date.now() - d.getTime();
+    const mins = Math.floor(diff / 60000);
+    if (mins < 60) return `${mins}m ago`;
+    const hrs = Math.floor(mins / 60);
+    if (hrs < 24) return `${hrs}h ago`;
+    const days = Math.floor(hrs / 24);
+    return `${days}d ago`;
+  } catch {
+    return "";
+  }
+}
+
+function FeedSkeleton() {
+  return (
+    <div className="space-y-4">
+      {[0, 1].map((i) => (
+        <div
+          key={i}
+          className="rounded-2xl bg-white border border-gray-100 shadow-sm overflow-hidden"
+        >
+          <div className="p-4 flex gap-3 items-center">
+            <div className="h-9 w-9 rounded-full bg-gray-100" />
+            <div className="flex-1">
+              <div className="h-3 w-32 bg-gray-100 rounded" />
+              <div className="mt-2 h-3 w-20 bg-gray-100 rounded" />
+            </div>
+          </div>
+          <div className="h-[360px] bg-gray-50" />
+          <div className="p-4">
+            <div className="h-3 w-40 bg-gray-100 rounded" />
+            <div className="mt-2 h-3 w-64 bg-gray-100 rounded" />
+          </div>
         </div>
-      </InfiniteScroll>
-    </>
+      ))}
+    </div>
+  );
+}
+
+function EmptyFeed() {
+  return (
+    <div className="rounded-2xl bg-white border border-gray-100 shadow-sm p-10 text-center">
+      <div className="text-lg font-semibold text-gray-900">No posts yet</div>
+      <div className="mt-2 text-sm text-gray-500">
+        Follow people or upload your first moment to see content here.
+      </div>
+    </div>
   );
 }
