@@ -1,5 +1,14 @@
 import { api } from "./axios";
 
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
+const COGNITO_DOMAIN = import.meta.env.VITE_COGNITO_DOMAIN;
+const CLIENT_ID = import.meta.env.VITE_COGNITO_CLIENT_ID;
+const LOGOUT_REDIRECT = import.meta.env.VITE_COGNITO_LOGOUT_REDIRECT;
+
+if (!COGNITO_DOMAIN || !CLIENT_ID || !LOGOUT_REDIRECT) {
+  throw new Error("Missing Cognito env variables");
+}
+
 export type MeResponse = {
   user: {
     id: string;
@@ -10,18 +19,21 @@ export type MeResponse = {
 };
 
 export const AuthAPI = {
-  // 1) يبدأ لوجين: redirect browser (مش axios)
+  // redirect → backend (BFF)
   startLogin() {
-    window.location.href = "http://localhost:4000/v1/auth/login";
+    window.location.href = `${API_BASE_URL}/auth/login`;
   },
 
-  // 2) يجيب المستخدم الحالي عبر cookies
+  // cookies-based
   me() {
     return api.get<MeResponse>("/auth/me");
   },
 
-  // 3) يعمل logout ويمسح cookies من السيرفر
+  // redirect → Cognito logout
   startLogout() {
-    window.location.href = "http://localhost:4000/v1/auth/logout";
+    window.location.href =
+      `${COGNITO_DOMAIN}/logout` +
+      `?client_id=${CLIENT_ID}` +
+      `&logout_uri=${encodeURIComponent(LOGOUT_REDIRECT)}`;
   },
 };
