@@ -1,4 +1,3 @@
-// src/App.tsx
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import LoginPage from "./features/auth/LoginPage";
 import RegisterPage from "./features/auth/RegisterPage";
@@ -9,6 +8,8 @@ import UserProfilePage from "./features/profile/UserProfilePage";
 import { useUserStore } from "./store/user.store";
 import { ThemeProvider } from "./components/ThemeProvider";
 import MainLayout from "./layouts/MainLayout";
+import AuthBootstrap from "./features/auth/AuthBootstrap";
+import AuthSuccessPage from "./features/auth/pages/AuthSuccessPage";
 
 export default function App() {
   const user = useUserStore((s) => s.user);
@@ -17,15 +18,20 @@ export default function App() {
     <BrowserRouter>
       <ThemeProvider>
         <Routes>
-          <Route
-            element={user ? <MainLayout /> : <Navigate to="/login" replace />}
-          >
-            <Route path="/" element={<FeedPage />} />
-            <Route path="/upload" element={<UploadPage />} />
-            <Route path="/profile" element={<ProfilePage />} />
-            <Route path="/users/:userId" element={<UserProfilePage />} />
+          {/* callback redirect target */}
+          <Route path="/auth/success" element={<AuthSuccessPage />} />
+
+          {/* protected area */}
+          <Route element={<AuthBootstrap />}>
+            <Route element={<MainLayout />}>
+              <Route path="/" element={<FeedPage />} />
+              <Route path="/upload" element={<UploadPage />} />
+              <Route path="/profile" element={<ProfilePage />} />
+              <Route path="/users/:userId" element={<UserProfilePage />} />
+            </Route>
           </Route>
 
+          {/* public */}
           <Route
             path="/login"
             element={!user ? <LoginPage /> : <Navigate to="/" replace />}

@@ -18,6 +18,7 @@ const app = express();
 app.use(cookieParser());
 app.use(helmet());
 app.use(cors(config.cors));
+app.options("*", cors(config.cors));
 app.use(preventHPP);
 
 const globalLimiter = rateLimit({

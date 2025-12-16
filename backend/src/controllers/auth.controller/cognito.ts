@@ -65,13 +65,13 @@ export async function cognitoLogin(req: Request, res: Response) {
   `${domain}/oauth2/authorize` +
   `?response_type=code` +
   `&client_id=${encodeURIComponent(clientId)}` +
-    `&redirect_uri=${encodeURIComponent(redirectUri)}` +
-    `&scope=${scope}` +
-    `&state=${encodeURIComponent(state)}` +
-    `&code_challenge=${encodeURIComponent(codeChallenge)}` +
-    `&code_challenge_method=S256`;
-    `&response_mode=query` +   // ✅ مهم
-    `&prompt=login`;
+  `&redirect_uri=${encodeURIComponent(redirectUri)}` +
+  `&scope=${scope}` +
+  `&state=${encodeURIComponent(state)}` +
+  `&code_challenge=${encodeURIComponent(codeChallenge)}` +
+  `&code_challenge_method=S256` +
+  `&response_mode=query` +
+  `&prompt=login`;
 
     console.log("🚀 ~ cognitoLogin ~ url:", url)
   return res.redirect(url);

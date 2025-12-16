@@ -11,9 +11,18 @@ export const config = {
     password: process.env.REDIS_PASSWORD,
   },
   cors: {
-    origin: process.env.CORS_ORIGIN || '*',
+    origin(origin: string | undefined, callback: (err: Error | null, allow?: boolean) => void) {
+      const allowedOrigins = ["http://localhost:5173"];
+
+      if (!origin || allowedOrigins.includes(origin)) {
+        callback(null, true);
+      } else {
+        callback(new Error("Not allowed by CORS"));
+      }
+    },
     credentials: true,
   },
+
   rateLimit: {
     windowMs: 15 * 60 * 1000,
     max: 100,
