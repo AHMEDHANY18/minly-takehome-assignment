@@ -1,8 +1,8 @@
 import { useEffect, useRef } from "react";
 import { useNotificationStore, type NotificationItem } from "../store/notification.store";
+import { useNotificationSound } from "./useNotificationSound";
 
 export function useNotificationStream(enabled: boolean) {
-  // DEBUG: يثبت إن الهـوك بيترندر أصلًا
   console.log("[SSE hook] render", { enabled });
 
   const esRef = useRef<EventSource | null>(null);
@@ -10,10 +10,12 @@ export function useNotificationStream(enabled: boolean) {
   const pushIncoming = useNotificationStore((s) => s.pushIncoming);
   const setConnected = useNotificationStore((s) => s.setConnected);
 
+  // 🔊 الصوت
+  const { play } = useNotificationSound();
+
   useEffect(() => {
     if (!enabled) {
       console.log("[SSE] disabled");
-      // لو كان فيه اتصال قديم وقفّه
       if (esRef.current) {
         esRef.current.close();
         esRef.current = null;
@@ -34,35 +36,42 @@ export function useNotificationStream(enabled: boolean) {
       console.log("[SSE] open");
     };
 
-    // event: ping
+    // keep-alive
     es.addEventListener("ping", () => {
       console.log("[SSE] ping");
     });
 
-    // event: notification
+    // 🔔 إشعار حقيقي
     es.addEventListener("notification", (evt) => {
       try {
         const payload = JSON.parse((evt as MessageEvent).data) as NotificationItem;
         console.log("[SSE] notification", payload);
+
         pushIncoming(payload);
-      } catch (e) {
-        console.log("[SSE] bad notification payload", (evt as MessageEvent).data);
+
+        // 🔊 شغل الصوت (بشروط)
+        if (!payload.isRead && !window.location.pathname.startsWith("/notifications")) {
+            play();
+          }
+      } catch {
+        console.log("[SSE] bad notification payload");
       }
     });
 
-    // لو السيرفر بيبعت default message
+    // fallback
     es.onmessage = (evt) => {
       try {
         const payload = JSON.parse(evt.data) as NotificationItem;
         console.log("[SSE] message", payload);
+
         pushIncoming(payload);
+        if (!payload.isRead) play();
       } catch {
         console.log("[SSE] bad message payload", evt.data);
       }
     };
 
     es.onerror = (e) => {
-      // EventSource بيحاول يعيد الاتصال تلقائيًا
       setConnected(false);
       console.log("[SSE] error", e);
     };
@@ -73,5 +82,5 @@ export function useNotificationStream(enabled: boolean) {
       es.close();
       esRef.current = null;
     };
-  }, [enabled, pushIncoming, setConnected]);
+  }, [enabled, pushIncoming, setConnected, play]);
 }
