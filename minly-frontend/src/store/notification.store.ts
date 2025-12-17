@@ -20,6 +20,9 @@ type NotificationStore = {
   unread: number;
   connected: boolean;
 
+  // ✅ للـ Floating toast + تشغيل الصوت
+  latest: NotificationItem | null;
+
   setInitial: (items: NotificationItem[]) => void;
   pushIncoming: (n: NotificationItem) => void;
 
@@ -27,18 +30,22 @@ type NotificationStore = {
   markReadLocal: (id: string) => void;
 
   setConnected: (v: boolean) => void;
+
+  // ✅
+  clearLatest: () => void;
 };
 
 export const useNotificationStore = create<NotificationStore>((set, get) => ({
   items: [],
   unread: 0,
   connected: false,
+  latest: null,
 
   setConnected: (v) => set({ connected: v }),
 
   setInitial: (items) => {
     const unread = items.filter((x) => !x.isRead).length;
-    set({ items, unread });
+    set({ items, unread, latest: null });
   },
 
   pushIncoming: (n) => {
@@ -47,10 +54,10 @@ export const useNotificationStore = create<NotificationStore>((set, get) => ({
     // dedupe by id
     if (prev.some((x) => x.id === n.id)) return;
 
-    const next = [n, ...prev];
     set({
-      items: next,
+      items: [n, ...prev],
       unread: get().unread + (n.isRead ? 0 : 1),
+      latest: n, // ✅ أهم سطر
     });
   },
 
@@ -70,4 +77,6 @@ export const useNotificationStore = create<NotificationStore>((set, get) => ({
       unread: Math.max(0, get().unread - (before && !before.isRead ? 1 : 0)),
     });
   },
+
+  clearLatest: () => set({ latest: null }),
 }));

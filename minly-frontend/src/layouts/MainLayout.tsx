@@ -1,18 +1,33 @@
-import React from "react";
+import React, { useEffect } from "react";
 import { NavLink, Outlet, useLocation, useNavigate } from "react-router-dom";
 import { useUserStore } from "../store/user.store";
 import { useNotificationStore } from "../store/notification.store";
-import { useNotificationStream } from "../hooks/useNotificationStream"; // ✅
+import { useNotificationStream } from "../hooks/useNotificationStream";
+import { useNotificationSound } from "../hooks/useNotificationSound";
+import FloatingNotification from "../components/FloatingNotification";
 
 export default function MainLayout() {
   const user = useUserStore((s) => s.user);
   const unread = useNotificationStore((s) => s.unread);
-
-  // ✅ هنا الاستدعاء الصح: مرة واحدة طول ما المستخدم داخل
-  useNotificationStream(!!user);
+  const latest = useNotificationStore((s) => s.latest);
 
   const { pathname } = useLocation();
   const nav = useNavigate();
+
+  // ✅ SSE مرة واحدة طول ما المستخدم داخل
+  useNotificationStream(!!user);
+
+  // ✅ الصوت
+  const { play, unlock, unlocked } = useNotificationSound();
+
+  // ✅ شغل الصوت لما يجي إشعار جديد (latest اتغير)
+  useEffect(() => {
+    if (!latest) return;
+    if (latest.isRead) return;
+    if (pathname.startsWith("/notifications")) return;
+
+    play();
+  }, [latest?.id, latest?.isRead, pathname, play]);
 
   const hideSidebar = pathname.startsWith("/notifications");
 
@@ -122,9 +137,22 @@ export default function MainLayout() {
 
           <section className="min-w-0">
             <Outlet />
+            <FloatingNotification />
           </section>
         </div>
       </main>
+
+      {/* ✅ زر تفعيل الصوت (لازم Click صريح) */}
+      {!unlocked && (
+        <div className="fixed bottom-4 left-1/2 -translate-x-1/2 z-50">
+          <button
+            onClick={unlock}
+            className="px-4 py-3 rounded-xl bg-gray-900 text-white shadow-lg text-sm font-semibold"
+          >
+            Enable notification sound
+          </button>
+        </div>
+      )}
     </div>
   );
 }
@@ -137,7 +165,9 @@ function TopLink({ to, label, end }: { to: string; label: string; end?: boolean 
       className={({ isActive }) =>
         [
           "h-9 px-3 rounded-full text-sm font-semibold transition inline-flex items-center",
-          isActive ? "text-blue-700 bg-blue-50" : "text-gray-600 hover:text-gray-900 hover:bg-gray-50",
+          isActive
+            ? "text-blue-700 bg-blue-50"
+            : "text-gray-600 hover:text-gray-900 hover:bg-gray-50",
         ].join(" ")
       }
     >

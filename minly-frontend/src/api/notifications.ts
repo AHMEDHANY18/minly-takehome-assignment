@@ -71,6 +71,11 @@ export const NotificationsAPI = {
 
   readAll() {
     // بناءً على مثال الريسبونس عندك
-    return api.post("/notification/read-all");
+    return api.patch("/notification/read-all");
+  },
+
+  markRead(id: string) {
+    return api.patch(`/notification/${id}/read`);
+
   },
 };

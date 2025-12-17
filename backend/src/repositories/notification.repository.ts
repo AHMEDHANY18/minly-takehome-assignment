@@ -23,9 +23,52 @@ export const NotificationRepository = {
         commentId: data.commentId ?? null,
         followId: data.followId ?? null,
       },
+
+      // 👇👇 أهم جزء
+      select: {
+        id: true,
+        type: true,
+        isRead: true,
+        createdAt: true,
+
+        actor: {
+          select: {
+            id: true,
+            name: true,
+            avatarUrl: true,
+          },
+        },
+
+        media: data.mediaId
+          ? {
+              select: {
+                id: true,
+                thumbnailUrl: true, // أو url لو ده اللي عندك
+              },
+            }
+          : false,
+
+        comment: data.commentId
+          ? {
+              select: {
+                id: true,
+                text: true,
+              },
+            }
+          : false,
+
+        follow: data.followId
+          ? {
+              select: {
+                followerId: true,
+                followingId: true,
+              },
+            }
+          : false,
+      },
     });
 
-    // 🔥 realtime push
+    // 🔥 realtime push (جاهز للـ UI)
     NotificationStream.emit(data.targetUserId, notification);
 
     return notification;

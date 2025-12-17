@@ -2,12 +2,28 @@ import { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { SocialAPI } from "../../api/social";
 import type { NotificationItem } from "../../api/notifications";
-import { useNotifications, type NotificationsTab, matchesTab, normalizeType } from "./hooks/useNotifications";
+import {
+  useNotifications,
+  type NotificationsTab,
+  matchesTab,
+  normalizeType,
+} from "./hooks/useNotifications";
 
 export default function NotificationsPage() {
   const nav = useNavigate();
-  const { items, initialLoading, loadingMore, error, hasMore, loadMore, reload, markAllRead, unreadCount } =
-    useNotifications(20);
+
+  const {
+    items,
+    initialLoading,
+    loadingMore,
+    error,
+    hasMore,
+    loadMore,
+    reload,
+    markAllRead,
+    markRead,
+    unreadCount,
+  } = useNotifications(20);
 
   const [tab, setTab] = useState<NotificationsTab>("ALL");
   const [pendingFollow, setPendingFollow] = useState<Record<string, boolean>>({});
@@ -79,9 +95,9 @@ export default function NotificationsPage() {
         <Skeleton />
       ) : (
         <div className="space-y-6">
-          {renderSection("TODAY", grouped.today, nav, onFollowBack, pendingFollow)}
-          {renderSection("THIS WEEK", grouped.thisWeek, nav, onFollowBack, pendingFollow)}
-          {renderSection("EARLIER", grouped.earlier, nav, onFollowBack, pendingFollow)}
+          {renderSection("TODAY", grouped.today, nav, onFollowBack, pendingFollow, markRead)}
+          {renderSection("THIS WEEK", grouped.thisWeek, nav, onFollowBack, pendingFollow, markRead)}
+          {renderSection("EARLIER", grouped.earlier, nav, onFollowBack, pendingFollow, markRead)}
 
           <div className="py-2 flex justify-center">
             {hasMore ? (
@@ -109,7 +125,8 @@ function renderSection(
   rows: NotificationItem[],
   nav: ReturnType<typeof useNavigate>,
   onFollowBack: (actorId: string, notifId: string) => void,
-  pendingFollow: Record<string, boolean>
+  pendingFollow: Record<string, boolean>,
+  markRead: (id: string) => void
 ) {
   if (!rows.length) return null;
 
@@ -118,67 +135,100 @@ function renderSection(
       <div className="text-xs font-semibold text-gray-400 mb-2">{title}</div>
 
       <div className="rounded-2xl bg-white border border-gray-100 shadow-sm overflow-hidden">
-        {rows.map((n, idx) => (
-          <div
-            key={n.id}
-            className={[
-              "flex items-center gap-3 px-4 py-3",
-              idx !== 0 ? "border-t border-gray-100" : "",
-              "hover:bg-gray-50 transition",
-            ].join(" ")}
-          >
-            {/* unread dot */}
-            <div className="w-2">
-              {!n.isRead ? <span className="block h-2 w-2 rounded-full bg-blue-600" /> : null}
-            </div>
+        {rows.map((n, idx) => {
+          const mediaId = (n as any).mediaId ?? n.media?.id; // safety
 
-            <button
-              className="shrink-0"
-              onClick={() => n.actor?.id && nav(`/users/${n.actor.id}`)}
-              aria-label="Open actor profile"
+          const openMedia = () => {
+            if (!n.isRead) markRead(n.id);
+            if (mediaId) nav(`/media/${mediaId}`);
+          };
+
+          return (
+            <div
+              key={n.id}
+              role="button"
+              tabIndex={0}
+              onClick={() => {
+                // لو FOLLOW مفيش media — خليه يفتح البروفايل بدل
+                if (normalizeType(n.type) === "FOLLOW") {
+                  if (!n.isRead) markRead(n.id);
+                  if (n.actor?.id) nav(`/users/${n.actor.id}`);
+                  return;
+                }
+
+                openMedia();
+              }}
+              className={[
+                "flex items-center gap-3 px-4 py-3 cursor-pointer",
+                idx !== 0 ? "border-t border-gray-100" : "",
+                "hover:bg-gray-50 transition",
+              ].join(" ")}
             >
-              <Avatar name={n.actor?.name ?? "User"} src={n.actor?.avatarUrl ?? null} />
-            </button>
-
-            <div className="min-w-0 flex-1">
-              <div className="text-sm text-gray-900">
-                <span
-                  className="font-semibold hover:underline cursor-pointer"
-                  onClick={() => n.actor?.id && nav(`/users/${n.actor.id}`)}
-                >
-                  {n.actor?.name ?? "Someone"}
-                </span>{" "}
-                <span className="text-gray-700">{buildMessage(n)}</span>
+              {/* unread dot */}
+              <div className="w-2">
+                {!n.isRead ? <span className="block h-2 w-2 rounded-full bg-blue-600" /> : null}
               </div>
 
-              <div className="text-xs text-gray-400 mt-1">{formatTime(n.createdAt)}</div>
-            </div>
-
-            {/* Right side */}
-            {normalizeType(n.type) === "FOLLOW" ? (
               <button
-                onClick={() => n.actor?.id && onFollowBack(n.actor.id, n.id)}
-                disabled={!n.actor?.id || !!pendingFollow[n.id]}
-                className="h-9 px-4 rounded-full bg-blue-600 text-white text-sm font-semibold hover:bg-blue-700 transition disabled:opacity-60"
-              >
-                {pendingFollow[n.id] ? "Following…" : "Follow Back"}
-              </button>
-            ) : n.media?.url ? (
-              <button
-                className="h-12 w-12 rounded-xl overflow-hidden border border-gray-100 bg-gray-50 shrink-0"
-                aria-label="Open media"
-                onClick={() => {
-                  // لو عندك صفحة media اعمل route هنا
-                  // nav(`/media/${n.mediaId}`)
+                className="shrink-0"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  if (!n.isRead) markRead(n.id);
+                  n.actor?.id && nav(`/users/${n.actor.id}`);
                 }}
+                aria-label="Open actor profile"
               >
-                <img src={n.media.url} alt="" className="h-full w-full object-cover" />
+                <Avatar name={n.actor?.name ?? "User"} src={n.actor?.avatarUrl ?? null} />
               </button>
-            ) : (
-              <div className="h-12 w-12 rounded-xl border border-gray-100 bg-gray-50 shrink-0" />
-            )}
-          </div>
-        ))}
+
+              <div className="min-w-0 flex-1">
+                <div className="text-sm text-gray-900">
+                  <span
+                    className="font-semibold hover:underline cursor-pointer"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      if (!n.isRead) markRead(n.id);
+                      n.actor?.id && nav(`/users/${n.actor.id}`);
+                    }}
+                  >
+                    {n.actor?.name ?? "Someone"}
+                  </span>{" "}
+                  <span className="text-gray-700">{buildMessage(n)}</span>
+                </div>
+
+                <div className="text-xs text-gray-400 mt-1">{formatTime(n.createdAt)}</div>
+              </div>
+
+              {/* Right side */}
+              {normalizeType(n.type) === "FOLLOW" ? (
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    if (!n.isRead) markRead(n.id);
+                    n.actor?.id && onFollowBack(n.actor.id, n.id);
+                  }}
+                  disabled={!n.actor?.id || !!pendingFollow[n.id]}
+                  className="h-9 px-4 rounded-full bg-blue-600 text-white text-sm font-semibold hover:bg-blue-700 transition disabled:opacity-60"
+                >
+                  {pendingFollow[n.id] ? "Following…" : "Follow Back"}
+                </button>
+              ) : n.media?.url ? (
+                <button
+                  className="h-12 w-12 rounded-xl overflow-hidden border border-gray-100 bg-gray-50 shrink-0"
+                  aria-label="Open media"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    openMedia();
+                  }}
+                >
+                  <img src={n.media.url} alt="" className="h-full w-full object-cover" />
+                </button>
+              ) : (
+                <div className="h-12 w-12 rounded-xl border border-gray-100 bg-gray-50 shrink-0" />
+              )}
+            </div>
+          );
+        })}
       </div>
     </div>
   );
@@ -232,7 +282,6 @@ function buildMessage(n: NotificationItem) {
     return `commented on your post${txt}`;
   }
 
-  // SYSTEM / fallback
   return "sent you a notification.";
 }
 

@@ -12,6 +12,7 @@ import AuthBootstrap from "./features/auth/AuthBootstrap";
 import AuthSuccessPage from "./features/auth/pages/AuthSuccessPage";
 import NotificationsPage from "./features/notifications/NotificationsPage";
 import MediaDetailsPage from "./features/media/MediaDetailsPage";
+import SavedPage from "./features/saved/SavedPage";
 
 export default function App() {
   const user = useUserStore((s) => s.user);
@@ -32,7 +33,7 @@ export default function App() {
               <Route path="/trending" element={<FeedPage mode="trending" />} />
               <Route path="/notifications" element={<NotificationsPage />} />
               <Route path="/media/:mediaId" element={<MediaDetailsPage />} />
-
+              <Route path="/saved" element={<SavedPage />} />
 
               {/* other pages */}
               <Route path="/upload" element={<UploadPage />} />
