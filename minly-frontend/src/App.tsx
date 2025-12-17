@@ -11,6 +11,7 @@ import MainLayout from "./layouts/MainLayout";
 import AuthBootstrap from "./features/auth/AuthBootstrap";
 import AuthSuccessPage from "./features/auth/pages/AuthSuccessPage";
 import NotificationsPage from "./features/notifications/NotificationsPage";
+import MediaDetailsPage from "./features/media/MediaDetailsPage";
 
 export default function App() {
   const user = useUserStore((s) => s.user);
@@ -30,6 +31,8 @@ export default function App() {
               <Route path="/explore" element={<FeedPage mode="explore" />} />
               <Route path="/trending" element={<FeedPage mode="trending" />} />
               <Route path="/notifications" element={<NotificationsPage />} />
+              <Route path="/media/:mediaId" element={<MediaDetailsPage />} />
+
 
               {/* other pages */}
               <Route path="/upload" element={<UploadPage />} />

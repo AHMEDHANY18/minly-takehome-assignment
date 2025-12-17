@@ -141,8 +141,13 @@ function PostCard({
   onToggleLike: (id: string) => void;
   onToggleBookmark: (id: string) => void;
 }) {
+  const nav = useNavigate();
+
+  const openDetails = () => nav(`/media/${item.id}`, { state: { media: item } });
+
   return (
     <div className="rounded-2xl bg-white border border-gray-100 shadow-sm overflow-hidden">
+      {/* Header */}
       <div className="flex items-center justify-between px-4 py-3">
         <div className="flex items-center gap-3">
           <Avatar name={item.uploader.name} src={item.uploader.avatarUrl} />
@@ -150,28 +155,41 @@ function PostCard({
             <div className="text-sm font-semibold text-gray-900">
               {item.uploader.name}
             </div>
-            <div className="text-xs text-gray-500">
-              {formatTime(item.createdAt)}
-            </div>
+            <div className="text-xs text-gray-500">{formatTime(item.createdAt)}</div>
           </div>
         </div>
-        <button
-          className="h-9 w-9 rounded-full hover:bg-gray-50 transition"
-          aria-label="More"
-        >
+        <button className="h-9 w-9 rounded-full hover:bg-gray-50 transition" aria-label="More">
           ⋯
         </button>
       </div>
 
-      <div className="relative bg-gray-50">
+      {/* ✅ Media */}
+      <button
+        type="button"
+        onClick={openDetails}
+        className="block w-full text-left bg-gray-50"
+        aria-label="Open media"
+      >
         {item.type === "VIDEO" ? (
-          <video
-            className="w-full max-h-[520px] object-cover"
-            controls
-            preload="metadata"
-          >
-            <source src={item.url} />
-          </video>
+          item.thumbnailUrl ? (
+            <div className="relative">
+              <img
+                src={item.thumbnailUrl}
+                alt={item.title ?? "video"}
+                className="w-full max-h-[520px] object-cover"
+                loading="lazy"
+              />
+              <div className="absolute inset-0 grid place-items-center">
+                <div className="h-12 w-12 rounded-full bg-black/40 grid place-items-center text-white">
+                  ▶
+                </div>
+              </div>
+            </div>
+          ) : (
+            <video className="w-full max-h-[520px] object-cover" controls preload="metadata">
+              <source src={item.url} />
+            </video>
+          )
         ) : (
           <img
             src={item.url}
@@ -180,64 +198,50 @@ function PostCard({
             loading="lazy"
           />
         )}
-      </div>
+      </button>
 
+      {/* Actions + Text */}
       <div className="px-4 py-4">
-  {/* Actions row */}
-  <div className="flex items-center gap-6 text-gray-900">
-    <button
-      onClick={() => onToggleLike(item.id)}
-      className={
-        "inline-flex items-center gap-2 hover:opacity-80 transition " +
-        (item.isLiked ? "text-blue-600" : "text-gray-900")
-      }
-      aria-label="Like"
-    >
-<IconHeart filled={item.isLiked} />
-<span className="text-sm font-medium">{item.likesCount}</span>
-    </button>
+        <div className="flex items-center gap-6 text-gray-900">
+          <button
+            onClick={() => onToggleLike(item.id)}
+            className={
+              "inline-flex items-center gap-2 hover:opacity-80 transition " +
+              (item.isLiked ? "text-blue-600" : "")
+            }
+            aria-label="Like"
+          >
+            <IconHeart filled={item.isLiked} />
+            <span className="text-sm font-medium">{item.likesCount}</span>
+          </button>
 
-    <button
-      className="inline-flex items-center gap-2 hover:opacity-80 transition text-gray-900"
-      aria-label="Comments"
-    >
-      <IconComment />
-      <span className="text-sm font-medium">{item.commentCount}</span>
-    </button>
+          <button
+            onClick={openDetails}
+            className="inline-flex items-center gap-2 hover:opacity-80 transition"
+            aria-label="Comments"
+          >
+            <IconComment />
+            <span className="text-sm font-medium">{item.commentCount}</span>
+          </button>
 
-    <button
-      className="inline-flex items-center gap-2 hover:opacity-80 transition text-gray-900"
-      aria-label="Share"
-    >
-      <IconSend />
-    </button>
+          <button className="inline-flex items-center gap-2 hover:opacity-80 transition" aria-label="Share">
+            <IconSend />
+          </button>
 
-    <button
-      onClick={() => onToggleBookmark(item.id)}
-      className={
-        "ml-auto inline-flex items-center justify-center hover:opacity-80 transition " +
-        (item.isBookmarked ? "text-blue-600" : "text-gray-900")
-      }
-      aria-label="Bookmark"
-    >
-      <IconBookmark filled={item.isBookmarked} />
-    </button>
-  </div>
+          <button
+            onClick={() => onToggleBookmark(item.id)}
+            className={"ml-auto hover:opacity-80 transition " + (item.isBookmarked ? "text-blue-600" : "")}
+            aria-label="Bookmark"
+          >
+            <IconBookmark filled={item.isBookmarked} />
+          </button>
+        </div>
 
-  {/* Title + description */}
-  <div className="mt-3">
-    {item.title && (
-      <div className="text-base font-semibold text-gray-900">
-        {item.title}
+        <div className="mt-3">
+          {item.title && <div className="text-base font-semibold text-gray-900">{item.title}</div>}
+          {item.description && <p className="mt-1 text-sm text-gray-600 leading-relaxed">{item.description}</p>}
+        </div>
       </div>
-    )}
-    {item.description && (
-      <p className="mt-1 text-sm text-gray-600 leading-relaxed">
-        {item.description}
-      </p>
-    )}
-  </div>
-</div>
     </div>
   );
 }

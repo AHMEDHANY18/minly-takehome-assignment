@@ -22,6 +22,7 @@ export type NotificationItem = {
   media?: {
     id: string;
     thumbnailUrl: string | null;
+    url: string | null;
   } | null;
 
   comment?: {

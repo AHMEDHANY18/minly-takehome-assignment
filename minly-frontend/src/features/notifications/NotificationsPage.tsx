@@ -163,7 +163,7 @@ function renderSection(
               >
                 {pendingFollow[n.id] ? "Following…" : "Follow Back"}
               </button>
-            ) : n.media?.thumbnailUrl ? (
+            ) : n.media?.url ? (
               <button
                 className="h-12 w-12 rounded-xl overflow-hidden border border-gray-100 bg-gray-50 shrink-0"
                 aria-label="Open media"
@@ -172,7 +172,7 @@ function renderSection(
                   // nav(`/media/${n.mediaId}`)
                 }}
               >
-                <img src={n.media.thumbnailUrl} alt="" className="h-full w-full object-cover" />
+                <img src={n.media.url} alt="" className="h-full w-full object-cover" />
               </button>
             ) : (
               <div className="h-12 w-12 rounded-xl border border-gray-100 bg-gray-50 shrink-0" />

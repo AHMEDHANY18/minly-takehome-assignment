@@ -71,6 +71,7 @@ export const NotificationRepository = {
             select: {
               id: true,
               thumbnailUrl: true,
+              url: true,
             },
           },
           comment: {
