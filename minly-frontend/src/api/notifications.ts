@@ -36,6 +36,14 @@ export type NotificationItem = {
   } | null;
 };
 
+
+export type NotificationListResponse = {
+    status: "success";
+    data: NotificationItem[];
+    pagination: { page: number; limit: number; total: number; totalPages: number; hasNext: boolean; hasPrev: boolean };
+  };
+
+
 export type NotificationsResponse = {
   status: "success" | "error";
   data: NotificationItem[];
@@ -48,7 +56,14 @@ export type NotificationsResponse = {
     hasPrev: boolean;
   };
 };
-
+export const NotificationAPI = {
+  list(page = 1, limit = 20) {
+    return api.get<NotificationListResponse>("/notification", { params: { page, limit } });
+  },
+  readAll() {
+    return api.post("/notification/read-all");
+  },
+};
 export const NotificationsAPI = {
   list(params?: { page?: number; limit?: number }) {
     return api.get<NotificationsResponse>("/notification", { params });
