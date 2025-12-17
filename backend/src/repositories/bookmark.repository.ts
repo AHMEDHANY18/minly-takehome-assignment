@@ -60,22 +60,23 @@ export const BookmarkRepository = {
     if (sort === "oldest") {
       orderBy.push({ createdAt: "asc" });
     } else if (sort === "popularity") {
-      // ترتيب حسب شعبية الميديا (عدد اللايكس مثلاً)
-      orderBy.push({
-        media: {
-          likesCount: "desc", // ⚠️ لازم يكون موجود في Media
-        },
-      });
+      orderBy.push({ media: { likesCount: "desc" } });
+      // ✅ tie-breaker عشان النتائج تبقى مستقرة
+      orderBy.push({ createdAt: "desc" });
     } else {
-      // recent (default)
       orderBy.push({ createdAt: "desc" });
     }
 
+    const mediaType =
+      type === "image" ? "IMAGE" : type === "video" ? "VIDEO" : undefined;
+
+    const where: Prisma.BookmarkWhereInput = {
+      userId,
+      ...(mediaType ? { media: { type: mediaType } } : {}),
+    };
+
     return prisma.bookmark.findMany({
-      where: {
-        userId,
-        media: { type: "IMAGE" }
-      },
+      where,
       include: {
         media: {
           include: {
@@ -99,12 +100,14 @@ export const BookmarkRepository = {
   // Count bookmarks
   // ------------------------
   async countByUserId(userId: string, type?: MediaTypeFilter) {
-    return prisma.bookmark.count({
-      where: {
-        userId,
-        media: { type: "IMAGE" }
-      }
+    const mediaType =
+      type === "image" ? "IMAGE" : type === "video" ? "VIDEO" : undefined;
 
-    });
+    const where: Prisma.BookmarkWhereInput = {
+      userId,
+      ...(mediaType ? { media: { type: mediaType } } : {}),
+    };
+
+    return prisma.bookmark.count({ where });
   },
 };

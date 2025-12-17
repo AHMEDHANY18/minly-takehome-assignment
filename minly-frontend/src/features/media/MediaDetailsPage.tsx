@@ -1,24 +1,18 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { useLocation, useNavigate, useParams } from "react-router-dom";
-import { MediaDetailsAPI, type MediaComment, type ReplyItem } from "../../api/mediaDetails";
+import { useNavigate, useParams } from "react-router-dom";
+import {
+  MediaDetailsAPI,
+  type MediaComment,
+  type ReplyItem,
+  type MediaDetailsResponse,
+} from "../../api/mediaDetails";
 import { SocialAPI } from "../../api/social";
 import { useUserStore } from "../../store/user.store";
 import { IconBookmark, IconComment, IconHeart, IconSend } from "../feed/icons";
 
 /* ---------------- Types ---------------- */
 
-type MediaState = {
-  id: string;
-  url: string;
-  type: "IMAGE" | "VIDEO";
-  title?: string | null;
-  description?: string | null;
-  createdAt: string;
-  likesCount: number;
-  isLiked: boolean;
-  isBookmarked: boolean;
-  uploader: { id: string; name: string; avatarUrl?: string | null };
-};
+type MediaState = MediaDetailsResponse["media"];
 
 /* ---------------- Page ---------------- */
 
@@ -27,12 +21,11 @@ export default function MediaDetailsPage() {
   const { mediaId } = useParams();
   const me = useUserStore((s) => s.user);
 
-  const location = useLocation() as any;
-  const initialMedia: MediaState | undefined = location?.state?.media;
-
-  const [media, setMedia] = useState<MediaState | undefined>(initialMedia);
+  const [media, setMedia] = useState<MediaState | null>(null);
 
   const [comments, setComments] = useState<MediaComment[]>([]);
+  const [pagination, setPagination] = useState<MediaDetailsResponse["pagination"] | null>(null);
+
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState<string | null>(null);
 
@@ -49,19 +42,47 @@ export default function MediaDetailsPage() {
 
   const uploader = media?.uploader;
 
-  /* ---------------- Effects ---------------- */
+  /* ---------------- Load details (media + comments) ---------------- */
+
+  const [page, setPage] = useState(1);
+
+  const fetchDetails = async (targetPage: number, mode: "replace" | "append") => {
+    if (!mediaId) return;
+
+    setErr(null);
+    if (mode === "replace") setLoading(true);
+
+    try {
+      const res = await MediaDetailsAPI.getDetails(mediaId, { page: targetPage, limit: 20 });
+      const d = res.data.data;
+
+      setMedia(d.media);
+      setPagination(d.pagination);
+
+      if (mode === "replace") {
+        setComments(d.comments ?? []);
+        setPage(targetPage);
+      } else {
+        setComments((prev) => [...prev, ...(d.comments ?? [])]);
+        setPage(targetPage);
+      }
+    } catch (e: any) {
+      setErr(e?.response?.data?.message ?? "Failed to load media details.");
+    } finally {
+      if (mode === "replace") setLoading(false);
+    }
+  };
 
   useEffect(() => {
     if (!mediaId) return;
-
-    setLoading(true);
-    setErr(null);
-
-    MediaDetailsAPI.getComments(mediaId, { page: 1, limit: 20 })
-      .then((res) => setComments(res.data.data ?? []))
-      .catch((e) => setErr(e?.response?.data?.message ?? "Failed to load comments."))
-      .finally(() => setLoading(false));
+    fetchDetails(1, "replace");
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [mediaId]);
+
+  const loadMoreComments = () => {
+    if (!pagination?.hasMore) return;
+    fetchDetails(page + 1, "append");
+  };
 
   /* ---------------- Derived ---------------- */
 
@@ -142,7 +163,7 @@ export default function MediaDetailsPage() {
     setPosting(true);
 
     // ✅ optimistic comment
-    const optimisticComment = {
+    const optimisticComment: MediaComment = {
       id: crypto.randomUUID(),
       text,
       createdAt: new Date().toISOString(),
@@ -165,7 +186,7 @@ export default function MediaDetailsPage() {
       } else {
         setReplies((prev) => ({
           ...prev,
-          [replyTo.id]: [...(prev[replyTo.id] ?? []), optimisticComment],
+          [replyTo.id]: [...(prev[replyTo.id] ?? []), optimisticComment as any],
         }));
 
         setExpanded((p) => ({ ...p, [replyTo.id]: true }));
@@ -173,10 +194,7 @@ export default function MediaDetailsPage() {
         setComments((prev) =>
           prev.map((c) =>
             c.id === replyTo.id
-              ? {
-                  ...c,
-                  _count: { replies: (c._count?.replies ?? 0) + 1 },
-                }
+              ? { ...c, _count: { replies: (c._count?.replies ?? 0) + 1 } }
               : c
           )
         );
@@ -190,7 +208,6 @@ export default function MediaDetailsPage() {
       setPosting(false);
     }
   };
-
 
   /* ---------------- Render ---------------- */
 
@@ -214,12 +231,18 @@ export default function MediaDetailsPage() {
       <div className="rounded-2xl bg-white border border-gray-100 shadow-sm overflow-hidden grid grid-cols-1 md:grid-cols-[minmax(0,1fr)_380px]">
         {/* Media */}
         <div className="bg-gray-50">
-          {media?.type === "VIDEO" ? (
+          {loading && !media ? (
+            <div className="h-[78vh] grid place-items-center text-sm text-gray-500">Loading media…</div>
+          ) : !media ? (
+            <div className="h-[78vh] grid place-items-center text-sm text-gray-500">
+              {err ? "Failed to load media." : "No media found."}
+            </div>
+          ) : media.type === "VIDEO" ? (
             <video className="w-full h-full max-h-[78vh] object-cover" controls preload="metadata">
               <source src={media.url} />
             </video>
           ) : (
-            <img src={media?.url} className="w-full h-full max-h-[78vh] object-cover" />
+            <img src={media.url} className="w-full h-full max-h-[78vh] object-cover" />
           )}
         </div>
 
@@ -229,7 +252,7 @@ export default function MediaDetailsPage() {
           <div className="px-4 py-3 flex items-center justify-between border-b border-gray-100">
             <div className="flex items-center gap-3">
               <Avatar name={uploader?.name ?? "User"} src={uploader?.avatarUrl ?? null} />
-              <div className="text-sm font-semibold">{uploader?.name}</div>
+              <div className="text-sm font-semibold">{uploader?.name ?? "User"}</div>
               {uploader?.id && me?.id !== uploader.id && (
                 <button className="text-sm font-semibold text-blue-700 hover:underline">Follow</button>
               )}
@@ -238,17 +261,17 @@ export default function MediaDetailsPage() {
           </div>
 
           {/* Caption */}
-          {(media?.title || media?.description) && (
+          {!!media?.title || !!media?.description ? (
             <div className="px-4 py-3 border-b border-gray-100">
               <div className="flex gap-3">
                 <Avatar name={uploader?.name ?? "User"} src={uploader?.avatarUrl ?? null} size="sm" />
                 <div className="text-sm">
-                  <span className="font-semibold">{uploader?.name}</span>{" "}
+                  <span className="font-semibold">{uploader?.name ?? "User"}</span>{" "}
                   <span className="text-gray-700">{media?.description || media?.title}</span>
                 </div>
               </div>
             </div>
-          )}
+          ) : null}
 
           {/* Comments */}
           <div className="flex-1 overflow-y-auto px-4 py-3">
@@ -257,51 +280,65 @@ export default function MediaDetailsPage() {
             ) : err ? (
               <div className="text-sm text-red-600">{err}</div>
             ) : (
-              <div className="space-y-4">
-                {comments.map((c) => (
-                  <div key={c.id} className="flex gap-3">
-                    <Avatar name={c.user.name} src={c.user.avatarUrl} size="sm" />
-                    <div>
-                      <div className="text-sm">
-                        <span className="font-semibold">{c.user.name}</span>{" "}
-                        <span className="text-gray-700">{c.text}</span>
-                      </div>
+              <>
+                <div className="space-y-4">
+                  {comments.map((c) => (
+                    <div key={c.id} className="flex gap-3">
+                      <Avatar name={c.user.name} src={c.user.avatarUrl ?? null} size="sm" />
+                      <div>
+                        <div className="text-sm">
+                          <span className="font-semibold">{c.user.name}</span>{" "}
+                          <span className="text-gray-700">{c.text}</span>
+                        </div>
 
-                      <div className="mt-1 flex gap-3 text-xs text-gray-400">
-                        <span>{formatTime(c.createdAt)}</span>
-                        <button
-                          onClick={() => {
-                            setReplyTo({ id: c.id, name: c.user.name });
-                            commentInputRef.current?.focus();
-                          }}
-                          className="hover:underline"
-                        >
-                          Reply
-                        </button>
-                        {c._count?.replies ? (
-                          <button onClick={() => toggleReplies(c)} className="hover:underline">
-                            {expanded[c.id] ? "Hide replies" : `View replies (${c._count.replies})`}
+                        <div className="mt-1 flex gap-3 text-xs text-gray-400">
+                          <span>{formatTime(c.createdAt)}</span>
+                          <button
+                            onClick={() => {
+                              setReplyTo({ id: c.id, name: c.user.name });
+                              commentInputRef.current?.focus();
+                            }}
+                            className="hover:underline"
+                          >
+                            Reply
                           </button>
+                          {c._count?.replies ? (
+                            <button onClick={() => toggleReplies(c)} className="hover:underline">
+                              {expanded[c.id] ? "Hide replies" : `View replies (${c._count.replies})`}
+                            </button>
+                          ) : null}
+                        </div>
+
+                        {expanded[c.id] && (replies[c.id]?.length ?? 0) > 0 ? (
+                          <div className="mt-3 pl-3 border-l border-gray-100 space-y-3">
+                            {replies[c.id].map((r) => (
+                              <div key={r.id} className="flex gap-3">
+                                <Avatar name={r.user.name} src={r.user.avatarUrl ?? null} size="xs" />
+                                <div className="text-sm">
+                                  <span className="font-semibold">{r.user.name}</span>{" "}
+                                  <span className="text-gray-700">{r.text}</span>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
                         ) : null}
                       </div>
-
-                      {expanded[c.id] && replies[c.id]?.length && (
-                        <div className="mt-3 pl-3 border-l border-gray-100 space-y-3">
-                          {replies[c.id].map((r) => (
-                            <div key={r.id} className="flex gap-3">
-                              <Avatar name={r.user.name} src={r.user.avatarUrl} size="xs" />
-                              <div className="text-sm">
-                                <span className="font-semibold">{r.user.name}</span>{" "}
-                                <span className="text-gray-700">{r.text}</span>
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                      )}
                     </div>
+                  ))}
+                </div>
+
+                {/* Pagination */}
+                {pagination?.hasMore ? (
+                  <div className="mt-4 flex justify-center">
+                    <button
+                      onClick={loadMoreComments}
+                      className="h-10 px-5 rounded-xl bg-white border border-gray-200 shadow-sm hover:bg-gray-50 transition text-sm font-semibold"
+                    >
+                      Load more
+                    </button>
                   </div>
-                ))}
-              </div>
+                ) : null}
+              </>
             )}
           </div>
 
@@ -320,14 +357,17 @@ export default function MediaDetailsPage() {
               <button className="h-10 w-10 rounded-full hover:bg-gray-50 grid place-items-center">
                 <IconSend />
               </button>
-              <button onClick={onToggleBookmark} className="ml-auto h-10 w-10 rounded-full hover:bg-gray-50 grid place-items-center">
+              <button
+                onClick={onToggleBookmark}
+                className="ml-auto h-10 w-10 rounded-full hover:bg-gray-50 grid place-items-center"
+              >
                 <IconBookmark filled={!!media?.isBookmarked} />
               </button>
             </div>
 
             <div className="px-4 pb-2">
               <div className="text-sm font-semibold">{likeCountLabel}</div>
-              <div className="text-[11px] text-gray-400">{formatDate(media?.createdAt ?? "")}</div>
+              <div className="text-[11px] text-gray-400">{formatDate(media?.createdAt)}</div>
             </div>
 
             {replyTo && (
@@ -402,8 +442,9 @@ function formatTime(iso: string) {
   return `${Math.floor(h / 24)}d`;
 }
 
-function formatDate(iso: string) {
-  return new Date(iso)
-    .toLocaleDateString("en-US", { month: "long", day: "numeric" })
-    .toUpperCase();
+function formatDate(iso?: string | null) {
+  if (!iso) return "";
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return "";
+  return d.toLocaleDateString("en-US", { month: "long", day: "numeric" }).toUpperCase();
 }

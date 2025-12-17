@@ -15,7 +15,10 @@ export async function getBookmarksService(
     throw err;
   }
 
-  const { page, limit, sort, type } = options;
+  const page = Math.max(Number(options.page) || 1, 1);
+  const limit = Math.min(Math.max(Number(options.limit) || 20, 1), 50);
+
+  const { sort, type } = options;
 
   const skip = (page - 1) * limit;
 
@@ -30,7 +33,7 @@ export async function getBookmarksService(
   ]);
 
   return {
-    data: items.map((b) => b.media), // ✅ تمام
+    data: items.map((b) => b.media),
     pagination: {
       page,
       limit,

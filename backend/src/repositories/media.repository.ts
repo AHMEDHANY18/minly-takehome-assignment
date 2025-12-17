@@ -17,6 +17,35 @@ export const MediaRepository = {
       data: { mediaCount: { increment: 1 } },
     });
   },
+  async findByIdDetailedForViewer(mediaId: string, viewerId: string) {
+    const media = await prisma.media.findUnique({
+      where: { id: mediaId },
+      include: {
+        uploader: {
+          select: { id: true, name: true, avatarUrl: true },
+        },
+      },
+    });
+
+    if (!media) return null;
+
+    const [like, bookmark] = await Promise.all([
+      prisma.like.findFirst({
+        where: { mediaId, userId: viewerId },
+        select: { id: true },
+      }),
+      prisma.bookmark.findFirst({
+        where: { mediaId, userId: viewerId },
+        select: { id: true },
+      }),
+    ]);
+
+    return {
+      ...media,
+      isLiked: !!like,
+      isBookmarked: !!bookmark,
+    };
+  },
 
   async createMediaWithCounter(data: {
     url: string;

@@ -73,8 +73,8 @@ export default function SavedPage() {
         <GridSkeleton />
       ) : (
         <>
-          <div className="columns-1 sm:columns-2 lg:columns-3 gap-4 [column-fill:_balance]">
-            {filtered.map((m) => (
+<div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+{filtered.map((m) => (
               <MediaCard key={m.id} m={m} onClick={() => nav(`/media/${m.id}`)} />
             ))}
           </div>
@@ -132,25 +132,32 @@ function SortSelect({ value, onChange }: { value: SavedSort; onChange: (v: Saved
 }
 
 function MediaCard({ m, onClick }: { m: SavedMedia; onClick: () => void }) {
-  const src = m.thumbnailUrl ?? m.url;
+    const src = m.thumbnailUrl ?? m.url;
 
-  return (
-    <button
-      onClick={onClick}
-      className="mb-4 w-full break-inside-avoid rounded-2xl overflow-hidden bg-gray-100 border border-gray-200 shadow-sm hover:shadow transition relative"
-      aria-label="Open saved media"
-    >
-      <img src={src} alt="" className="w-full h-auto object-cover" loading="lazy" />
+    return (
+      <button
+        onClick={onClick}
+        className="w-full rounded-2xl overflow-hidden bg-gray-100 border border-gray-200 shadow-sm hover:shadow transition relative"
+        aria-label="Open saved media"
+      >
+        <div className="relative w-full aspect-[4/5] bg-gray-100">
+          <img
+            src={src}
+            alt=""
+            className="absolute inset-0 w-full h-full object-cover"
+            loading="lazy"
+          />
 
-      {/* overlay for video */}
-      {m.type === "VIDEO" ? (
-        <div className="absolute top-3 left-3 h-8 w-8 rounded-full bg-black/60 grid place-items-center text-white text-xs">
-          ▶
+          {m.type === "VIDEO" ? (
+            <div className="absolute top-3 left-3 h-8 w-8 rounded-full bg-black/60 grid place-items-center text-white text-xs">
+              ▶
+            </div>
+          ) : null}
         </div>
-      ) : null}
-    </button>
-  );
-}
+      </button>
+    );
+  }
+
 
 function GridSkeleton() {
   return (

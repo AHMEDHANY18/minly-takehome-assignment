@@ -15,27 +15,21 @@ import { presignMediaUploadController } from "../../controllers/media.controller
 import { finalizeMediaUploadController } from "../../controllers/media.controller/finalizeMedia.controller";
 import { getMediaCommentsController } from "../../controllers/media.controller/getMediaComments.controller";
 import { getCommentRepliesController } from "../../controllers/comment.controller/getCommentReplies.controller";
+import { getMediaDetailsController } from "../../controllers/media.controller/getMediaDetails.controller";
 
 const router = Router();
 
-router.post("/", requireAuth, mediaUpload, validate(createMediaSchema), uploadMediaController);
-
-// router.get("/:id", validate(getMediaByIdSchema), getMediaByIdController);
-
-// router.get("/", requireAuth,getFeedController);
-
-router.get(
-    "/:mediaId",
-    requireAuth,
-    getMediaCommentsController
-  );
-
-
-
-router.delete("/:id", requireAuth, validate(deleteMediaSchema), deleteMediaController);
-
-router.patch("/:id", requireAuth, validate(updateMediaSchema), updateMediaController);
-
+// ✅ static first
 router.post("/presign", requireAuth, presignMediaUploadController);
 router.post("/finalize", requireAuth, finalizeMediaUploadController);
+
+router.get(
+  "/:mediaId/details",
+  requireAuth,
+  getMediaDetailsController
+);
+
+router.patch("/:id", requireAuth, validate(updateMediaSchema), updateMediaController);
+router.delete("/:id", requireAuth, validate(deleteMediaSchema), deleteMediaController);
+
 export default router;
