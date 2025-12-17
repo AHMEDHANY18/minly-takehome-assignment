@@ -14,6 +14,17 @@ import NotificationsPage from "./features/notifications/NotificationsPage";
 import MediaDetailsPage from "./features/media/MediaDetailsPage";
 import SavedPage from "./features/saved/SavedPage";
 
+function ProfileEditStub() {
+  return (
+    <div className="min-h-screen bg-[#F4F7FF] flex items-center justify-center px-4">
+      <div className="w-full max-w-md rounded-2xl bg-white border border-[#E7ECFF] shadow-[0_10px_30px_rgba(16,24,40,0.06)] p-6 text-center">
+        <div className="text-lg font-semibold text-gray-900">Edit Profile</div>
+        <div className="mt-2 text-sm text-gray-500">Coming soon.</div>
+      </div>
+    </div>
+  );
+}
+
 export default function App() {
   const user = useUserStore((s) => s.user);
 
@@ -21,23 +32,24 @@ export default function App() {
     <BrowserRouter>
       <ThemeProvider>
         <Routes>
-          {/* callback redirect target */}
+          {/* callback */}
           <Route path="/auth/success" element={<AuthSuccessPage />} />
 
-          {/* protected area */}
+          {/* protected */}
           <Route element={<AuthBootstrap />}>
+            {/* خارج الـ MainLayout */}
+            <Route path="/profile" element={<ProfilePage />} />
+            <Route path="/profile/edit" element={<ProfileEditStub />} />
+
+            {/* كل الصفحات اللي ليها navbar */}
             <Route element={<MainLayout />}>
-              {/* feeds */}
               <Route path="/" element={<FeedPage mode="home" />} />
               <Route path="/explore" element={<FeedPage mode="explore" />} />
               <Route path="/trending" element={<FeedPage mode="trending" />} />
               <Route path="/notifications" element={<NotificationsPage />} />
-              <Route path="/media/:mediaId" element={<MediaDetailsPage />} />
               <Route path="/saved" element={<SavedPage />} />
-
-              {/* other pages */}
               <Route path="/upload" element={<UploadPage />} />
-              <Route path="/profile" element={<ProfilePage />} />
+              <Route path="/media/:mediaId" element={<MediaDetailsPage />} />
               <Route path="/users/:userId" element={<UserProfilePage />} />
             </Route>
           </Route>

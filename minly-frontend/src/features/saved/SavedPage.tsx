@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import type { SavedMedia, SavedSort } from "../../api/bookmarks";
 import { useSaved } from "./hooks/useSaved";
@@ -131,9 +131,16 @@ function SortSelect({ value, onChange }: { value: SavedSort; onChange: (v: Saved
   );
 }
 
-function MediaCard({ m, onClick }: { m: SavedMedia; onClick: () => void }) {
-    const src = m.thumbnailUrl ?? m.url;
 
+function MediaCard({ m, onClick }: { m: SavedMedia; onClick: () => void }) {
+  const videoRef = useRef<HTMLVideoElement | null>(null);
+  const [videoReady, setVideoReady] = useState(false);
+
+  const hasThumb = !!m.thumbnailUrl;
+  const isVideo = m.type === "VIDEO";
+
+  // IMAGE
+  if (!isVideo) {
     return (
       <button
         onClick={onClick}
@@ -142,21 +149,83 @@ function MediaCard({ m, onClick }: { m: SavedMedia; onClick: () => void }) {
       >
         <div className="relative w-full aspect-[4/5] bg-gray-100">
           <img
-            src={src}
+            src={m.thumbnailUrl ?? m.url}
+            alt=""
+            className="absolute inset-0 w-full h-full object-cover"
+            loading="lazy"
+          />
+        </div>
+      </button>
+    );
+  }
+
+  // VIDEO + thumbnail موجودة
+  if (hasThumb) {
+    return (
+      <button
+        onClick={onClick}
+        className="w-full rounded-2xl overflow-hidden bg-gray-100 border border-gray-200 shadow-sm hover:shadow transition relative"
+        aria-label="Open saved media"
+      >
+        <div className="relative w-full aspect-[4/5] bg-gray-100">
+          <img
+            src={m.thumbnailUrl!}
             alt=""
             className="absolute inset-0 w-full h-full object-cover"
             loading="lazy"
           />
 
-          {m.type === "VIDEO" ? (
-            <div className="absolute top-3 left-3 h-8 w-8 rounded-full bg-black/60 grid place-items-center text-white text-xs">
-              ▶
-            </div>
-          ) : null}
+          <div className="absolute top-3 left-3 h-8 w-8 rounded-full bg-black/60 grid place-items-center text-white text-xs">
+            ▶
+          </div>
         </div>
       </button>
     );
   }
+
+  // VIDEO + thumbnail مش موجودة => اعرض فيديو كـ preview (أول فريم)
+  return (
+    <button
+      onClick={onClick}
+      className="w-full rounded-2xl overflow-hidden bg-gray-100 border border-gray-200 shadow-sm hover:shadow transition relative"
+      aria-label="Open saved media"
+    >
+      <div className="relative w-full aspect-[4/5] bg-gray-100">
+        {/* placeholder بسيط لحد ما الفيديو يبقى جاهز */}
+        {!videoReady && <div className="absolute inset-0 bg-gray-200" />}
+
+        <video
+          ref={videoRef}
+          src={m.url}
+          preload="metadata"
+          muted
+          playsInline
+          className="absolute inset-0 w-full h-full object-cover pointer-events-none"
+          onLoadedMetadata={() => {
+            // نخلي المتصفح يجيب جزء صغير ويثبت أول فريم
+            const v = videoRef.current;
+            if (!v) return;
+            try {
+              v.currentTime = 0.01; // يساعد يظهر أول فريم بدل شاشة سوداء
+            } catch {}
+          }}
+          onSeeked={() => {
+            const v = videoRef.current;
+            if (!v) return;
+            v.pause();
+            setVideoReady(true);
+          }}
+          onLoadedData={() => setVideoReady(true)}
+        />
+
+        <div className="absolute top-3 left-3 h-8 w-8 rounded-full bg-black/60 grid place-items-center text-white text-xs">
+          ▶
+        </div>
+      </div>
+    </button>
+  );
+}
+
 
 
 function GridSkeleton() {

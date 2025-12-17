@@ -1,556 +1,391 @@
-// src/features/profile/ProfilePage.tsx
-import {
-  useEffect,
-  useState,
-  type ChangeEvent,
-  type FormEvent,
-} from "react";
-// import { useNavigate } from "react-router-dom";
-import type { MediaItem } from "../../api/media";
-import { MediaAPI } from "../../api/media";
-import { UserAPI, type MeData } from "../../api/user";
+import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { useNavigate } from "react-router-dom";
+import { ProfileAPI, type ProfileMediaItem, type ProfileResponse } from "../../api/profile";
 
-function formatCount(n: number) {
-  if (n < 1_000) return n.toString();
-  if (n < 1_000_000) return (n / 1_000).toFixed(1).replace(/\.0$/, "") + "K";
-  return (n / 1_000_000).toFixed(1).replace(/\.0$/, "") + "M";
-}
+type Tab = "ALL" | "VIDEOS" | "PHOTOS"
 
 export default function ProfilePage() {
-  // const navigate = useNavigate();
+  const nav = useNavigate();
 
-  const [me, setMe] = useState<MeData | null>(null);
-  const [items, setItems] = useState<MediaItem[]>([]);
+  const [tab, setTab] = useState<Tab>("ALL");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-
-  const [isEditing, setIsEditing] = useState(false);
-  const [editName, setEditName] = useState<string>("");
-  const [editEmail, setEditEmail] = useState<string>("");
-  const [editFile, setEditFile] = useState<File | null>(null);
-  const [editPreview, setEditPreview] = useState<string | null>(null);
-  const [saving, setSaving] = useState(false);
-  const [editError, setEditError] = useState<string | null>(null);
-
-  const [openMenuId, setOpenMenuId] = useState<string | null>(null);
-  const [deleteId, setDeleteId] = useState<string | null>(null);
-  const [deleting, setDeleting] = useState(false);
-
-  const [editMedia, setEditMedia] = useState<MediaItem | null>(null);
-  const [editMediaTitle, setEditMediaTitle] = useState("");
-  const [editMediaDesc, setEditMediaDesc] = useState("");
-  const [savingMedia, setSavingMedia] = useState(false);
+  const [payload, setPayload] = useState<ProfileResponse["data"] | null>(null);
 
   useEffect(() => {
-    let active = true;
-    async function load() {
-      try {
-        setLoading(true);
-        setError(null);
+    let alive = true;
 
-        const res = await UserAPI.getMe();
-        const data = res.data.data;
+    setLoading(true);
+    setError(null);
 
-        if (!active) return;
-        setMe(data);
-        setItems(data.media ?? []);
-      } catch (err: any) {
-        console.error(err);
-        if (active) {
-          setError(
-            err?.response?.data?.message ||
-              "Failed to load profile. Please try again."
-          );
-        }
-      } finally {
-        if (active) setLoading(false);
-      }
-    }
+    ProfileAPI.me()
+      .then((res) => {
+        if (!alive) return;
+        setPayload(res.data.data);
+      })
+      .catch((e) => {
+        if (!alive) return;
+        setError(e?.response?.data?.message ?? "Failed to load profile");
+      })
+      .finally(() => {
+        if (!alive) return;
+        setLoading(false);
+      });
 
-    load();
     return () => {
-      active = false;
+      alive = false;
     };
   }, []);
 
-  useEffect(() => () => {
-    if (editPreview && editPreview.startsWith("blob:")) {
-      URL.revokeObjectURL(editPreview);
-    }
-  }, [editPreview]);
+  const user = payload?.user;
 
-  const joinedYear = me ? new Date(me.createdAt).getFullYear() : null;
+  const username = useMemo(() => {
+    const email = user?.email ?? "";
+    const local = email.split("@")[0] || "user";
+    return `@${local}`;
+  }, [user?.email]);
 
-  const avatarUrl =
-    me?.avatarUrl ||
-    (me
-      ? `https://ui-avatars.com/api/?background=8b5cf6&color=fff&name=${encodeURIComponent(
-          me.name
-        )}`
-      : "");
-
-  const uploadsCount = me?.mediaCount ?? items.length;
-  const likesReceived = me?.totalLikesReceived ?? 0;
-  const likesGiven = me?.totalLikesGiven ?? 0;
-
-  function startEdit() {
-    if (!me) return;
-    setIsEditing(true);
-    setEditName(me.name);
-    setEditEmail(me.email);
-    setEditFile(null);
-    setEditPreview(null);
-    setEditError(null);
-  }
-
-  function cancelEdit() {
-    setIsEditing(false);
-    setEditError(null);
-
-    if (editPreview && editPreview.startsWith("blob:")) {
-      URL.revokeObjectURL(editPreview);
-    }
-    setEditFile(null);
-    setEditPreview(null);
-  }
-
-  function handleAvatarChange(e: ChangeEvent<HTMLInputElement>) {
-    const f = e.target.files?.[0];
-    if (!f) return;
-
-    if (!f.type.startsWith("image/")) {
-      setEditError("Please choose an image file.");
-      return;
-    }
-
-    setEditError(null);
-    if (editPreview && editPreview.startsWith("blob:")) {
-      URL.revokeObjectURL(editPreview);
-    }
-
-    setEditFile(f);
-    const url = URL.createObjectURL(f);
-    setEditPreview(url);
-  }
-
-  async function handleSaveProfile(e: FormEvent) {
-    e.preventDefault();
-    if (!me || saving) return;
-
-    setSaving(true);
-    setEditError(null);
-
-    try {
-      const res = await UserAPI.updateMe({
-        name: editName?.trim() || me.name,
-        email: editEmail?.trim() || me.email,
-        file: editFile ?? undefined,
-      });
-
-      const updated = res.data.data;
-
-      setMe(updated);
-      setItems(updated.media ?? []);
-      setIsEditing(false);
-
-      if (editPreview && editPreview.startsWith("blob:")) {
-        URL.revokeObjectURL(editPreview);
-      }
-      setEditFile(null);
-      setEditPreview(null);
-    } catch (err: any) {
-      console.error(err);
-      const msg =
-        err?.response?.data?.message ||
-        err?.message ||
-        "Failed to update profile. Please try again.";
-      setEditError(msg);
-    } finally {
-      setSaving(false);
-    }
-  }
-
-  const currentEditAvatar = editPreview || avatarUrl;
-
-  async function handleConfirmDelete() {
-    if (!deleteId) return;
-    try {
-      setDeleting(true);
-      await MediaAPI.deleteMedia(deleteId);
-      setItems((prev) => prev.filter((m) => m.id !== deleteId));
-      setDeleteId(null);
-    } catch (err: any) {
-      console.error(err);
-      setError("Failed to delete media. Please try again.");
-    } finally {
-      setDeleting(false);
-    }
-  }
-
-  async function handleSaveMedia() {
-    if (!editMedia) return;
-
-    try {
-      setSavingMedia(true);
-      await MediaAPI.updateMedia(editMedia.id, {
-        title: editMediaTitle?.trim() || undefined,
-        description: editMediaDesc?.trim() || undefined,
-      });
-
-      setItems((prev) =>
-        prev.map((m) =>
-          m.id === editMedia.id
-            ? { ...m, title: editMediaTitle, description: editMediaDesc }
-            : m
-        )
-      );
-
-      setEditMedia(null);
-    } catch (err) {
-      console.error(err);
-      setError("Failed to save media changes.");
-    } finally {
-      setSavingMedia(false);
-    }
-  }
+  const filtered = useMemo(() => {
+    const list = payload?.media ?? [];
+    if (tab === "ALL") return list;
+    if (tab === "VIDEOS") return list.filter((m) => normalizeMediaType(m.type, m.url) === "VIDEO");
+    if (tab === "PHOTOS") return list.filter((m) => normalizeMediaType(m.type, m.url) === "IMAGE");
+    return [];
+  }, [payload?.media, tab]);
 
   return (
-    <>
-      {loading && (
-        <p className="mt-6 text-center text-sm text-[#7c6189]">
-          Loading profile...
-        </p>
-      )}
+    <div className="min-h-screen bg-[#F4F7FF]">
+      {/* Top bar */}
+      <div className="sticky top-0 z-40 border-b border-[#E7ECFF] bg-white/85 backdrop-blur">
+        <div className="mx-auto max-w-[1200px] px-4 h-14 flex items-center gap-4">
+          {/* logo */}
+          <button
+            onClick={() => nav("/")}
+            className="flex items-center gap-2 shrink-0"
+            aria-label="Go to home"
+          >
+            <div className="h-8 w-8 rounded-lg bg-blue-600 grid place-items-center text-white font-bold">
+              M
+            </div>
+            <div className="font-semibold text-gray-900">Minly</div>
+          </button>
 
-      {error && (
-        <p className="mt-6 text-center text-sm text-red-500">{error}</p>
-      )}
+          <div className="flex-1" />
 
-      {!loading && !error && me && (
-        <div className="space-y-5">
-          <section className="mt-2 rounded-3xl bg-white shadow-[0_18px_35px_rgba(15,23,42,0.08)] pb-4">
-            <div className="flex flex-col items-center pt-6 px-5">
-              <div className="h-24 w-24 rounded-full bg-[#f3eefc] overflow-hidden shadow-[0_10px_25px_rgba(15,23,42,0.15)]">
-                <img
-                  src={avatarUrl}
-                  alt={me.name}
-                  className="h-full w-full object-cover"
-                  loading="lazy"
-                />
+          {/* Home button */}
+          <button
+            onClick={() => nav("/")}
+            className="h-9 px-3 rounded-xl bg-white border border-[#E7ECFF] shadow-sm text-sm font-semibold text-gray-700 hover:bg-[#F6F8FF] transition flex items-center gap-2"
+          >
+            <svg
+              width="16"
+              height="16"
+              viewBox="0 0 24 24"
+              fill="none"
+              className="text-gray-600"
+              aria-hidden="true"
+            >
+              <path
+                d="M3 10.5L12 3l9 7.5V21a1 1 0 0 1-1 1h-5v-7H9v7H4a1 1 0 0 1-1-1v-10.5Z"
+                stroke="currentColor"
+                strokeWidth="1.8"
+                strokeLinejoin="round"
+              />
+            </svg>
+            Home
+          </button>
+        </div>
+      </div>
+
+      <div className="mx-auto max-w-[1200px] px-4 py-6">
+        <div className="grid grid-cols-[280px_1fr] gap-6">
+          {/* Left */}
+          <aside className="space-y-4">
+            <div className="rounded-2xl bg-white border border-[#E7ECFF] shadow-[0_10px_30px_rgba(16,24,40,0.06)] p-5">
+              <div className="flex flex-col items-center text-center">
+                <ProfileAvatar name={user?.name ?? "User"} src={user?.avatarUrl ?? null} />
+
+                <div className="mt-3 text-[18px] font-semibold text-gray-900">
+                  {loading ? "Loading…" : user?.name ?? "—"}
+                </div>
+
+                <div className="mt-0.5 text-[12px] text-gray-500">{username}</div>
+
+                <div className="mt-2 text-[12px] text-gray-500 flex items-center gap-2">
+                  <span className="text-gray-400">✉</span>
+                  <span className="truncate max-w-[220px]">{user?.email ?? "—"}</span>
+                </div>
+
+                <div className="mt-2 text-[12px] text-gray-500 flex items-center gap-2">
+                  <span className="text-gray-400">📅</span>
+                  <span>Joined {user?.createdAt ? formatMonthYear(user.createdAt) : "—"}</span>
+                </div>
+
+                <button
+                  onClick={() => nav("/profile/edit")}
+                  className="mt-4 h-10 w-full rounded-xl bg-blue-600 text-white text-sm font-semibold hover:bg-blue-700 transition"
+                >
+                  Edit Profile
+                </button>
+
+                <div className="mt-4 w-full grid grid-cols-2 gap-3">
+                  <MiniStat label="Followers" value={user?.followerCount ?? 0} />
+                  <MiniStat label="Following" value={user?.followingCount ?? 0} />
+                </div>
               </div>
-
-              <div className="mt-4 text-center">
-                <p className="text-base font-semibold text-[#161118]">
-                  {me.name}
-                </p>
-
-                <p className="text-xs text-[#7c6189] mt-0.5">{me.email}</p>
-
-                {joinedYear && (
-                  <p className="inline-flex items-center gap-1 mt-2 rounded-full bg-[#f3eefc] px-3 py-1 text-[11px] text-[#7b6b8e]">
-                    <span className="inline-block h-2 w-2 rounded-full bg-[#a855ff]" />
-                    Joined in {joinedYear}
-                  </p>
-                )}
-              </div>
-
-              <button
-                type="button"
-                onClick={startEdit}
-                className="mt-3 inline-flex items-center gap-1 rounded-full bg-[#f3eefc] px-3 py-1.5 text-xs font-semibold text-[#7b6b8e] hover:bg-[#e5dbff] active:scale-95 transition"
-              >
-                <span className="material-symbols-outlined text-[16px]">
-                  edit
-                </span>
-                <span>Edit profile</span>
-              </button>
             </div>
 
-            <div className="mt-5 grid grid-cols-3 gap-2 px-4">
-              <div className="rounded-2xl bg-[#f8f6ff] px-3 py-2.5 text-center">
-                <p className="text-[11px] text-[#8a7aa7]">Uploads</p>
-                <p className="mt-1 text-base font-semibold text-[#161118]">
-                  {uploadsCount}
-                </p>
-              </div>
-
-              <div className="rounded-2xl bg-[#f8f6ff] px-3 py-2.5 text-center">
-                <p className="text-[11px] text-[#8a7aa7]">Likes received</p>
-                <p className="mt-1 text-base font-semibold text-[#161118]">
-                  {formatCount(likesReceived)}
-                </p>
-              </div>
-
-              <div className="rounded-2xl bg-[#f8f6ff] px-3 py-2.5 text-center">
-                <p className="text-[11px] text-[#8a7aa7]">Likes given</p>
-                <p className="mt-1 text-base font-semibold text-[#161118]">
-                  {formatCount(likesGiven)}
-                </p>
-              </div>
+            <div className="rounded-2xl bg-white border border-[#E7ECFF] shadow-[0_10px_30px_rgba(16,24,40,0.06)] p-4 space-y-3">
+              <StatRow icon="⬆" label="UPLOADS" value={user?.mediaCount ?? 0} />
+              <StatRow icon="❤" label="LIKES GET" value={compactNumber(user?.totalLikesReceived ?? 0)} />
+              <StatRow icon="👍" label="LIKES GIVEN" value={user?.totalLikesGiven ?? 0} />
             </div>
+          </aside>
 
-            {isEditing && (
-              <div className="mt-6 border-t border-[#f1edf9] pt-4 px-4">
-                <p className="text-xs font-semibold text-[#161118] mb-3">
-                  Edit profile
-                </p>
+          {/* Right */}
+          <main>
+            <div className="flex items-center gap-6 px-2">
+              <TopTab active={tab === "ALL"} onClick={() => setTab("ALL")}>All Media</TopTab>
+              <TopTab active={tab === "VIDEOS"} onClick={() => setTab("VIDEOS")}>Videos</TopTab>
+              <TopTab active={tab === "PHOTOS"} onClick={() => setTab("PHOTOS")}>Photos</TopTab>
+              <LinkTab onClick={() => nav("/saved")}>Saved</LinkTab>
+              </div>
 
-                <form onSubmit={handleSaveProfile} className="space-y-4">
-                  <div className="flex items-center gap-3">
-                    <div className="h-14 w-14 rounded-full bg-[#f3eefc] overflow-hidden">
-                      {currentEditAvatar ? (
-                        <img
-                          src={currentEditAvatar}
-                          alt="Avatar preview"
-                          className="h-full w-full object-cover"
-                          loading="lazy"
-                        />
-                      ) : (
-                        <span className="material-symbols-outlined text-[26px] text-[#a293bf]">
-                          person
-                        </span>
-                      )}
+            <div className="mt-5">
+              {error && (
+                <div className="mb-4 rounded-2xl bg-white border border-red-100 p-4 text-sm text-red-600">
+                  {error}
+                </div>
+              )}
+
+              {loading ? (
+                <GridSkeleton />
+              ) : (
+                <div className="grid grid-cols-3 gap-5">
+                  {filtered.map((m) => (
+                    <MediaTile key={m.id} media={m} onClick={() => nav(`/media/${m.id}`)} />
+                  ))}
+
+                  <button
+                    onClick={() => nav("/upload")}
+                    className="aspect-square rounded-2xl border-2 border-dashed border-[#D8E2FF] bg-white/60 grid place-items-center text-gray-400 hover:bg-white transition"
+                  >
+                    <div className="text-center">
+                      <div className="text-xl">＋</div>
+                      <div className="mt-1 text-[12px] font-semibold">Addmore</div>
                     </div>
-
-                    <label className="cursor-pointer text-[11px] font-semibold text-[#7b6b8e] underline">
-                      Change photo
-                      <input
-                        type="file"
-                        accept="image/*"
-                        className="hidden"
-                        onChange={handleAvatarChange}
-                      />
-                    </label>
-                  </div>
-
-                  <div>
-                    <label className="text-[11px] font-medium text-[#7b6b8e]">
-                      Name
-                    </label>
-                    <input
-                      value={editName}
-                      onChange={(e) => setEditName(e.target.value)}
-                      className="mt-1 w-full rounded-xl border border-[#e3ddf5] bg-[#faf8ff] px-3 py-2 text-xs text-[#161118] outline-none focus:border-[#a855ff]"
-                      placeholder="Your name"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="text-[11px] font-medium text-[#7b6b8e]">
-                      Email
-                    </label>
-                    <input
-                      type="email"
-                      value={editEmail}
-                      onChange={(e) => setEditEmail(e.target.value)}
-                      className="mt-1 w-full rounded-xl border border-[#e3ddf5] bg-[#faf8ff] px-3 py-2 text-xs text-[#161118] outline-none focus:border-[#a855ff]"
-                      placeholder="name@example.com"
-                    />
-                  </div>
-
-                  {editError && (
-                    <p className="text-[11px] text-red-500">{editError}</p>
-                  )}
-
-                  <div className="flex gap-2 pt-1">
-                    <button
-                      type="button"
-                      onClick={cancelEdit}
-                      className="flex-1 rounded-xl border border-[#ddd4f0] bg-white py-2 text-xs font-semibold text-[#5b516c] active:scale-95 transition"
-                    >
-                      Cancel
-                    </button>
-                    <button
-                      type="submit"
-                      disabled={saving}
-                      className="flex-1 rounded-xl bg-gradient-to-r from-[#ff3fd1] to-[#a855ff] py-2 text-xs font-semibold text-white shadow-[0_10px_25px_rgba(168,85,255,0.5)] disabled:opacity-70 disabled:cursor-not-allowed active:scale-95 transition"
-                    >
-                      {saving ? "Saving..." : "Save changes"}
-                    </button>
-                  </div>
-                </form>
-              </div>
-            )}
-
-            <div className="mt-5 px-4 flex items-center justify-between">
-              <p className="text-sm font-semibold text-[#161118]">
-                Your uploads
-              </p>
-              <p className="text-[11px] text-[#a293bf]">
-                {items.length} item{items.length === 1 ? "" : "s"}
-              </p>
+                  </button>
+                </div>
+              )}
             </div>
+          </main>
+        </div>
+      </div>
+    </div>
+  );
+}
 
-            {items.length === 0 ? (
-              <p className="mt-3 px-4 pb-4 text-xs text-[#8a7aa7]">
-                You haven&apos;t uploaded any media yet.
-              </p>
-            ) : (
-              <div className="mt-3 px-4 pb-4 grid grid-cols-2 gap-2">
-                {items.map((m) => {
-                  const isVideo = m.type === "VIDEO" || m.type === "video";
+/* ---------------- UI bits ---------------- */
 
-                  return (
-                    <div
-                      key={m.id}
-                      className="group relative aspect-square rounded-2xl overflow-hidden bg-[#e5e1f5]"
-                    >
-                      <img
-                        src={m.thumbnailUrl || m.url}
-                        alt={m.title || "Media"}
-                        className="h-full w-full object-cover"
-                        loading="lazy"
-                      />
+function ProfileAvatar({ name, src }: { name: string; src: string | null }) {
+  if (src) return <img src={src} alt={name} className="h-[96px] w-[96px] rounded-full object-cover" />;
+  const initial = (name?.[0] ?? "U").toUpperCase();
+  return (
+    <div className="relative">
+      <div className="h-[96px] w-[96px] rounded-full bg-[#F7C9B5] grid place-items-center text-white text-3xl font-bold">
+        {initial}
+      </div>
+      <span className="absolute -bottom-1 -right-1 h-4 w-4 rounded-full bg-emerald-400 border-2 border-white" />
+    </div>
+  );
+}
 
-                      {isVideo && (
-                        <div className="absolute inset-0 flex items-center justify-center bg-black/20">
-                          <div className="flex h-8 w-8 items-center justify-center rounded-full bg-white/70 backdrop-blur-sm">
-                            <span className="material-symbols-outlined text-[18px]">
-                              play_arrow
-                            </span>
-                          </div>
-                        </div>
-                      )}
+function MiniStat({ label, value }: { label: string; value: number }) {
+  return (
+    <div className="rounded-xl bg-[#F6F8FF] border border-[#E7ECFF] p-3">
+      <div className="text-[11px] font-semibold text-gray-500">{label}</div>
+      <div className="mt-1 text-[14px] font-semibold text-gray-900">{value}</div>
+    </div>
+  );
+}
 
-                      <button
-                        type="button"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setOpenMenuId((prev) =>
-                            prev === m.id ? null : m.id
-                          );
-                        }}
-                        className="absolute right-2 top-2 flex h-8 w-8 items-center justify-center rounded-full bg-black/35 text-white hover:bg-black/55 active:scale-95 transition z-10"
-                        aria-expanded={openMenuId === m.id}
-                        aria-haspopup="menu"
-                      >
-                        <span className="material-symbols-outlined text-[18px]">
-                          more_vert
-                        </span>
-                      </button>
+function StatRow({ icon, label, value }: { icon: string; label: string; value: ReactNode }) {
+  return (
+    <div className="rounded-xl border border-[#E7ECFF] bg-white p-3 flex items-center gap-3">
+      <div className="h-9 w-9 rounded-xl bg-[#F3F6FF] border border-[#E7ECFF] grid place-items-center text-gray-600">
+        {icon}
+      </div>
+      <div className="flex-1">
+        <div className="text-[11px] font-semibold text-gray-400">{label}</div>
+        <div className="text-[16px] font-semibold text-gray-900 mt-0.5">{value}</div>
+      </div>
+    </div>
+  );
+}
 
-                      {openMenuId === m.id && (
-                        <div className="absolute right-2 top-11 w-36 rounded-2xl bg-white shadow-xl border border-black/5 text-[12px] z-20">
-                          <button
-                            type="button"
-                            className="block w-full px-4 py-2 text-left hover:bg-[#f5efff]"
-                            onClick={() => {
-                              setEditMedia(m);
-                              setEditMediaTitle(m.title || "");
-                              setEditMediaDesc(m.description || "");
-                              setOpenMenuId(null);
-                            }}
-                          >
-                            Edit details
-                          </button>
-                          <button
-                            type="button"
-                            className="block w-full px-4 py-2 text-left text-red-500 hover:bg-red-50"
-                            onClick={() => {
-                              setDeleteId(m.id);
-                              setOpenMenuId(null);
-                            }}
-                          >
-                            Delete
-                          </button>
-                        </div>
-                      )}
+function TopTab({
+  active,
+  children,
+  onClick,
+}: {
+  active?: boolean;
+  children: ReactNode;
+  onClick?: () => void;
+}) {
+  return (
+    <button
+      onClick={onClick}
+      className={[
+        "relative text-sm font-semibold",
+        active ? "text-blue-700" : "text-gray-500 hover:text-gray-800",
+      ].join(" ")}
+    >
+      {children}
+      <span
+        className={[
+          "absolute left-0 -bottom-3 h-[2px] rounded-full transition",
+          active ? "w-full bg-blue-600" : "w-0 bg-transparent",
+        ].join(" ")}
+      />
+    </button>
+  );
+}
 
-                      <div className="pointer-events-none absolute inset-0 flex items-end justify-start bg-black/0 opacity-0 transition duration-150 group-hover:bg-black/40 group-hover:opacity-100">
-                        <div className="m-2 flex items-center gap-1 rounded-full bg-black/60 px-2.5 py-1 text-[11px] font-semibold text-white">
-                          <span className="material-symbols-outlined text-[14px]">
-                            favorite
-                          </span>
-                          <span>{formatCount(m.likesCount)}</span>
-                        </div>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            )}
-          </section>
+function MediaTile({ media, onClick }: { media: ProfileMediaItem; onClick: () => void }) {
+  const type = normalizeMediaType(media.type, media.url);
+  const isVideo = type === "VIDEO";
+
+  return (
+    <button
+      onClick={onClick}
+      className="relative aspect-square rounded-2xl overflow-hidden bg-white border border-[#E7ECFF] shadow-[0_10px_30px_rgba(16,24,40,0.06)]"
+      aria-label="Open media"
+    >
+      <MediaThumb media={media} />
+
+      {isVideo && (
+        <div className="absolute top-3 right-3 h-7 w-7 rounded-full bg-white/85 border border-[#E7ECFF] grid place-items-center text-gray-700 text-[12px]">
+          ▶
         </div>
       )}
+    </button>
+  );
+}
 
-      {deleteId && (
-        <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/40">
-          <div className="w-72 rounded-2xl bg-white p-5 shadow-xl">
-            <p className="text-sm font-semibold text-[#161118] mb-3">
-              Delete this media?
-            </p>
-            <p className="text-xs text-[#6b607f] mb-4">
-              This action can&apos;t be undone.
-            </p>
-            <div className="flex gap-2">
-              <button
-                type="button"
-                onClick={() => setDeleteId(null)}
-                className="flex-1 rounded-xl border border-[#ddd4f0] bg-white py-2 text-xs font-semibold text-[#5b516c]"
-              >
-                Cancel
-              </button>
-              <button
-                type="button"
-                onClick={handleConfirmDelete}
-                className="flex-1 rounded-xl bg-red-500 py-2 text-xs font-semibold text-white shadow-sm active:scale-95 transition disabled:opacity-70"
-                disabled={deleting}
-              >
-                {deleting ? "Deleting..." : "Delete"}
-              </button>
-            </div>
-          </div>
+/* ---------------- Thumb ---------------- */
+
+function guessMediaTypeFromUrl(url?: string): "IMAGE" | "VIDEO" | undefined {
+  if (!url) return undefined;
+  const clean = url.split("?")[0].toLowerCase();
+  if (/\.(mp4|webm|mov|m4v)$/i.test(clean)) return "VIDEO";
+  if (/\.(png|jpe?g|gif|webp|avif)$/i.test(clean)) return "IMAGE";
+  return undefined;
+}
+function LinkTab({
+  children,
+  onClick,
+}: {
+  children: React.ReactNode;
+  onClick?: () => void;
+}) {
+  return (
+    <button
+      onClick={onClick}
+      className="relative text-sm font-semibold text-gray-500 hover:text-gray-800"
+    >
+      {children}
+      <span className="absolute left-0 -bottom-3 h-[2px] w-0 bg-transparent" />
+    </button>
+  );
+}
+
+function normalizeMediaType(t?: string, url?: string): "IMAGE" | "VIDEO" {
+  const up = (t ?? "").toUpperCase();
+  if (up === "IMAGE" || up === "VIDEO") return up;
+  return guessMediaTypeFromUrl(url) ?? "IMAGE";
+}
+
+function MediaThumb({ media }: { media: { url: string; type?: string; thumbnailUrl?: string | null } }) {
+  const [broken, setBroken] = useState(false);
+
+  const type = normalizeMediaType(media.type, media.url);
+  const isVideo = type === "VIDEO";
+
+  if (isVideo && !media.thumbnailUrl) return <VideoFirstFrame url={media.url} />;
+
+  const src = media.thumbnailUrl ?? media.url;
+  if (!src || broken) return <div className="h-full w-full bg-[#F3F6FF]" />;
+
+  return (
+    <img
+      src={src}
+      alt=""
+      className="h-full w-full object-cover"
+      loading="lazy"
+      decoding="async"
+      onError={() => setBroken(true)}
+    />
+  );
+}
+
+function VideoFirstFrame({ url }: { url: string }) {
+  const ref = useRef<HTMLVideoElement | null>(null);
+  const [ready, setReady] = useState(false);
+
+  return (
+    <div className="relative h-full w-full">
+      {!ready && <div className="absolute inset-0 bg-[#F3F6FF]" />}
+
+      <video
+        ref={ref}
+        src={url}
+        preload="metadata"
+        muted
+        playsInline
+        className="absolute inset-0 h-full w-full object-cover pointer-events-none"
+        onLoadedMetadata={() => {
+          const v = ref.current;
+          if (!v) return;
+          try {
+            v.currentTime = 0.01;
+          } catch {}
+        }}
+        onSeeked={() => {
+          ref.current?.pause();
+          setReady(true);
+        }}
+        onLoadedData={() => setReady(true)}
+      />
+    </div>
+  );
+}
+
+/* ---------------- Utils ---------------- */
+
+function compactNumber(n: number) {
+  if (n < 1000) return String(n);
+  const k = n / 1000;
+  const rounded = Math.round(k * 10) / 10;
+  return `${rounded}k`;
+}
+
+function formatMonthYear(iso: string) {
+  try {
+    const d = new Date(iso);
+    return d.toLocaleString(undefined, { month: "long", year: "numeric" });
+  } catch {
+    return "—";
+  }
+}
+
+function GridSkeleton() {
+  return (
+    <div className="grid grid-cols-3 gap-5">
+      {Array.from({ length: 9 }).map((_, i) => (
+        <div key={i} className="aspect-square rounded-2xl bg-white border border-[#E7ECFF] overflow-hidden">
+          <div className="h-full w-full bg-[#F3F6FF]" />
         </div>
-      )}
-
-      {editMedia && (
-        <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/40">
-          <div className="w-80 rounded-2xl bg-white p-5 shadow-xl">
-            <p className="text-sm font-semibold text-[#161118] mb-3">
-              Edit media details
-            </p>
-
-            <label className="text-[11px] font-medium text-[#7b6b8e]">
-              Title
-            </label>
-            <input
-              value={editMediaTitle}
-              onChange={(e) => setEditMediaTitle(e.target.value)}
-              className="mt-1 mb-3 w-full rounded-xl border border-[#e3ddf5] bg-[#faf8ff] px-3 py-2 text-xs text-[#161118]"
-              placeholder="Title"
-            />
-
-            <label className="text-[11px] font-medium text-[#7b6b8e]">
-              Description
-            </label>
-            <textarea
-              value={editMediaDesc}
-              onChange={(e) => setEditMediaDesc(e.target.value)}
-              rows={3}
-              className="mt-1 w-full rounded-xl border border-[#e3ddf5] bg-[#faf8ff] px-3 py-2 text-xs text-[#161118]"
-              placeholder="Description"
-            />
-
-            <div className="mt-4 flex gap-2">
-              <button
-                type="button"
-                onClick={() => setEditMedia(null)}
-                className="flex-1 rounded-xl border border-[#ddd4f0] bg-white py-2 text-xs font-semibold text-[#5b516c]"
-              >
-                Cancel
-              </button>
-              <button
-                type="button"
-                onClick={handleSaveMedia}
-                disabled={savingMedia}
-                className="flex-1 rounded-xl bg-gradient-to-r from-[#ff3fd1] to-[#a855ff] py-2 text-xs font-semibold text-white disabled:opacity-70"
-              >
-                {savingMedia ? "Saving..." : "Save"}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-    </>
+      ))}
+    </div>
   );
 }

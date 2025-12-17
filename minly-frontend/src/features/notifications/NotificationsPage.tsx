@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { SocialAPI } from "../../api/social";
 import type { NotificationItem } from "../../api/notifications";
@@ -136,7 +136,7 @@ function renderSection(
 
       <div className="rounded-2xl bg-white border border-gray-100 shadow-sm overflow-hidden">
         {rows.map((n, idx) => {
-          const mediaId = (n as any).mediaId ?? n.media?.id; // safety
+          const mediaId = (n as any).mediaId ?? n.media?.id;
 
           const openMedia = () => {
             if (!n.isRead) markRead(n.id);
@@ -149,13 +149,11 @@ function renderSection(
               role="button"
               tabIndex={0}
               onClick={() => {
-                // لو FOLLOW مفيش media — خليه يفتح البروفايل بدل
                 if (normalizeType(n.type) === "FOLLOW") {
                   if (!n.isRead) markRead(n.id);
                   if (n.actor?.id) nav(`/users/${n.actor.id}`);
                   return;
                 }
-
                 openMedia();
               }}
               className={[
@@ -212,7 +210,7 @@ function renderSection(
                 >
                   {pendingFollow[n.id] ? "Following…" : "Follow Back"}
                 </button>
-              ) : n.media?.url ? (
+              ) : n.media ? (
                 <button
                   className="h-12 w-12 rounded-xl overflow-hidden border border-gray-100 bg-gray-50 shrink-0"
                   aria-label="Open media"
@@ -221,7 +219,7 @@ function renderSection(
                     openMedia();
                   }}
                 >
-                  <img src={n.media.url} alt="" className="h-full w-full object-cover" />
+                  <MediaThumb media={n.media as any} />
                 </button>
               ) : (
                 <div className="h-12 w-12 rounded-xl border border-gray-100 bg-gray-50 shrink-0" />
@@ -229,6 +227,101 @@ function renderSection(
             </div>
           );
         })}
+      </div>
+    </div>
+  );
+}
+
+function guessMediaTypeFromUrl(url?: string): "IMAGE" | "VIDEO" | undefined {
+  if (!url) return undefined;
+  const clean = url.split("?")[0].toLowerCase();
+
+  if (/\.(mp4|webm|mov|m4v)$/i.test(clean)) return "VIDEO";
+  if (/\.(png|jpe?g|gif|webp|avif)$/i.test(clean)) return "IMAGE";
+
+  return undefined;
+}
+
+function normalizeMediaType(t?: string): "IMAGE" | "VIDEO" | undefined {
+  const up = (t ?? "").toUpperCase();
+  if (up === "IMAGE" || up === "VIDEO") return up;
+  return undefined;
+}
+
+function MediaThumb({
+  media,
+}: {
+  media: { url?: string; type?: string; thumbnailUrl?: string | null };
+}) {
+  const [broken, setBroken] = useState(false);
+
+  const type =
+    normalizeMediaType(media.type) ??
+    guessMediaTypeFromUrl(media.url) ??
+    "IMAGE";
+
+  const isVideo = type === "VIDEO";
+  const imgSrc = media.thumbnailUrl ?? (!isVideo ? media.url : undefined);
+
+  // لو Image و src فاضي/فشل
+  if (!imgSrc || broken) {
+    // لو فيديو: استخدم أول فريم (أو Placeholder لو حابب)
+    if (isVideo && media.url) return <VideoFirstFrame url={media.url} />;
+
+    // Placeholder عام
+    return (
+      <div className="h-full w-full bg-gray-100 grid place-items-center text-[10px] text-gray-400">
+        No preview
+      </div>
+    );
+  }
+
+  return (
+    <img
+      src={imgSrc}
+      alt=""
+      className="h-full w-full object-cover"
+      loading="lazy"
+      decoding="async"
+      onError={() => setBroken(true)}
+    />
+  );
+}
+
+
+function VideoFirstFrame({ url }: { url: string }) {
+  const ref = useRef<HTMLVideoElement | null>(null);
+  const [ready, setReady] = useState(false);
+
+  return (
+    <div className="relative h-full w-full">
+      {!ready && <div className="absolute inset-0 bg-gray-200" />}
+
+      <video
+        ref={ref}
+        src={url}
+        preload="metadata"
+        muted
+        playsInline
+        className="absolute inset-0 h-full w-full object-cover pointer-events-none"
+        onLoadedMetadata={() => {
+          const v = ref.current;
+          if (!v) return;
+          try {
+            v.currentTime = 0.01;
+          } catch {}
+        }}
+        onSeeked={() => {
+          ref.current?.pause();
+          setReady(true);
+        }}
+        onLoadedData={() => setReady(true)}
+      />
+
+      <div className="absolute inset-0 grid place-items-center">
+        <div className="h-6 w-6 rounded-full bg-black/55 grid place-items-center text-white text-[10px]">
+          ▶
+        </div>
       </div>
     </div>
   );
