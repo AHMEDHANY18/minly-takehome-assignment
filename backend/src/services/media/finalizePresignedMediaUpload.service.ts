@@ -65,8 +65,6 @@ if (!key.startsWith(expectedPrefix)) {
 
   const oldUrl = user.avatarUrl;
   const updatedUser = await UserRepository.updateUser(userId, { avatarUrl: url });
-
-  // best-effort delete old avatar
   if (oldUrl && oldUrl !== url) {
     try {
       const oldKey = extractS3Key(oldUrl);
