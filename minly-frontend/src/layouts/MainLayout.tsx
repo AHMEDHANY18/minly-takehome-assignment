@@ -32,23 +32,23 @@ export default function MainLayout() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* Top Bar */}
-      <header className="sticky top-0 z-40 bg-white/90 backdrop-blur border-b border-gray-100">
-        <div className="mx-auto max-w-[1200px] px-4 h-14 flex items-center justify-between">
+      {/* Header */}
+      <header className="sticky top-0 z-50 border-b border-gray-200/70 bg-white/80 backdrop-blur">
+        <div className="mx-auto max-w-[1240px] px-4 h-14 flex items-center justify-between">
           {/* Logo */}
           <button
             onClick={() => nav("/")}
-            className="flex items-center gap-2 shrink-0"
+            className="flex items-center gap-2 shrink-0 group"
             aria-label="Go to Home"
           >
-            <div className="h-8 w-8 rounded-lg bg-blue-600 grid place-items-center text-white font-bold">
+            <div className="h-9 w-9 rounded-xl bg-blue-600 grid place-items-center text-white font-extrabold shadow-sm group-hover:shadow transition">
               M
             </div>
-            <div className="font-semibold text-gray-900">Minly</div>
+            <div className="font-semibold text-gray-900 tracking-tight">Minly</div>
           </button>
 
           {/* Top nav */}
-          <nav className="hidden md:flex items-center gap-1">
+          <nav className="hidden md:flex items-center gap-1.5">
             <TopLink to="/" label="Home" end />
             <TopLink to="/explore" label="Explore" />
             <TopLink to="/upload" label="Create" />
@@ -60,12 +60,12 @@ export default function MainLayout() {
           <div className="flex items-center gap-2 shrink-0">
             <button
               onClick={() => nav("/notifications")}
-              className="relative h-10 w-10 rounded-full hover:bg-gray-50 border border-transparent hover:border-gray-200 transition grid place-items-center text-gray-700"
+              className="relative h-10 w-10 rounded-full border border-transparent hover:border-gray-200 hover:bg-gray-100 transition grid place-items-center text-gray-700"
               aria-label="Notifications"
             >
               <IconBell />
               {unread > 0 && (
-                <span className="absolute -top-0.5 -right-0.5 h-5 min-w-[20px] px-1 rounded-full bg-blue-600 text-white text-[11px] font-semibold grid place-items-center">
+                <span className="absolute -top-0.5 -right-0.5 h-5 min-w-[20px] px-1 rounded-full bg-blue-600 text-white text-[11px] font-semibold grid place-items-center shadow">
                   {unread > 99 ? "99+" : unread}
                 </span>
               )}
@@ -73,7 +73,7 @@ export default function MainLayout() {
 
             <button
               onClick={() => nav("/profile")}
-              className="ml-1 h-9 w-9 rounded-full bg-gray-100 border border-gray-200 grid place-items-center overflow-hidden"
+              className="ml-1 h-10 w-10 rounded-full bg-gray-100 border border-gray-200 grid place-items-center overflow-hidden hover:bg-gray-200/60 transition"
               aria-label="Profile"
             >
               {user?.avatarUrl ? (
@@ -93,18 +93,19 @@ export default function MainLayout() {
       </header>
 
       {/* Body */}
-      <main className="mx-auto max-w-[1200px] px-4 py-6">
+      <main className="mx-auto max-w-[1240px] px-4 py-6">
         <div
           className={
             hideSidebar
               ? "grid grid-cols-1"
-              : "grid grid-cols-1 lg:grid-cols-[260px_minmax(0,1fr)] gap-6"
+              : "grid grid-cols-1 lg:grid-cols-[280px_minmax(0,1fr)] gap-6"
           }
         >
           {!hideSidebar && (
             <aside className="hidden lg:block">
-              <div className="sticky top-20">
-                <div className="rounded-2xl bg-white border border-gray-100 shadow-sm p-3">
+              <div className="sticky top-[76px]">
+                {/* Sidebar Card */}
+                <div className="rounded-2xl bg-white border border-gray-200/70 shadow-sm p-3">
                   <nav className="space-y-1">
                     <SideLink to="/" label="Home" icon={<IconHome />} end />
                     <SideLink to="/explore" label="Explore" icon={<IconCompass />} />
@@ -112,7 +113,7 @@ export default function MainLayout() {
                     <SideLink to="/saved" label="Saved" icon={<IconBookmark />} />
                   </nav>
 
-                  <div className="mt-3 pt-3 border-t border-gray-100 text-[11px] text-gray-400">
+                  <div className="mt-4 pt-4 border-t border-gray-200/70 text-[11px] text-gray-400 leading-relaxed">
                     © 2024 Minly Inc. <br />
                     Privacy · Terms · Cookies
                   </div>
@@ -130,10 +131,10 @@ export default function MainLayout() {
 
       {/* زر تفعيل الصوت */}
       {!unlocked && (
-        <div className="fixed bottom-4 left-1/2 -translate-x-1/2 z-50">
+        <div className="fixed bottom-5 left-1/2 -translate-x-1/2 z-50">
           <button
             onClick={unlock}
-            className="px-4 py-3 rounded-xl bg-gray-900 text-white shadow-lg text-sm font-semibold"
+            className="px-4 py-3 rounded-2xl bg-gray-900 text-white shadow-lg text-sm font-semibold border border-white/10 hover:bg-black transition"
           >
             Enable notification sound
           </button>
@@ -152,10 +153,11 @@ function TopLink({ to, label, end }: { to: string; label: string; end?: boolean 
       end={end}
       className={({ isActive }) =>
         [
-          "h-9 px-3 rounded-full text-sm font-semibold transition inline-flex items-center",
+          "h-9 px-4 rounded-full text-sm font-semibold transition inline-flex items-center",
+          "focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/40",
           isActive
-            ? "text-blue-700 bg-blue-50"
-            : "text-gray-600 hover:text-gray-900 hover:bg-gray-50",
+            ? "text-blue-700 bg-blue-50 shadow-sm ring-1 ring-blue-100"
+            : "text-gray-600 hover:text-gray-900 hover:bg-gray-100",
         ].join(" ")
       }
     >
@@ -181,14 +183,19 @@ function SideLink({
       end={end}
       className={({ isActive }) =>
         [
-          "flex items-center gap-3 h-11 px-3 rounded-xl text-sm font-semibold transition",
+          "relative flex items-center gap-3 h-11 px-3 rounded-xl text-sm font-semibold transition",
+          "focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/30",
           isActive
             ? "bg-gray-100 text-gray-900"
             : "text-gray-600 hover:bg-gray-50 hover:text-gray-900",
+          // indicator (زي اللي في الصورة)
+          isActive
+            ? "before:content-[''] before:absolute before:left-0 before:top-2 before:bottom-2 before:w-1 before:rounded-full before:bg-blue-600"
+            : "",
         ].join(" ")
       }
     >
-      <span className="w-5 h-5 grid place-items-center">{icon}</span>
+      <span className="w-5 h-5 grid place-items-center text-gray-700">{icon}</span>
       <span>{label}</span>
     </NavLink>
   );
