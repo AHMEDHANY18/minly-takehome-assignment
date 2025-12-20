@@ -18,7 +18,12 @@ export type FinalizeMediaApiResponse<T = any> = {
   status: "success";
   data: T;
 };
-
+export type MediaEntity = {
+  id: string;
+  title?: string | null;
+  description?: string | null;
+  updatedAt?: string;
+};
 export const MediaAPI = {
   // ✅ Update these routes if your router path differs
   presign(body: { contentType: string; type: MediaType }) {
@@ -32,5 +37,9 @@ export const MediaAPI = {
     type: MediaType;
   }) {
     return api.post<FinalizeMediaApiResponse>("/media/finalize", body);
+  },
+
+  update(mediaId: string, payload: { title?: string; description?: string }) {
+    return api.patch<{ status: "success"; data: MediaEntity }>(`/media/${mediaId}`, payload);
   },
 };

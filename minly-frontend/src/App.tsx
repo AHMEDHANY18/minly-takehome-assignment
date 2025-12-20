@@ -4,7 +4,7 @@ import RegisterPage from "./features/auth/RegisterPage";
 import FeedPage from "./features/feed/FeedPage";
 import UploadPage from "./features/upload/UploadPage";
 import ProfilePage from "./features/profile/ProfilePage";
-import UserProfilePage from "./features/profile/UserProfilePage";
+// import UserProfilePage from "./features/profile/UserProfilePage";
 import { useUserStore } from "./store/user.store";
 import { ThemeProvider } from "./components/ThemeProvider";
 import MainLayout from "./layouts/MainLayout";
@@ -50,7 +50,7 @@ export default function App() {
               <Route path="/saved" element={<SavedPage />} />
               <Route path="/upload" element={<UploadPage />} />
               <Route path="/media/:mediaId" element={<MediaDetailsPage />} />
-              <Route path="/users/:userId" element={<UserProfilePage />} />
+              {/* <Route path="/users/:userId" element={<UserProfilePage />} /> */}
             </Route>
           </Route>
 

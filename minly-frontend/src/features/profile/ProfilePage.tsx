@@ -1,8 +1,9 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { useNavigate } from "react-router-dom";
 import { ProfileAPI, type ProfileMediaItem, type ProfileResponse } from "../../api/profile";
+import { MediaAPI } from "../../api/media";
 
-type Tab = "ALL" | "VIDEOS" | "PHOTOS"
+type Tab = "ALL" | "VIDEOS" | "PHOTOS";
 
 export default function ProfilePage() {
   const nav = useNavigate();
@@ -53,20 +54,24 @@ export default function ProfilePage() {
     return [];
   }, [payload?.media, tab]);
 
+  const onMediaUpdated = (id: string, patch: Partial<ProfileMediaItem>) => {
+    setPayload((prev) => {
+      if (!prev) return prev;
+      return {
+        ...prev,
+        media: (prev.media ?? []).map((m) => (m.id === id ? { ...m, ...patch } : m)),
+      };
+    });
+  };
+
   return (
     <div className="min-h-screen bg-[#F4F7FF]">
       {/* Top bar */}
       <div className="sticky top-0 z-40 border-b border-[#E7ECFF] bg-white/85 backdrop-blur">
         <div className="mx-auto max-w-[1200px] px-4 h-14 flex items-center gap-4">
           {/* logo */}
-          <button
-            onClick={() => nav("/")}
-            className="flex items-center gap-2 shrink-0"
-            aria-label="Go to home"
-          >
-            <div className="h-8 w-8 rounded-lg bg-blue-600 grid place-items-center text-white font-bold">
-              M
-            </div>
+          <button onClick={() => nav("/")} className="flex items-center gap-2 shrink-0" aria-label="Go to home">
+            <div className="h-8 w-8 rounded-lg bg-blue-600 grid place-items-center text-white font-bold">M</div>
             <div className="font-semibold text-gray-900">Minly</div>
           </button>
 
@@ -77,14 +82,7 @@ export default function ProfilePage() {
             onClick={() => nav("/")}
             className="h-9 px-3 rounded-xl bg-white border border-[#E7ECFF] shadow-sm text-sm font-semibold text-gray-700 hover:bg-[#F6F8FF] transition flex items-center gap-2"
           >
-            <svg
-              width="16"
-              height="16"
-              viewBox="0 0 24 24"
-              fill="none"
-              className="text-gray-600"
-              aria-hidden="true"
-            >
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" className="text-gray-600" aria-hidden="true">
               <path
                 d="M3 10.5L12 3l9 7.5V21a1 1 0 0 1-1 1h-5v-7H9v7H4a1 1 0 0 1-1-1v-10.5Z"
                 stroke="currentColor"
@@ -105,10 +103,7 @@ export default function ProfilePage() {
               <div className="flex flex-col items-center text-center">
                 <ProfileAvatar name={user?.name ?? "User"} src={user?.avatarUrl ?? null} />
 
-                <div className="mt-3 text-[18px] font-semibold text-gray-900">
-                  {loading ? "Loading…" : user?.name ?? "—"}
-                </div>
-
+                <div className="mt-3 text-[18px] font-semibold text-gray-900">{loading ? "Loading…" : user?.name ?? "—"}</div>
                 <div className="mt-0.5 text-[12px] text-gray-500">{username}</div>
 
                 <div className="mt-2 text-[12px] text-gray-500 flex items-center gap-2">
@@ -145,17 +140,21 @@ export default function ProfilePage() {
           {/* Right */}
           <main>
             <div className="flex items-center gap-6 px-2">
-              <TopTab active={tab === "ALL"} onClick={() => setTab("ALL")}>All Media</TopTab>
-              <TopTab active={tab === "VIDEOS"} onClick={() => setTab("VIDEOS")}>Videos</TopTab>
-              <TopTab active={tab === "PHOTOS"} onClick={() => setTab("PHOTOS")}>Photos</TopTab>
+              <TopTab active={tab === "ALL"} onClick={() => setTab("ALL")}>
+                All Media
+              </TopTab>
+              <TopTab active={tab === "VIDEOS"} onClick={() => setTab("VIDEOS")}>
+                Videos
+              </TopTab>
+              <TopTab active={tab === "PHOTOS"} onClick={() => setTab("PHOTOS")}>
+                Photos
+              </TopTab>
               <LinkTab onClick={() => nav("/saved")}>Saved</LinkTab>
-              </div>
+            </div>
 
             <div className="mt-5">
               {error && (
-                <div className="mb-4 rounded-2xl bg-white border border-red-100 p-4 text-sm text-red-600">
-                  {error}
-                </div>
+                <div className="mb-4 rounded-2xl bg-white border border-red-100 p-4 text-sm text-red-600">{error}</div>
               )}
 
               {loading ? (
@@ -163,7 +162,12 @@ export default function ProfilePage() {
               ) : (
                 <div className="grid grid-cols-3 gap-5">
                   {filtered.map((m) => (
-                    <MediaTile key={m.id} media={m} onClick={() => nav(`/media/${m.id}`)} />
+                    <MediaTile
+                      key={m.id}
+                      media={m}
+                      onClick={() => nav(`/media/${m.id}`)}
+                      onUpdated={onMediaUpdated}
+                    />
                   ))}
 
                   <button
@@ -172,7 +176,7 @@ export default function ProfilePage() {
                   >
                     <div className="text-center">
                       <div className="text-xl">＋</div>
-                      <div className="mt-1 text-[12px] font-semibold">Addmore</div>
+                      <div className="mt-1 text-[12px] font-semibold">Add more</div>
                     </div>
                   </button>
                 </div>
@@ -251,24 +255,319 @@ function TopTab({
   );
 }
 
-function MediaTile({ media, onClick }: { media: ProfileMediaItem; onClick: () => void }) {
+function LinkTab({ children, onClick }: { children: ReactNode; onClick?: () => void }) {
+  return (
+    <button onClick={onClick} className="relative text-sm font-semibold text-gray-500 hover:text-gray-800">
+      {children}
+      <span className="absolute left-0 -bottom-3 h-[2px] w-0 bg-transparent" />
+    </button>
+  );
+}
+
+/* ---------------- Media tile (hover + menu + edit modal) ---------------- */
+
+function MediaTile({
+  media,
+  onClick,
+  onUpdated,
+}: {
+  media: ProfileMediaItem;
+  onClick: () => void;
+  onUpdated: (id: string, patch: Partial<ProfileMediaItem>) => void;
+}) {
   const type = normalizeMediaType(media.type, media.url);
   const isVideo = type === "VIDEO";
 
-  return (
-    <button
-      onClick={onClick}
-      className="relative aspect-square rounded-2xl overflow-hidden bg-white border border-[#E7ECFF] shadow-[0_10px_30px_rgba(16,24,40,0.06)]"
-      aria-label="Open media"
-    >
-      <MediaThumb media={media} />
+  const likes = media.likesCount ?? 0;
+  const comments = media.commentCount ?? 0;
+  const title = (media.title ?? "").trim() || "Untitled";
+  const desc = (media.description ?? "").trim();
 
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [editOpen, setEditOpen] = useState(false);
+  const menuRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    if (!menuOpen) return;
+    const onDown = (e: MouseEvent) => {
+      const el = menuRef.current;
+      if (!el) return;
+      if (el.contains(e.target as Node)) return;
+      setMenuOpen(false);
+    };
+    document.addEventListener("mousedown", onDown);
+    return () => document.removeEventListener("mousedown", onDown);
+  }, [menuOpen]);
+
+  return (
+<div className="relative group aspect-square rounded-2xl overflow-hidden bg-white border border-[#E7ECFF]
+  shadow-[0_10px_30px_rgba(16,24,40,0.06)]
+  transition-transform duration-300 ease-out hover:-translate-y-[2px] hover:shadow-[0_18px_50px_rgba(16,24,40,0.12)]
+">
+      {/* Base click layer */}
+      <button type="button" onClick={onClick} className="absolute inset-0 z-0" aria-label="Open media" />
+
+      {/* Media */}
+      <div className="absolute inset-0 z-0">
+        <MediaThumb media={media} />
+      </div>
+
+      {/* video badge */}
       {isVideo && (
-        <div className="absolute top-3 right-3 h-7 w-7 rounded-full bg-white/85 border border-[#E7ECFF] grid place-items-center text-gray-700 text-[12px]">
+        <div className="absolute top-3 right-3 z-20 h-8 w-8 rounded-full bg-white/90 border border-[#E7ECFF] shadow-sm grid place-items-center text-gray-800 text-[12px]">
           ▶
         </div>
       )}
+
+      {/* 3 dots */}
+      <div className="absolute top-3 left-3 z-30 opacity-0 group-hover:opacity-100 transition">
+        <div ref={menuRef} className="relative">
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              setMenuOpen((v) => !v);
+            }}
+            className="h-8 w-8 rounded-full bg-white/90 border border-[#E7ECFF] shadow-sm grid place-items-center text-gray-800 hover:bg-white transition"
+            aria-haspopup="menu"
+            aria-expanded={menuOpen}
+            aria-label="Media actions"
+          >
+            <span className="text-lg leading-none">⋯</span>
+          </button>
+
+          {menuOpen && (
+            <div
+              role="menu"
+              className="absolute left-0 mt-2 w-56 rounded-2xl bg-white border border-[#E7ECFF] shadow-[0_12px_32px_rgba(16,24,40,0.14)] p-1"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <MenuItem
+                onClick={() => {
+                  setMenuOpen(false);
+                  setEditOpen(true);
+                }}
+              >
+                Edit title & description
+              </MenuItem>
+
+            </div>
+          )}
+        </div>
+      </div>
+
+  {/* Hover overlay */}
+<div
+  className="
+    absolute inset-0 z-20 pointer-events-none
+    opacity-0 group-hover:opacity-100
+    transition-opacity duration-300 ease-out
+  "
+>
+  {/* gradient */}
+  <div
+    className="
+      absolute inset-0
+      bg-gradient-to-t from-black/75 via-black/25 to-transparent
+      opacity-0 group-hover:opacity-100
+      transition-opacity duration-300 ease-out
+    "
+  />
+
+  {/* content */}
+  <div
+    className="
+      absolute bottom-3 left-3 right-3
+      flex items-end justify-between gap-3
+      translate-y-2 opacity-0
+      group-hover:translate-y-0 group-hover:opacity-100
+      transition-all duration-300 ease-out
+    "
+  >
+    <div className="min-w-0">
+      <div className="text-white text-sm font-semibold truncate drop-shadow-sm">
+        {title}
+      </div>
+
+      {desc && (
+        <div className="text-white/80 text-xs truncate mt-0.5 drop-shadow-sm">
+          {desc}
+        </div>
+      )}
+    </div>
+
+    <div
+      className="
+        flex items-center gap-2 shrink-0
+        scale-95 opacity-0
+        group-hover:scale-100 group-hover:opacity-100
+        transition-all duration-300 ease-out delay-75
+      "
+    >
+      <StatPill icon="❤" value={likes} />
+      <StatPill icon="💬" value={comments} />
+    </div>
+  </div>
+</div>
+
+
+      {/* Edit modal */}
+      <EditMediaModal
+        open={editOpen}
+        initialTitle={media.title ?? ""}
+        initialDescription={media.description ?? ""}
+        onClose={() => setEditOpen(false)}
+        onSubmit={async ({ title, description }) => {
+          const res = await MediaAPI.update(media.id, { title, description });
+          const updated = res.data.data;
+
+          onUpdated(media.id, {
+            title: updated.title ?? title,
+            description: updated.description ?? description,
+          });
+
+          setEditOpen(false);
+        }}
+      />
+    </div>
+  );
+}
+
+function MenuItem({ children, onClick }: { children: ReactNode; onClick: () => void }) {
+  return (
+    <button
+      type="button"
+      role="menuitem"
+      onClick={onClick}
+      className="w-full text-left px-3 py-2 rounded-xl text-sm font-semibold text-gray-700 hover:bg-[#F6F8FF] transition"
+    >
+      {children}
     </button>
+  );
+}
+
+function StatPill({ icon, value }: { icon: string; value: number }) {
+  return (
+    <div className="inline-flex items-center gap-1 rounded-full bg-black/35 border border-white/10 backdrop-blur px-2 py-1">
+      <span className="text-[12px]">{icon}</span>
+      <span className="text-white text-xs font-semibold">{value}</span>
+    </div>
+  );
+}
+
+function EditMediaModal({
+  open,
+  initialTitle,
+  initialDescription,
+  onClose,
+  onSubmit,
+}: {
+  open: boolean;
+  initialTitle: string;
+  initialDescription: string;
+  onClose: () => void;
+  onSubmit: (v: { title: string; description: string }) => Promise<void>;
+}) {
+  const [title, setTitle] = useState(initialTitle);
+  const [description, setDescription] = useState(initialDescription);
+  const [saving, setSaving] = useState(false);
+  const [err, setErr] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    setTitle(initialTitle);
+    setDescription(initialDescription);
+    setErr(null);
+  }, [open, initialTitle, initialDescription]);
+
+  useEffect(() => {
+    if (!open) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onClose();
+    };
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
+  }, [open, onClose]);
+
+  if (!open) return null;
+
+  return (
+    <div className="fixed inset-0 z-50 bg-black/35 backdrop-blur-sm grid place-items-center p-4" onMouseDown={onClose}>
+      <div
+        className="w-full max-w-[520px] rounded-2xl bg-white border border-[#E7ECFF] shadow-[0_18px_60px_rgba(16,24,40,0.25)] p-5"
+        onMouseDown={(e) => e.stopPropagation()}
+      >
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <div className="text-[16px] font-semibold text-gray-900">Edit media details</div>
+            <div className="text-[12px] text-gray-500 mt-1">Update title and description for this post.</div>
+          </div>
+
+          <button
+            type="button"
+            onClick={onClose}
+            className="h-9 w-9 rounded-xl border border-[#E7ECFF] bg-white hover:bg-[#F6F8FF] transition grid place-items-center text-gray-700"
+            aria-label="Close"
+          >
+            ✕
+          </button>
+        </div>
+
+        <div className="mt-4 space-y-3">
+          <div>
+            <label className="block text-[12px] font-semibold text-gray-600 mb-1">Title</label>
+            <input
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+              className="w-full h-11 rounded-xl border border-[#E7ECFF] bg-white px-3 text-sm outline-none focus:ring-4 focus:ring-blue-100"
+              placeholder="e.g. My new post"
+            />
+          </div>
+
+          <div>
+            <label className="block text-[12px] font-semibold text-gray-600 mb-1">Description</label>
+            <textarea
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              className="w-full min-h-[110px] rounded-xl border border-[#E7ECFF] bg-white p-3 text-sm outline-none focus:ring-4 focus:ring-blue-100 resize-none"
+              placeholder="Write a short description…"
+            />
+          </div>
+
+          {err && <div className="rounded-xl border border-red-100 bg-red-50 p-3 text-sm text-red-700">{err}</div>}
+        </div>
+
+        <div className="mt-5 flex items-center justify-end gap-3">
+          <button
+            type="button"
+            onClick={onClose}
+            className="h-10 px-4 rounded-xl border border-[#E7ECFF] bg-white text-sm font-semibold text-gray-700 hover:bg-[#F6F8FF] transition"
+            disabled={saving}
+          >
+            Cancel
+          </button>
+
+          <button
+            type="button"
+            onClick={async () => {
+              setSaving(true);
+              setErr(null);
+              try {
+                await onSubmit({ title: title.trim(), description: description.trim() });
+              } catch (e: any) {
+                setErr(e?.response?.data?.message ?? "Failed to update media");
+              } finally {
+                setSaving(false);
+              }
+            }}
+            className="h-10 px-4 rounded-xl bg-blue-600 text-white text-sm font-semibold hover:bg-blue-700 transition disabled:opacity-60"
+            disabled={saving}
+          >
+            {saving ? "Saving..." : "Save changes"}
+          </button>
+        </div>
+      </div>
+    </div>
   );
 }
 
@@ -280,23 +579,6 @@ function guessMediaTypeFromUrl(url?: string): "IMAGE" | "VIDEO" | undefined {
   if (/\.(mp4|webm|mov|m4v)$/i.test(clean)) return "VIDEO";
   if (/\.(png|jpe?g|gif|webp|avif)$/i.test(clean)) return "IMAGE";
   return undefined;
-}
-function LinkTab({
-  children,
-  onClick,
-}: {
-  children: React.ReactNode;
-  onClick?: () => void;
-}) {
-  return (
-    <button
-      onClick={onClick}
-      className="relative text-sm font-semibold text-gray-500 hover:text-gray-800"
-    >
-      {children}
-      <span className="absolute left-0 -bottom-3 h-[2px] w-0 bg-transparent" />
-    </button>
-  );
 }
 
 function normalizeMediaType(t?: string, url?: string): "IMAGE" | "VIDEO" {
@@ -320,8 +602,11 @@ function MediaThumb({ media }: { media: { url: string; type?: string; thumbnailU
     <img
       src={src}
       alt=""
-      className="h-full w-full object-cover"
-      loading="lazy"
+      className="h-full w-full object-cover
+      transition-all duration-300 ease-out
+      group-hover:scale-[1.06] group-hover:blur-[2px] group-hover:brightness-75
+    "
+          loading="lazy"
       decoding="async"
       onError={() => setBroken(true)}
     />
@@ -342,7 +627,7 @@ function VideoFirstFrame({ url }: { url: string }) {
         preload="metadata"
         muted
         playsInline
-        className="absolute inset-0 h-full w-full object-cover pointer-events-none"
+        className="absolute inset-0 h-full w-full object-cover pointer-events-none transition-transform duration-300 group-hover:scale-[1.06]"
         onLoadedMetadata={() => {
           const v = ref.current;
           if (!v) return;
