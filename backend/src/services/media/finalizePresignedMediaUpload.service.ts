@@ -24,9 +24,14 @@ export async function finalizePresignedUploadService(params: {
   if (!key) throw new Error("MISSING_KEY");
 
   const safeUserId = userId.replace(/[^a-zA-Z0-9-_]/g, "");
-  const expectedPrefix = kind === "media" ? `media/${safeUserId}/` : `avatar/${safeUserId}/`;
-  if (!key.startsWith(expectedPrefix)) throw new Error("FORBIDDEN_KEY");
+  const expectedPrefix =
+  kind === "media"
+    ? `media/${safeUserId}/`
+    : `avatars/${safeUserId}/`;
 
+if (!key.startsWith(expectedPrefix)) {
+  throw new Error("FORBIDDEN_KEY");
+}
   if (!s3Client) throw new Error("S3 is not configured");
 
   try {

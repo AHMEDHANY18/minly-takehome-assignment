@@ -254,8 +254,17 @@ export const MediaRepository = {
     const { mediaId, userId, likesToDeduct } = params;
 
     await prisma.$transaction([
+      // 1) delete children first
       prisma.like.deleteMany({ where: { mediaId } }),
+      prisma.bookmark.deleteMany({ where: { mediaId } }),
+
+      prisma.threadedComment.deleteMany({ where: { mediaId } }),
+      prisma.notification.deleteMany({ where: { mediaId } }),
+
+      // 2) delete parent
       prisma.media.delete({ where: { id: mediaId } }),
+
+      // 3) update counters
       prisma.user.update({
         where: { id: userId },
         data: {

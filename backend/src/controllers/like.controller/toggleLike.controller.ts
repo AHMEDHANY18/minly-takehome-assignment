@@ -1,6 +1,6 @@
 import { Response, NextFunction } from "express";
-import { AuthRequest } from "../../middleware/auth/requireAuth";
 import { toggleLikeService } from "../../services/like/toggleLike.service";
+import { AuthRequest } from "../../middleware/auth/types";
 
 export async function toggleLikeController(
   req: AuthRequest,

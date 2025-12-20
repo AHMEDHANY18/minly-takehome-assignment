@@ -1,6 +1,6 @@
 // src/controllers/follow/follow.controller.ts
 import { Response, NextFunction } from "express";
-import { AuthRequest } from "../../middleware/auth/requireAuth";
+import { AuthRequest } from "../../middleware/auth/types";
 import { toggleFollowService } from "../../services/follow/follow.service";
 
 export async function toggleFollowController(

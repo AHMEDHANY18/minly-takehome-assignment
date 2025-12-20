@@ -13,6 +13,10 @@ export default function ProfilePage() {
   const [error, setError] = useState<string | null>(null);
   const [payload, setPayload] = useState<ProfileResponse["data"] | null>(null);
 
+  // single modals (instead of per-card)
+  const [editing, setEditing] = useState<ProfileMediaItem | null>(null);
+  const [deleting, setDeleting] = useState<ProfileMediaItem | null>(null);
+
   useEffect(() => {
     let alive = true;
 
@@ -49,8 +53,15 @@ export default function ProfilePage() {
   const filtered = useMemo(() => {
     const list = payload?.media ?? [];
     if (tab === "ALL") return list;
-    if (tab === "VIDEOS") return list.filter((m) => normalizeMediaType(m.type, m.url) === "VIDEO");
-    if (tab === "PHOTOS") return list.filter((m) => normalizeMediaType(m.type, m.url) === "IMAGE");
+
+    if (tab === "VIDEOS") {
+      return list.filter((m) => normalizeMediaType(m.type, m.url) === "VIDEO");
+    }
+
+    if (tab === "PHOTOS") {
+      return list.filter((m) => normalizeMediaType(m.type, m.url) === "IMAGE");
+    }
+
     return [];
   }, [payload?.media, tab]);
 
@@ -64,12 +75,32 @@ export default function ProfilePage() {
     });
   };
 
+  const onMediaDeleted = (id: string) => {
+    setPayload((prev) => {
+      if (!prev) return prev;
+
+      const nextMedia = (prev.media ?? []).filter((m) => m.id !== id);
+
+      return {
+        ...prev,
+        user: {
+          ...prev.user,
+          mediaCount: Math.max(0, (prev.user.mediaCount ?? 0) - 1),
+        },
+        media: nextMedia,
+        pagination: {
+          ...prev.pagination,
+          total: Math.max(0, (prev.pagination.total ?? 0) - 1),
+        },
+      };
+    });
+  };
+
   return (
     <div className="min-h-screen bg-[#F4F7FF]">
       {/* Top bar */}
       <div className="sticky top-0 z-40 border-b border-[#E7ECFF] bg-white/85 backdrop-blur">
         <div className="mx-auto max-w-[1200px] px-4 h-14 flex items-center gap-4">
-          {/* logo */}
           <button onClick={() => nav("/")} className="flex items-center gap-2 shrink-0" aria-label="Go to home">
             <div className="h-8 w-8 rounded-lg bg-blue-600 grid place-items-center text-white font-bold">M</div>
             <div className="font-semibold text-gray-900">Minly</div>
@@ -77,7 +108,6 @@ export default function ProfilePage() {
 
           <div className="flex-1" />
 
-          {/* Home button */}
           <button
             onClick={() => nav("/")}
             className="h-9 px-3 rounded-xl bg-white border border-[#E7ECFF] shadow-sm text-sm font-semibold text-gray-700 hover:bg-[#F6F8FF] transition flex items-center gap-2"
@@ -96,14 +126,16 @@ export default function ProfilePage() {
       </div>
 
       <div className="mx-auto max-w-[1200px] px-4 py-6">
-        <div className="grid grid-cols-[280px_1fr] gap-6">
+        <div className="grid grid-cols-1 lg:grid-cols-[280px_1fr] gap-6">
           {/* Left */}
           <aside className="space-y-4">
             <div className="rounded-2xl bg-white border border-[#E7ECFF] shadow-[0_10px_30px_rgba(16,24,40,0.06)] p-5">
               <div className="flex flex-col items-center text-center">
                 <ProfileAvatar name={user?.name ?? "User"} src={user?.avatarUrl ?? null} />
 
-                <div className="mt-3 text-[18px] font-semibold text-gray-900">{loading ? "Loading…" : user?.name ?? "—"}</div>
+                <div className="mt-3 text-[18px] font-semibold text-gray-900">
+                  {loading ? "Loading…" : user?.name ?? "—"}
+                </div>
                 <div className="mt-0.5 text-[12px] text-gray-500">{username}</div>
 
                 <div className="mt-2 text-[12px] text-gray-500 flex items-center gap-2">
@@ -159,14 +191,26 @@ export default function ProfilePage() {
 
               {loading ? (
                 <GridSkeleton />
+              ) : filtered.length === 0 ? (
+                <div className="rounded-2xl bg-white border border-[#E7ECFF] p-8 text-center">
+                  <div className="text-[16px] font-semibold text-gray-900">No media yet</div>
+                  <div className="mt-1 text-sm text-gray-500">Upload your first post to see it here.</div>
+                  <button
+                    onClick={() => nav("/upload")}
+                    className="mt-4 h-10 px-4 rounded-xl bg-blue-600 text-white text-sm font-semibold hover:bg-blue-700 transition"
+                  >
+                    Upload now
+                  </button>
+                </div>
               ) : (
-                <div className="grid grid-cols-3 gap-5">
+                <div className="grid grid-cols-2 md:grid-cols-3 gap-4 lg:gap-5">
                   {filtered.map((m) => (
                     <MediaTile
                       key={m.id}
                       media={m}
-                      onClick={() => nav(`/media/${m.id}`)}
-                      onUpdated={onMediaUpdated}
+                      onOpen={() => nav(`/media/${m.id}`)} // ✅ guaranteed open on click
+                      onEdit={() => setEditing(m)}
+                      onDelete={() => setDeleting(m)}
                     />
                   ))}
 
@@ -185,6 +229,41 @@ export default function ProfilePage() {
           </main>
         </div>
       </div>
+
+      {/* ✅ One edit modal */}
+      <EditMediaModal
+        open={!!editing}
+        initialTitle={editing?.title ?? ""}
+        initialDescription={editing?.description ?? ""}
+        onClose={() => setEditing(null)}
+        onSubmit={async ({ title, description }) => {
+          if (!editing) return;
+
+          const res = await MediaAPI.update(editing.id, { title, description });
+          const updated = res.data.data;
+
+          onMediaUpdated(editing.id, {
+            title: updated.title ?? title,
+            description: updated.description ?? description,
+            updatedAt: updated.updatedAt ?? editing.updatedAt,
+          });
+
+          setEditing(null);
+        }}
+      />
+
+      {/* ✅ One delete modal */}
+      <DeleteConfirmModal
+        open={!!deleting}
+        title={((deleting?.title ?? "").trim() || "Untitled") as string}
+        onClose={() => setDeleting(null)}
+        onConfirm={async () => {
+          if (!deleting) return;
+          await MediaAPI.remove(deleting.id);
+          onMediaDeleted(deleting.id);
+          setDeleting(null);
+        }}
+      />
     </div>
   );
 }
@@ -193,6 +272,7 @@ export default function ProfilePage() {
 
 function ProfileAvatar({ name, src }: { name: string; src: string | null }) {
   if (src) return <img src={src} alt={name} className="h-[96px] w-[96px] rounded-full object-cover" />;
+
   const initial = (name?.[0] ?? "U").toUpperCase();
   return (
     <div className="relative">
@@ -264,16 +344,18 @@ function LinkTab({ children, onClick }: { children: ReactNode; onClick?: () => v
   );
 }
 
-/* ---------------- Media tile (hover + menu + edit modal) ---------------- */
+/* ---------------- Media tile (click open + menu) ---------------- */
 
 function MediaTile({
   media,
-  onClick,
-  onUpdated,
+  onOpen,
+  onEdit,
+  onDelete,
 }: {
   media: ProfileMediaItem;
-  onClick: () => void;
-  onUpdated: (id: string, patch: Partial<ProfileMediaItem>) => void;
+  onOpen: () => void;
+  onEdit: () => void;
+  onDelete: () => void;
 }) {
   const type = normalizeMediaType(media.type, media.url);
   const isVideo = type === "VIDEO";
@@ -284,29 +366,54 @@ function MediaTile({
   const desc = (media.description ?? "").trim();
 
   const [menuOpen, setMenuOpen] = useState(false);
-  const [editOpen, setEditOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
     if (!menuOpen) return;
+
     const onDown = (e: MouseEvent) => {
       const el = menuRef.current;
       if (!el) return;
       if (el.contains(e.target as Node)) return;
       setMenuOpen(false);
     };
+
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setMenuOpen(false);
+    };
+
     document.addEventListener("mousedown", onDown);
-    return () => document.removeEventListener("mousedown", onDown);
+    document.addEventListener("keydown", onKey);
+    return () => {
+      document.removeEventListener("mousedown", onDown);
+      document.removeEventListener("keydown", onKey);
+    };
   }, [menuOpen]);
 
   return (
-<div className="relative group aspect-square rounded-2xl overflow-hidden bg-white border border-[#E7ECFF]
-  shadow-[0_10px_30px_rgba(16,24,40,0.06)]
-  transition-transform duration-300 ease-out hover:-translate-y-[2px] hover:shadow-[0_18px_50px_rgba(16,24,40,0.12)]
-">
-      {/* Base click layer */}
-      <button type="button" onClick={onClick} className="absolute inset-0 z-0" aria-label="Open media" />
-
+    <div
+      role="button"
+      tabIndex={0}
+      onClick={() => {
+        if (!menuOpen) onOpen();
+      }}
+      onKeyDown={(e) => {
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault();
+          if (!menuOpen) onOpen();
+        }
+      }}
+      className="
+        relative group aspect-square rounded-2xl overflow-hidden cursor-pointer
+        bg-white border border-[#E7ECFF]
+        shadow-[0_10px_30px_rgba(16,24,40,0.06)]
+        transition-transform duration-300 ease-out
+        hover:-translate-y-[2px]
+        hover:shadow-[0_18px_50px_rgba(16,24,40,0.12)]
+        outline-none focus:ring-4 focus:ring-blue-100
+      "
+      aria-label={`Open media: ${title}`}
+    >
       {/* Media */}
       <div className="absolute inset-0 z-0">
         <MediaThumb media={media} />
@@ -319,8 +426,8 @@ function MediaTile({
         </div>
       )}
 
-      {/* 3 dots */}
-      <div className="absolute top-3 left-3 z-30 opacity-0 group-hover:opacity-100 transition">
+      {/* 3 dots (visible on touch, hover on desktop) */}
+      <div className="absolute top-3 left-3 z-30 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition">
         <div ref={menuRef} className="relative">
           <button
             type="button"
@@ -345,101 +452,92 @@ function MediaTile({
               <MenuItem
                 onClick={() => {
                   setMenuOpen(false);
-                  setEditOpen(true);
+                  onEdit();
                 }}
               >
                 Edit title & description
               </MenuItem>
 
+              <MenuItem
+                danger
+                onClick={() => {
+                  setMenuOpen(false);
+                  onDelete();
+                }}
+              >
+                Delete
+              </MenuItem>
             </div>
           )}
         </div>
       </div>
 
-  {/* Hover overlay */}
-<div
-  className="
-    absolute inset-0 z-20 pointer-events-none
-    opacity-0 group-hover:opacity-100
-    transition-opacity duration-300 ease-out
-  "
->
-  {/* gradient */}
-  <div
-    className="
-      absolute inset-0
-      bg-gradient-to-t from-black/75 via-black/25 to-transparent
-      opacity-0 group-hover:opacity-100
-      transition-opacity duration-300 ease-out
-    "
-  />
+      {/* Hover overlay */}
+      <div
+        className="
+          absolute inset-0 z-20 pointer-events-none
+          opacity-0 group-hover:opacity-100
+          transition-opacity duration-300 ease-out
+        "
+      >
+        <div
+          className="
+            absolute inset-0
+            bg-gradient-to-t from-black/75 via-black/25 to-transparent
+            opacity-0 group-hover:opacity-100
+            transition-opacity duration-300 ease-out
+          "
+        />
 
-  {/* content */}
-  <div
-    className="
-      absolute bottom-3 left-3 right-3
-      flex items-end justify-between gap-3
-      translate-y-2 opacity-0
-      group-hover:translate-y-0 group-hover:opacity-100
-      transition-all duration-300 ease-out
-    "
-  >
-    <div className="min-w-0">
-      <div className="text-white text-sm font-semibold truncate drop-shadow-sm">
-        {title}
-      </div>
+        <div
+          className="
+            absolute bottom-3 left-3 right-3
+            flex items-end justify-between gap-3
+            translate-y-2 opacity-0
+            group-hover:translate-y-0 group-hover:opacity-100
+            transition-all duration-300 ease-out
+          "
+        >
+          <div className="min-w-0">
+            <div className="text-white text-sm font-semibold truncate drop-shadow-sm">{title}</div>
+            {desc && <div className="text-white/80 text-xs truncate mt-0.5 drop-shadow-sm">{desc}</div>}
+          </div>
 
-      {desc && (
-        <div className="text-white/80 text-xs truncate mt-0.5 drop-shadow-sm">
-          {desc}
+          <div
+            className="
+              flex items-center gap-2 shrink-0
+              scale-95 opacity-0
+              group-hover:scale-100 group-hover:opacity-100
+              transition-all duration-300 ease-out delay-75
+            "
+          >
+            <StatPill icon="❤" value={likes} />
+            <StatPill icon="💬" value={comments} />
+          </div>
         </div>
-      )}
-    </div>
-
-    <div
-      className="
-        flex items-center gap-2 shrink-0
-        scale-95 opacity-0
-        group-hover:scale-100 group-hover:opacity-100
-        transition-all duration-300 ease-out delay-75
-      "
-    >
-      <StatPill icon="❤" value={likes} />
-      <StatPill icon="💬" value={comments} />
-    </div>
-  </div>
-</div>
-
-
-      {/* Edit modal */}
-      <EditMediaModal
-        open={editOpen}
-        initialTitle={media.title ?? ""}
-        initialDescription={media.description ?? ""}
-        onClose={() => setEditOpen(false)}
-        onSubmit={async ({ title, description }) => {
-          const res = await MediaAPI.update(media.id, { title, description });
-          const updated = res.data.data;
-
-          onUpdated(media.id, {
-            title: updated.title ?? title,
-            description: updated.description ?? description,
-          });
-
-          setEditOpen(false);
-        }}
-      />
+      </div>
     </div>
   );
 }
 
-function MenuItem({ children, onClick }: { children: ReactNode; onClick: () => void }) {
+function MenuItem({
+  children,
+  onClick,
+  danger,
+}: {
+  children: ReactNode;
+  onClick: () => void;
+  danger?: boolean;
+}) {
   return (
     <button
       type="button"
       role="menuitem"
       onClick={onClick}
-      className="w-full text-left px-3 py-2 rounded-xl text-sm font-semibold text-gray-700 hover:bg-[#F6F8FF] transition"
+      className={[
+        "w-full text-left px-3 py-2 rounded-xl text-sm font-semibold transition",
+        danger ? "text-red-600 hover:bg-red-50" : "text-gray-700 hover:bg-[#F6F8FF]",
+      ].join(" ")}
     >
       {children}
     </button>
@@ -454,6 +552,8 @@ function StatPill({ icon, value }: { icon: string; value: number }) {
     </div>
   );
 }
+
+/* ---------------- Modals ---------------- */
 
 function EditMediaModal({
   open,
@@ -478,6 +578,7 @@ function EditMediaModal({
     setTitle(initialTitle);
     setDescription(initialDescription);
     setErr(null);
+    setSaving(false);
   }, [open, initialTitle, initialDescription]);
 
   useEffect(() => {
@@ -571,6 +672,103 @@ function EditMediaModal({
   );
 }
 
+function DeleteConfirmModal({
+  open,
+  title,
+  onClose,
+  onConfirm,
+}: {
+  open: boolean;
+  title: string;
+  onClose: () => void;
+  onConfirm: () => Promise<void>;
+}) {
+  const [deleting, setDeleting] = useState(false);
+  const [err, setErr] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    setErr(null);
+    setDeleting(false);
+  }, [open]);
+
+  useEffect(() => {
+    if (!open) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onClose();
+    };
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
+  }, [open, onClose]);
+
+  if (!open) return null;
+
+  return (
+    <div
+      className="fixed inset-0 z-50 bg-black/35 backdrop-blur-sm grid place-items-center p-4"
+      onMouseDown={() => !deleting && onClose()}
+    >
+      <div
+        className="w-full max-w-[520px] rounded-2xl bg-white border border-[#E7ECFF] shadow-[0_18px_60px_rgba(16,24,40,0.25)] p-5"
+        onMouseDown={(e) => e.stopPropagation()}
+      >
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <div className="text-[16px] font-semibold text-gray-900">Delete post</div>
+            <div className="text-[12px] text-gray-500 mt-1">This action cannot be undone.</div>
+          </div>
+
+          <button
+            type="button"
+            onClick={onClose}
+            disabled={deleting}
+            className="h-9 w-9 rounded-xl border border-[#E7ECFF] bg-white hover:bg-[#F6F8FF] transition grid place-items-center text-gray-700 disabled:opacity-60"
+            aria-label="Close"
+          >
+            ✕
+          </button>
+        </div>
+
+        <div className="mt-4 rounded-2xl border border-[#E7ECFF] bg-[#F6F8FF] p-4">
+          <div className="text-[12px] text-gray-500">You are deleting:</div>
+          <div className="mt-1 text-[14px] font-semibold text-gray-900 truncate">{title}</div>
+        </div>
+
+        {err && <div className="mt-4 rounded-xl border border-red-100 bg-red-50 p-3 text-sm text-red-700">{err}</div>}
+
+        <div className="mt-5 flex items-center justify-end gap-3">
+          <button
+            type="button"
+            onClick={onClose}
+            disabled={deleting}
+            className="h-10 px-4 rounded-xl border border-[#E7ECFF] bg-white text-sm font-semibold text-gray-700 hover:bg-[#F6F8FF] transition disabled:opacity-60"
+          >
+            Cancel
+          </button>
+
+          <button
+            type="button"
+            disabled={deleting}
+            onClick={async () => {
+              setDeleting(true);
+              setErr(null);
+              try {
+                await onConfirm();
+              } catch (e: any) {
+                setErr(e?.response?.data?.message ?? "Failed to delete media");
+                setDeleting(false);
+              }
+            }}
+            className="h-10 px-4 rounded-xl bg-red-600 text-white text-sm font-semibold hover:bg-red-700 transition disabled:opacity-60"
+          >
+            {deleting ? "Deleting..." : "Delete"}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 /* ---------------- Thumb ---------------- */
 
 function guessMediaTypeFromUrl(url?: string): "IMAGE" | "VIDEO" | undefined {
@@ -602,11 +800,14 @@ function MediaThumb({ media }: { media: { url: string; type?: string; thumbnailU
     <img
       src={src}
       alt=""
-      className="h-full w-full object-cover
-      transition-all duration-300 ease-out
-      group-hover:scale-[1.06] group-hover:blur-[2px] group-hover:brightness-75
-    "
-          loading="lazy"
+      className="
+        h-full w-full object-cover
+        transition-all duration-300 ease-out
+        group-hover:scale-[1.06]
+        group-hover:blur-[2px]
+        group-hover:brightness-75
+      "
+      loading="lazy"
       decoding="async"
       onError={() => setBroken(true)}
     />
@@ -627,7 +828,7 @@ function VideoFirstFrame({ url }: { url: string }) {
         preload="metadata"
         muted
         playsInline
-        className="absolute inset-0 h-full w-full object-cover pointer-events-none transition-transform duration-300 group-hover:scale-[1.06]"
+        className="absolute inset-0 h-full w-full object-cover transition-transform duration-300 group-hover:scale-[1.06]"
         onLoadedMetadata={() => {
           const v = ref.current;
           if (!v) return;
@@ -665,7 +866,7 @@ function formatMonthYear(iso: string) {
 
 function GridSkeleton() {
   return (
-    <div className="grid grid-cols-3 gap-5">
+    <div className="grid grid-cols-2 md:grid-cols-3 gap-4 lg:gap-5">
       {Array.from({ length: 9 }).map((_, i) => (
         <div key={i} className="aspect-square rounded-2xl bg-white border border-[#E7ECFF] overflow-hidden">
           <div className="h-full w-full bg-[#F3F6FF]" />

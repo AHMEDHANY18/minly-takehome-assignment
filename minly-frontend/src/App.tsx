@@ -13,17 +13,9 @@ import AuthSuccessPage from "./features/auth/pages/AuthSuccessPage";
 import NotificationsPage from "./features/notifications/NotificationsPage";
 import MediaDetailsPage from "./features/media/MediaDetailsPage";
 import SavedPage from "./features/saved/SavedPage";
+import EditProfilePage from "./features/profile/EditProfilePage";
 
-function ProfileEditStub() {
-  return (
-    <div className="min-h-screen bg-[#F4F7FF] flex items-center justify-center px-4">
-      <div className="w-full max-w-md rounded-2xl bg-white border border-[#E7ECFF] shadow-[0_10px_30px_rgba(16,24,40,0.06)] p-6 text-center">
-        <div className="text-lg font-semibold text-gray-900">Edit Profile</div>
-        <div className="mt-2 text-sm text-gray-500">Coming soon.</div>
-      </div>
-    </div>
-  );
-}
+
 
 export default function App() {
   const user = useUserStore((s) => s.user);
@@ -39,7 +31,7 @@ export default function App() {
           <Route element={<AuthBootstrap />}>
             {/* خارج الـ MainLayout */}
             <Route path="/profile" element={<ProfilePage />} />
-            <Route path="/profile/edit" element={<ProfileEditStub />} />
+              <Route path="/profile/edit" element={<EditProfilePage />} />
 
             {/* كل الصفحات اللي ليها navbar */}
             <Route element={<MainLayout />}>

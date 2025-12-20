@@ -11,6 +11,7 @@ export type ProfileMediaItem = {
   likesCount: number;
   commentCount: number;
   createdAt: string;
+  updatedAt: string;
 };
 
 export type ProfileResponse = {
@@ -40,9 +41,28 @@ export type ProfileResponse = {
     meta: { tab: "ALL" | "VIDEOS" | "PHOTOS" | "SAVED" | string; isMe: boolean };
   };
 };
+export type ProfileUser = {
+  id: string;
+  name: string;
+  avatarUrl: string | null;
+  email: string;
 
+  mediaCount: number;
+  totalLikesReceived: number;
+  totalLikesGiven: number;
+  followerCount: number;
+  followingCount: number;
+
+  createdAt: string;
+};
 export const ProfileAPI = {
+  /** get my profile */
   me() {
     return api.get<ProfileResponse>("/user/profile");
+  },
+
+  /** update name / email (no file) */
+  update(body: { name?: string; }) {
+    return api.patch<{ status: "success"; data: ProfileUser }>("/user", body);
   },
 };

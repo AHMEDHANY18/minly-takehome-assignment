@@ -14,7 +14,9 @@ export async function finalizeUploadController(req: AuthRequest, res: Response, 
       description?: string;
       type?: "IMAGE" | "VIDEO";
     };
+      console.log("🚀 ~ finalizeUploadController ~ kind:", kind)
 
+      console.log("🚀 ~ finalizeUploadController ~ key:", key)
     const result = await finalizePresignedUploadService({
       userId: user.id,
       kind: kind ?? "media",

@@ -5,10 +5,11 @@ import { createPresignedPutUrl } from "../../utilities/storage/presignPut";
 
 export async function createPresignedMediaUploadService(params: {
   userId: string;
+  kind: "media" | "avatar";
   contentType: string;
   type?: "IMAGE" | "VIDEO";
 }) {
-  const { userId, contentType, type } = params;
+  const { userId, kind,contentType, type } = params;
 
   if (!contentType) throw new Error("MISSING_CONTENT_TYPE");
 
@@ -22,7 +23,7 @@ export async function createPresignedMediaUploadService(params: {
 
   const key = buildMediaKey({
     userId,
-    kind: "media",
+    kind, // ✅ دلوقتي صحيح
     extension,
   });
 

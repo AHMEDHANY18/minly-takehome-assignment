@@ -1,6 +1,6 @@
 import { Response, NextFunction } from "express";
-import { AuthRequest } from "../../middleware/auth/requireAuth";
 import { deleteCommentService } from "../../services/comment/deleteComment.service";
+import { AuthRequest } from "../../middleware/auth/types";
 
 export async function deleteCommentController(
   req: AuthRequest,

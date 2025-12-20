@@ -29,25 +29,26 @@ export type MediaEntity = {
 };
 
 export const MediaAPI = {
-  // ✅ unified endpoints
   presign(body: { kind: UploadKind; contentType: string; type?: MediaType }) {
-    return api.post<PresignMediaApiResponse>("/uploads/presign", body);
+    return api.post<PresignMediaApiResponse>("/media/presign", body);
   },
 
   finalize(body: {
     kind: UploadKind;
     key: string;
-
-    // media only
     title?: string;
     description?: string;
     type?: MediaType;
   }) {
-    return api.post<FinalizeApiResponse>("/uploads/finalize", body);
+    return api.post<FinalizeApiResponse>("/media/finalize", body);
   },
 
-  // media-specific
   update(mediaId: string, payload: { title?: string; description?: string }) {
     return api.patch<{ status: "success"; data: MediaEntity }>(`/media/${mediaId}`, payload);
+  },
+
+  // ✅ NEW: delete media
+  remove(mediaId: string) {
+    return api.delete<{ status: "success" }>(`/media/${mediaId}`);
   },
 };

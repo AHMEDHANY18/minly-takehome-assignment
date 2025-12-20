@@ -1,6 +1,6 @@
 import { Response, NextFunction } from "express";
-import { AuthRequest } from "../../middleware/auth/requireAuth";
 import { deleteMediaService } from "../../services/media/deleteMedia.service";
+import { AuthRequest } from "../../middleware/auth/types";
 
 export async function deleteMediaController(
   req: AuthRequest,

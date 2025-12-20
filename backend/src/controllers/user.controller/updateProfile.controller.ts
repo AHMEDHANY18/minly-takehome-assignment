@@ -22,8 +22,7 @@ export async function updateProfileController(
 
     const updatedUser = await updateProfileService(
       userId,
-      { name, email },
-      req.file
+      { name },
     );
 
     return res.status(200).json({
