@@ -56,8 +56,6 @@ if (!key.startsWith(expectedPrefix)) {
 
     return { kind: "media", data: created };
   }
-
-  // kind === "avatar"
   const user = await UserRepository.findById(userId);
   if (!user) {
     const e: any = new Error("User not found");
