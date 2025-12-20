@@ -1,8 +1,10 @@
-import { Request, Response } from "express";
+// src/controllers/auth/auth.controller.ts
+import type { Request, Response } from "express";
 import axios from "axios";
 import crypto from "crypto";
 import { verifyCognitoToken } from "../../services/auth/cognito/cognito.verify";
 import { UserRepository } from "../../repositories/user.repository";
+import { cookieOpts, mustEnv } from "../../utilities/authCookies";
 
 function base64Url(buf: Buffer) {
   return buf
@@ -16,34 +18,8 @@ function sha256(input: string) {
   return crypto.createHash("sha256").update(input).digest();
 }
 
-function cookieOpts() {
-  const secure = process.env.NODE_ENV === "production";
-  console.log("🚀 ~ cookieOpts ~ secure:", secure)
-  const sameSiteEnv = (process.env.COOKIE_SAMESITE || "lax").toLowerCase();
-  console.log("🚀 ~ cookieOpts ~ sameSiteEnv:", sameSiteEnv)
-  const sameSite =
-    sameSiteEnv === "none"
-      ? ("none" as const)
-      : sameSiteEnv === "strict"
-      ? ("strict" as const)
-      : ("lax" as const);
-
-  return {
-    httpOnly: true,
-    secure:false,
-    sameSite,
-  };
-}
-
-function mustEnv(name: string) {
-  const v = process.env[name];
-  if (!v) throw new Error(`Missing env ${name}`);
-  return v;
-}
-
 export async function cognitoLogin(req: Request, res: Response) {
   const domain = mustEnv("COGNITO_DOMAIN").replace(/\/+$/, "");
-  console.log("🚀 ~ cognitoLogin ~ domain:", domain)
   const clientId = mustEnv("COGNITO_CLIENT_ID");
   const redirectUri = mustEnv("COGNITO_REDIRECT_URI");
 
@@ -52,28 +28,34 @@ export async function cognitoLogin(req: Request, res: Response) {
   const codeVerifier = base64Url(crypto.randomBytes(64));
   const codeChallenge = base64Url(sha256(codeVerifier));
 
-  // cookies (short-lived)
-  res.cookie("oauth_state", state, { ...cookieOpts(), maxAge: 10 * 60 * 1000 });
+  // store temp cookies with explicit path (so clearCookie works reliably)
+  const tempPath = "/v1/auth";
+  res.cookie("oauth_state", state, { ...cookieOpts(), maxAge: 10 * 60 * 1000, path: tempPath });
   res.cookie("pkce_verifier", codeVerifier, {
     ...cookieOpts(),
     maxAge: 10 * 60 * 1000,
+    path: tempPath,
   });
 
-  const scope = encodeURIComponent("openid email profile");
-  console.log("🚀 ~ cognitoLogin ~ scope:", scope)
-  const url =
-  `${domain}/oauth2/authorize` +
-  `?response_type=code` +
-  `&client_id=${encodeURIComponent(clientId)}` +
-  `&redirect_uri=${encodeURIComponent(redirectUri)}` +
-  `&scope=${scope}` +
-  `&state=${encodeURIComponent(state)}` +
-  `&code_challenge=${encodeURIComponent(codeChallenge)}` +
-  `&code_challenge_method=S256` +
-  `&response_mode=query` +
-  `&prompt=login`;
+  // request scopes (offline_access helps getting refresh_token if enabled in Cognito app client)
+  const scope = encodeURIComponent("openid email profile offline_access");
 
-    console.log("🚀 ~ cognitoLogin ~ url:", url)
+  // DO NOT force prompt=login unless explicitly requested
+  const forceLogin = process.env.COGNITO_FORCE_LOGIN === "1";
+  const prompt = forceLogin ? `&prompt=login` : "";
+
+  const url =
+    `${domain}/oauth2/authorize` +
+    `?response_type=code` +
+    `&client_id=${encodeURIComponent(clientId)}` +
+    `&redirect_uri=${encodeURIComponent(redirectUri)}` +
+    `&scope=${scope}` +
+    `&state=${encodeURIComponent(state)}` +
+    `&code_challenge=${encodeURIComponent(codeChallenge)}` +
+    `&code_challenge_method=S256` +
+    `&response_mode=query` +
+    prompt;
+
   return res.redirect(url);
 }
 
@@ -86,9 +68,7 @@ export async function cognitoCallback(req: Request, res: Response) {
 
   try {
     const code = req.query.code?.toString();
-    console.log("🚀 ~ cognitoCallback ~ code:", code)
     const state = req.query.state?.toString();
-    console.log("🚀 ~ cognitoCallback ~ state:", state)
 
     if (!code) return res.status(400).json({ message: "Missing code" });
     if (!state) return res.status(400).json({ message: "Missing state" });
@@ -96,15 +76,10 @@ export async function cognitoCallback(req: Request, res: Response) {
     // validate state
     const savedState = req.cookies?.oauth_state;
     if (!savedState) return res.status(400).json({ message: "Missing oauth_state cookie" });
-
-    if (state && state !== savedState) {
-      return res.status(400).json({ message: "Invalid state" });
-    }
+    if (state !== savedState) return res.status(400).json({ message: "Invalid state" });
 
     const codeVerifier = req.cookies?.pkce_verifier;
-    if (!codeVerifier) {
-      return res.status(400).json({ message: "Missing PKCE verifier" });
-    }
+    if (!codeVerifier) return res.status(400).json({ message: "Missing PKCE verifier" });
 
     // exchange code -> tokens
     const tokenUrl = `${domain}/oauth2/token`;
@@ -116,12 +91,10 @@ export async function cognitoCallback(req: Request, res: Response) {
       code_verifier: codeVerifier,
     });
 
-    console.log("🚀 ~ cognitoCallback ~ tokenUrl:", tokenUrl)
     const headers: Record<string, string> = {
       "Content-Type": "application/x-www-form-urlencoded",
     };
 
-    // If you configured a secret, use Basic (confidential client)
     if (clientSecret) {
       const basic = Buffer.from(`${clientId}:${clientSecret}`).toString("base64");
       headers.Authorization = `Basic ${basic}`;
@@ -136,13 +109,13 @@ export async function cognitoCallback(req: Request, res: Response) {
       return res.status(400).json({ message: "Missing access_token from Cognito" });
     }
 
-    // verify ACCESS token (this is what protects APIs)
+    // verify ACCESS token
     const accessPayload = await verifyCognitoToken<any>(accessToken, {
       expectedUse: "access",
       clientId,
     });
 
-    // fetch user profile from userInfo (requires scope openid/profile/email)
+    // fetch user profile
     const { data: userInfo } = await axios.get(`${domain}/oauth2/userInfo`, {
       headers: { Authorization: `Bearer ${accessToken}` },
     });
@@ -158,7 +131,7 @@ export async function cognitoCallback(req: Request, res: Response) {
     const avatarUrl = userInfo?.picture ?? null;
 
     // Link user in DB by Cognito sub
-    const user = await UserRepository.upsertOAuthUser({
+    await UserRepository.upsertOAuthUser({
       email,
       name,
       avatarUrl,
@@ -168,30 +141,29 @@ export async function cognitoCallback(req: Request, res: Response) {
     // set auth cookies
     const common = cookieOpts();
 
-    // access cookie (short)
     const accessMaxAgeMs =
       typeof data?.expires_in === "number" ? data.expires_in * 1000 : 60 * 60 * 1000;
 
+    // access cookie (short)
     res.cookie("access_token", accessToken, {
       ...common,
       maxAge: accessMaxAgeMs,
-      path: "/", // used by all APIs
+      path: "/",
     });
 
     // refresh cookie (longer, restricted path)
     if (refreshToken) {
       res.cookie("refresh_token", refreshToken, {
         ...common,
-        maxAge: 30 * 24 * 60 * 60 * 1000, // 30d (حسب إعدادات Cognito)
+        maxAge: 30 * 24 * 60 * 60 * 1000, // 30d (depends on Cognito settings)
         path: "/v1/auth/refresh",
       });
     }
 
-    // cleanup oauth temp cookies
-    res.clearCookie("oauth_state", { path: "/" });
-    res.clearCookie("pkce_verifier", { path: "/" });
+    // cleanup oauth temp cookies (use same path that was set)
+    res.clearCookie("oauth_state", { path: "/v1/auth" });
+    res.clearCookie("pkce_verifier", { path: "/v1/auth" });
 
-    // redirect to frontend (logged in)
     return res.redirect(`${frontendUrl}/auth/success`);
   } catch (err: any) {
     if (axios.isAxiosError(err)) {
@@ -208,7 +180,7 @@ export async function cognitoCallback(req: Request, res: Response) {
 }
 
 export async function authMe(req: Request, res: Response) {
-  // user will be attached by requireAuth middleware
+  // user attached by requireAuth
   // @ts-ignore
   return res.json({ user: req.user });
 }
@@ -220,7 +192,9 @@ export async function authRefresh(req: Request, res: Response) {
 
   try {
     const refreshToken = req.cookies?.refresh_token;
-    if (!refreshToken) return res.status(401).json({ message: "Missing refresh token" });
+    if (!refreshToken) {
+      return res.status(401).json({ code: "NO_REFRESH", message: "Missing refresh token" });
+    }
 
     const tokenUrl = `${domain}/oauth2/token`;
     const body = new URLSearchParams({
@@ -248,14 +222,13 @@ export async function authRefresh(req: Request, res: Response) {
 
     res.cookie("access_token", accessToken, {
       ...cookieOpts(),
-      maxAge:
-        typeof data?.expires_in === "number" ? data.expires_in * 1000 : 60 * 60 * 1000,
+      maxAge: typeof data?.expires_in === "number" ? data.expires_in * 1000 : 60 * 60 * 1000,
       path: "/",
     });
 
     return res.json({ ok: true });
   } catch (err: any) {
-    return res.status(401).json({ message: "Refresh failed", details: err?.message });
+    return res.status(401).json({ code: "REFRESH_FAILED", message: "Refresh failed", details: err?.message });
   }
 }
 
