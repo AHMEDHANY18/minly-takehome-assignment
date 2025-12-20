@@ -1,12 +1,10 @@
+// src/api/auth.ts
 import { api } from "./axios";
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
-const COGNITO_DOMAIN = import.meta.env.VITE_COGNITO_DOMAIN;
-const CLIENT_ID = import.meta.env.VITE_COGNITO_CLIENT_ID;
-const LOGOUT_REDIRECT = import.meta.env.VITE_COGNITO_LOGOUT_REDIRECT;
 
-if (!COGNITO_DOMAIN || !CLIENT_ID || !LOGOUT_REDIRECT) {
-  throw new Error("Missing Cognito env variables");
+if (!API_BASE_URL) {
+  throw new Error("Missing VITE_API_BASE_URL");
 }
 
 export type MeResponse = {
@@ -16,23 +14,22 @@ export type MeResponse = {
     email: string;
     avatarUrl?: string | null;
 
+    mediaCount: number;
+    followerCount: number;
+    followingCount: number;
 
-  mediaCount: number;
-  followerCount: number;
-  followingCount: number;
+    totalLikesReceived: number;
+    totalLikesGiven: number;
 
-  totalLikesReceived: number;
-  totalLikesGiven: number;
-
-  createdAt: string;
-  updatedAt: string;
-
+    createdAt: string;
+    updatedAt: string;
   };
 };
 
 export const AuthAPI = {
   // redirect → backend (BFF)
   startLogin() {
+    // يعتمد على أن baseURL فيه /v1
     window.location.href = `${API_BASE_URL}/auth/login`;
   },
 
@@ -41,11 +38,13 @@ export const AuthAPI = {
     return api.get<MeResponse>("/auth/me");
   },
 
-  // redirect → Cognito logout
+  // optional: لو عايز تنادي refresh يدويًا (مش ضروري مع interceptor)
+  refresh() {
+    return api.post("/auth/refresh");
+  },
+
+  // logout عبر الباك عشان يمسح cookies + يعمل redirect لـ Cognito logout
   startLogout() {
-    window.location.href =
-      `${COGNITO_DOMAIN}/logout` +
-      `?client_id=${CLIENT_ID}` +
-      `&logout_uri=${encodeURIComponent(LOGOUT_REDIRECT)}`;
+    window.location.href = `${API_BASE_URL}/auth/logout`;
   },
 };

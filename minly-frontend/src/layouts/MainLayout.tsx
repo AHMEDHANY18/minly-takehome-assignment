@@ -14,18 +14,17 @@ export default function MainLayout() {
   const { pathname } = useLocation();
   const nav = useNavigate();
 
-  // ✅ SSE مرة واحدة طول ما المستخدم داخل
+  // SSE طول ما المستخدم داخل
   useNotificationStream(!!user);
 
-  // ✅ الصوت
+  // الصوت
   const { play, unlock, unlocked } = useNotificationSound();
 
-  // ✅ شغل الصوت لما يجي إشعار جديد (latest اتغير)
+  // شغّل الصوت لما يجي إشعار جديد
   useEffect(() => {
     if (!latest) return;
     if (latest.isRead) return;
     if (pathname.startsWith("/notifications")) return;
-
     play();
   }, [latest?.id, latest?.isRead, pathname, play]);
 
@@ -35,7 +34,7 @@ export default function MainLayout() {
     <div className="min-h-screen bg-gray-50">
       {/* Top Bar */}
       <header className="sticky top-0 z-40 bg-white/90 backdrop-blur border-b border-gray-100">
-        <div className="mx-auto max-w-[1200px] px-4 h-14 flex items-center gap-4">
+        <div className="mx-auto max-w-[1200px] px-4 h-14 flex items-center justify-between">
           {/* Logo */}
           <button
             onClick={() => nav("/")}
@@ -56,19 +55,6 @@ export default function MainLayout() {
             <TopLink to="/notifications" label="Notifications" />
             <TopLink to="/profile" label="Profile" />
           </nav>
-
-          {/* Search */}
-          <div className="flex-1">
-            <div className="relative w-full md:max-w-[520px] md:mx-auto">
-              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">
-                <IconSearch />
-              </span>
-              <input
-                className="w-full h-10 pl-9 pr-3 rounded-full bg-gray-50 border border-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-100"
-                placeholder="Search"
-              />
-            </div>
-          </div>
 
           {/* Right actions */}
           <div className="flex items-center gap-2 shrink-0">
@@ -142,7 +128,7 @@ export default function MainLayout() {
         </div>
       </main>
 
-      {/* ✅ زر تفعيل الصوت (لازم Click صريح) */}
+      {/* زر تفعيل الصوت */}
       {!unlocked && (
         <div className="fixed bottom-4 left-1/2 -translate-x-1/2 z-50">
           <button
@@ -156,6 +142,8 @@ export default function MainLayout() {
     </div>
   );
 }
+
+/* ---------------- Links ---------------- */
 
 function TopLink({ to, label, end }: { to: string; label: string; end?: boolean }) {
   return (
@@ -194,7 +182,9 @@ function SideLink({
       className={({ isActive }) =>
         [
           "flex items-center gap-3 h-11 px-3 rounded-xl text-sm font-semibold transition",
-          isActive ? "bg-gray-100 text-gray-900" : "text-gray-600 hover:bg-gray-50 hover:text-gray-900",
+          isActive
+            ? "bg-gray-100 text-gray-900"
+            : "text-gray-600 hover:bg-gray-50 hover:text-gray-900",
         ].join(" ")
       }
     >
@@ -205,20 +195,6 @@ function SideLink({
 }
 
 /* ---------------- Icons ---------------- */
-
-function IconSearch() {
-  return (
-    <svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true">
-      <path
-        d="M21 21l-4.35-4.35m1.35-5.15a7 7 0 11-14 0 7 7 0 0114 0z"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="2"
-        strokeLinecap="round"
-      />
-    </svg>
-  );
-}
 
 function IconBell() {
   return (
@@ -259,7 +235,12 @@ function IconHome() {
 function IconCompass() {
   return (
     <svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true">
-      <path d="M12 21a9 9 0 100-18 9 9 0 000 18z" fill="none" stroke="currentColor" strokeWidth="2" />
+      <path
+        d="M12 21a9 9 0 100-18 9 9 0 000 18z"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="2"
+      />
       <path
         d="M14.5 9.5l-2 5-5 2 2-5 5-2z"
         fill="none"
@@ -274,8 +255,21 @@ function IconCompass() {
 function IconTrending() {
   return (
     <svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true">
-      <path d="M3 17l7-7 4 4 7-7" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
-      <path d="M21 10V4h-6" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+      <path
+        d="M3 17l7-7 4 4 7-7"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
+      />
+      <path
+        d="M21 10V4h-6"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
     </svg>
   );
 }

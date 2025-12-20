@@ -38,7 +38,7 @@ export async function cognitoLogin(req: Request, res: Response) {
   });
 
   // request scopes (offline_access helps getting refresh_token if enabled in Cognito app client)
-  const scope = encodeURIComponent("openid email profile offline_access");
+  const scope = encodeURIComponent("openid email profile ");
 
   // DO NOT force prompt=login unless explicitly requested
   const forceLogin = process.env.COGNITO_FORCE_LOGIN === "1";
