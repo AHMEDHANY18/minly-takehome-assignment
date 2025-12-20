@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import  { useState } from "react";
 import { motion, type Variants } from "framer-motion"; // 1. استيراد Variants لحل المشكلة
 import { AuthAPI } from "../../api/auth";
 

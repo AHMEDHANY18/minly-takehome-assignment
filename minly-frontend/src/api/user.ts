@@ -1,7 +1,6 @@
 // src/api/user.ts
 import type { AxiosResponse } from "axios";
 import { api } from "./axios";
-import type { MediaItem } from "./media";
 
 export type MeData = {
   id: string;
@@ -12,7 +11,6 @@ export type MeData = {
   totalLikesReceived: number;
   totalLikesGiven: number;
   createdAt: string;
-  media: MediaItem[];
 };
 
 type UserResponse = { status: string; data: MeData };

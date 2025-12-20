@@ -1,6 +1,5 @@
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import LoginPage from "./features/auth/LoginPage";
-import RegisterPage from "./features/auth/RegisterPage";
 import FeedPage from "./features/feed/FeedPage";
 import UploadPage from "./features/upload/UploadPage";
 import ProfilePage from "./features/profile/ProfilePage";
@@ -51,10 +50,7 @@ export default function App() {
             path="/login"
             element={!user ? <LoginPage /> : <Navigate to="/" replace />}
           />
-          <Route
-            path="/register"
-            element={!user ? <RegisterPage /> : <Navigate to="/" replace />}
-          />
+
 
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
