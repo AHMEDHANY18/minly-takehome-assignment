@@ -42,7 +42,6 @@ if (!key.startsWith(expectedPrefix)) {
 
   const url = getPublicUrl(key);
 
-  // ---- Branch by kind ----
   if (kind === "media") {
     if (!type) throw new Error("MISSING_MEDIA_TYPE");
     if (!["IMAGE", "VIDEO"].includes(type)) throw new Error("MISSING_MEDIA_TYPE");
