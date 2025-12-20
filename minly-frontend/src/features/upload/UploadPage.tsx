@@ -114,6 +114,7 @@ export default function UploadPage() {
 
       // 1) presign
       const presignRes = await MediaAPI.presign({
+        kind: "media",
         contentType: file.type,
         type,
       });
@@ -125,10 +126,11 @@ export default function UploadPage() {
 
       // 3) finalize (create DB record)
       await MediaAPI.finalize({
+        kind: "media",
         key,
         title: title.trim() || undefined,
         description: description.trim() || undefined,
-        type,
+        type, // مهم للـ media
       });
 
       // ✅ go back to feed

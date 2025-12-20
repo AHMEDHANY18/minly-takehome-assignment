@@ -12,16 +12,16 @@ import { updateMediaController } from "../../controllers/media.controller/update
 import { deleteMediaSchema } from "../../validation/media/deleteMedia.schema";
 import { createMediaSchema } from "../../validation/media/createMedia.schema";
 import { presignMediaUploadController } from "../../controllers/media.controller/presignMedia.controller";
-import { finalizeMediaUploadController } from "../../controllers/media.controller/finalizeMedia.controller";
 import { getMediaCommentsController } from "../../controllers/media.controller/getMediaComments.controller";
 import { getCommentRepliesController } from "../../controllers/comment.controller/getCommentReplies.controller";
 import { getMediaDetailsController } from "../../controllers/media.controller/getMediaDetails.controller";
+import { finalizeUploadController } from "../../controllers/media.controller/finalizeMedia.controller";
 
 const router = Router();
 
 // ✅ static first
 router.post("/presign", requireAuth, presignMediaUploadController);
-router.post("/finalize", requireAuth, finalizeMediaUploadController);
+router.post("/finalize", requireAuth, finalizeUploadController);
 
 router.get(
   "/:mediaId/details",

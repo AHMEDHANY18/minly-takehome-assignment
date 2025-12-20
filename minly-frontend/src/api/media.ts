@@ -2,6 +2,7 @@
 import { api } from "./axios";
 
 export type MediaType = "IMAGE" | "VIDEO";
+export type UploadKind = "media" | "avatar";
 
 export type PresignMediaResponse = {
   key: string;
@@ -14,31 +15,38 @@ export type PresignMediaApiResponse = {
   data: PresignMediaResponse;
 };
 
-export type FinalizeMediaApiResponse<T = any> = {
+export type FinalizeApiResponse<T = any> = {
   status: "success";
+  kind: UploadKind;
   data: T;
 };
+
 export type MediaEntity = {
   id: string;
   title?: string | null;
   description?: string | null;
   updatedAt?: string;
 };
+
 export const MediaAPI = {
-  // ✅ Update these routes if your router path differs
-  presign(body: { contentType: string; type: MediaType }) {
-    return api.post<PresignMediaApiResponse>("/media/presign", body);
+  // ✅ unified endpoints
+  presign(body: { kind: UploadKind; contentType: string; type?: MediaType }) {
+    return api.post<PresignMediaApiResponse>("/uploads/presign", body);
   },
 
   finalize(body: {
+    kind: UploadKind;
     key: string;
+
+    // media only
     title?: string;
     description?: string;
-    type: MediaType;
+    type?: MediaType;
   }) {
-    return api.post<FinalizeMediaApiResponse>("/media/finalize", body);
+    return api.post<FinalizeApiResponse>("/uploads/finalize", body);
   },
 
+  // media-specific
   update(mediaId: string, payload: { title?: string; description?: string }) {
     return api.patch<{ status: "success"; data: MediaEntity }>(`/media/${mediaId}`, payload);
   },

@@ -1,6 +1,6 @@
 import { Response, NextFunction } from "express";
-import { AuthRequest } from "../../middleware/auth/requireAuth";
 import { updateProfileService } from "../../services/user/updateProfile.service";
+import { AuthRequest } from "../../middleware/auth/types";
 
 export async function updateProfileController(
   req: AuthRequest,
@@ -22,7 +22,7 @@ export async function updateProfileController(
 
     const updatedUser = await updateProfileService(
       userId,
-      { name, email }, 
+      { name, email },
       req.file
     );
 
