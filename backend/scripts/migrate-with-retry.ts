@@ -34,7 +34,7 @@ function runMigrateOnce() {
       process.exit(0);
     }
 
-    const delay = BASE_DELAY_MS * attempt; // simple linear backoff
+    const delay = BASE_DELAY_MS * attempt; 
     console.log(`[db] migrate failed; retrying in ${delay}ms...`);
     await sleep(delay);
   }
