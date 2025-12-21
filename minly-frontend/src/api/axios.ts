@@ -10,7 +10,6 @@ export const api = axios.create({
   withCredentials: true,
 });
 
-// axios instance بدون interceptor عشان نستخدمه في refresh بدون loop
 const refreshClient = axios.create({
   baseURL,
   withCredentials: true,
