@@ -8,8 +8,7 @@
     "dev:test-db": "ts-node-dev --respawn --transpile-only src/test-db.ts",
     "build": "prisma generate && tsc",
     "start": "node dist/server.js",
-    "migrate": "node scripts/migrate-with-retry.js",
-    "migrate:deploy": "prisma migrate deploy",
+    "migrate": "prisma migrate deploy",
     "lint": "eslint . --ext .ts",
     "test": "jest"
   },
@@ -24,7 +23,6 @@
     "axios": "^1.13.2",
     "bcrypt": "^6.0.0",
     "cache-center": "^1.0.31",
-    "child_process": "^1.0.2",
     "cookie-parser": "^1.4.7",
     "cors": "^2.8.5",
     "dotenv": "^16.3.1",
