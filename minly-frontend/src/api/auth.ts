@@ -1,7 +1,8 @@
 // src/api/auth.ts
 import { api } from "./axios";
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
+// const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
+const API_BASE_URL = "https://minly-takehome-assignment.onrender.com/v1"
 
 if (!API_BASE_URL) {
   throw new Error("Missing VITE_API_BASE_URL");
