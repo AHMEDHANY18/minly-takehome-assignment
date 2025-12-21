@@ -1,6 +1,8 @@
 import { useEffect, useRef } from "react";
 import { useNotificationStore, type NotificationItem } from "../store/notification.store";
 
+const API_BASE_URL = "https://minly-takehome-assignment.onrender.com/v1"; // أو import.meta.env
+
 export function useNotificationStream(enabled: boolean) {
   const esRef = useRef<EventSource | null>(null);
 
@@ -9,19 +11,16 @@ export function useNotificationStream(enabled: boolean) {
 
   useEffect(() => {
     if (!enabled) {
-      if (esRef.current) {
-        esRef.current.close();
-        esRef.current = null;
-      }
+      if (esRef.current) esRef.current.close();
+      esRef.current = null;
       setConnected(false);
       return;
     }
 
-    // امنع فتح اتصالين
-    if (esRef.current) return;
+    const streamUrl = `${API_BASE_URL}/notification/stream`;
 
-    console.log("[SSE] creating EventSource -> /v1/notification/stream");
-    const es = new EventSource("/v1/notification/stream");
+    // مهم: لو الـ auth cookies cross-site لازم withCredentials
+    const es = new EventSource(streamUrl, { withCredentials: true });
     esRef.current = es;
 
     es.onopen = () => {
@@ -29,38 +28,30 @@ export function useNotificationStream(enabled: boolean) {
       console.log("[SSE] open");
     };
 
-    es.addEventListener("ping", () => {
-      console.log("[SSE] ping");
-    });
+    es.onmessage = (evt) => {
+      try {
+        const payload = JSON.parse(evt.data) as NotificationItem;
+        pushIncoming(payload);
+      } catch {
+        // لو عندك ping / heartbeats هتدخل هنا عادي
+      }
+    };
 
     es.addEventListener("notification", (evt) => {
       try {
         const payload = JSON.parse((evt as MessageEvent).data) as NotificationItem;
-        console.log("[SSE] notification", payload);
         pushIncoming(payload);
-      } catch {
-        console.log("[SSE] bad notification payload");
-      }
+      } catch {}
     });
-
-    // fallback
-    es.onmessage = (evt) => {
-      try {
-        const payload = JSON.parse(evt.data) as NotificationItem;
-        console.log("[SSE] message", payload);
-        pushIncoming(payload);
-      } catch {
-        console.log("[SSE] bad message payload", evt.data);
-      }
-    };
 
     es.onerror = (e) => {
       setConnected(false);
       console.log("[SSE] error", e);
+      // optional: close to allow browser auto-reconnect cleanly
+      // es.close();
     };
 
     return () => {
-      console.log("[SSE] cleanup (close)");
       setConnected(false);
       es.close();
       esRef.current = null;
