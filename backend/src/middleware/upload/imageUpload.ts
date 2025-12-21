@@ -16,7 +16,7 @@ export function imageFileFilter(
 }
 
 export const uploadImage = multer({
-  storage: multer.memoryStorage(), 
+  storage: multer.memoryStorage(), // override
   limits: {
     fileSize: 10 * 1024 * 1024 // 10MB
   },
