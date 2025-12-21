@@ -13,8 +13,7 @@ router.get("/health", (_req, res) => {
     });
   });
 
-  
-// API routes
+
 router.use("/v1", V1Router);
 
 export default router;
