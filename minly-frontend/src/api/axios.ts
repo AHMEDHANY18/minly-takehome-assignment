@@ -4,6 +4,7 @@ import { useUserStore } from "../store/user.store";
 import { useAuthStore } from "../store/auth.store";
 
 const baseURL = import.meta.env.VITE_API_BASE_URL;
+const baseURL = "https://minly-takehome-assignment.onrender.com/v1"
 
 export const api = axios.create({
   baseURL,
