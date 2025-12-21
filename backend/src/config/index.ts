@@ -16,7 +16,6 @@ export const config = {
 
   cors: {
     origin(origin: string | undefined, callback: (err: Error | null, allow?: boolean) => void) {
-      // allow non-browser clients (no origin)
       if (!origin) return callback(null, true);
 
       if (allowedOrigins.includes(origin)) return callback(null, true);
