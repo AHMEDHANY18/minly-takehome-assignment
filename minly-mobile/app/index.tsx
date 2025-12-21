@@ -1,38 +1,21 @@
-// app/index.tsx
+import { useEffect } from "react";
 import { Redirect } from "expo-router";
-import { useEffect, useState } from "react";
-import { ActivityIndicator, View } from "react-native";
-import * as SecureStore from "expo-secure-store";
+import { useAuthStore } from "../stores/auth.store";
 
 export default function Index() {
-  const [token, setToken] = useState<string | null>(null);
-  const [ready, setReady] = useState(false);
+  const status = useAuthStore((s) => s.status);
+  const bootstrap = useAuthStore((s) => s.bootstrap);
 
   useEffect(() => {
-    SecureStore.getItemAsync("token").then((t) => {
-      setToken(t);
-      setReady(true);
-    });
-  }, []);
+    bootstrap();
+  }, [bootstrap]);
 
-  // ممكن تحط Splash حلو هنا لو حابب
-  if (!ready) {
-    return (
-      <View
-        style={{
-          flex: 1,
-          alignItems: "center",
-          justifyContent: "center",
-        }}
-      >
-        <ActivityIndicator />
-      </View>
-    );
+  // ممكن تحط Splash Screen هنا بدل null
+  if (status === "loading") return null;
+
+  if (status === "authenticated") {
+    return <Redirect href="/(tabs)/home" />;
   }
 
-  if (!token) {
-    return <Redirect href="/auth/login" />;
-  }
-
-  return <Redirect href="/(tabs)/home" />;
+  return <Redirect href="/auth/login" />;
 }

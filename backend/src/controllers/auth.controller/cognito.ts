@@ -18,6 +18,17 @@ function sha256(input: string) {
   return crypto.createHash("sha256").update(input).digest();
 }
 
+function isAllowedAppRedirect(u: string) {
+  // Production scheme
+  if (u.startsWith("minly://")) return true;
+
+  // Optional: Expo Go dev links (لو بتجرب على Expo Go)
+  if (u.startsWith("exp://")) return true;
+
+  return false;
+}
+
+
 export async function cognitoLogin(req: Request, res: Response) {
   const domain = mustEnv("COGNITO_DOMAIN").replace(/\/+$/, "");
   const clientId = mustEnv("COGNITO_CLIENT_ID");
@@ -28,19 +39,23 @@ export async function cognitoLogin(req: Request, res: Response) {
   const codeVerifier = base64Url(crypto.randomBytes(64));
   const codeChallenge = base64Url(sha256(codeVerifier));
 
-  // store temp cookies with explicit path (so clearCookie works reliably)
   const tempPath = "/v1/auth";
+
+  // ✅ NEW: store mobile redirect (if provided)
+  const appRedirect = req.query.app_redirect?.toString();
+  if (appRedirect && isAllowedAppRedirect(appRedirect)) {
+    res.cookie("post_login_redirect", appRedirect, {
+      ...cookieOpts(),
+      maxAge: 10 * 60 * 1000,
+      path: tempPath,
+    });
+  }
+
+  // existing cookies
   res.cookie("oauth_state", state, { ...cookieOpts(), maxAge: 10 * 60 * 1000, path: tempPath });
-  res.cookie("pkce_verifier", codeVerifier, {
-    ...cookieOpts(),
-    maxAge: 10 * 60 * 1000,
-    path: tempPath,
-  });
+  res.cookie("pkce_verifier", codeVerifier, { ...cookieOpts(), maxAge: 10 * 60 * 1000, path: tempPath });
 
-  // request scopes (offline_access helps getting refresh_token if enabled in Cognito app client)
   const scope = encodeURIComponent("openid email profile ");
-
-  // DO NOT force prompt=login unless explicitly requested
   const forceLogin = process.env.COGNITO_FORCE_LOGIN === "1";
   const prompt = forceLogin ? `&prompt=login` : "";
 
@@ -58,6 +73,7 @@ export async function cognitoLogin(req: Request, res: Response) {
 
   return res.redirect(url);
 }
+
 
 export async function cognitoCallback(req: Request, res: Response) {
   const domain = mustEnv("COGNITO_DOMAIN").replace(/\/+$/, "");
@@ -164,6 +180,20 @@ export async function cognitoCallback(req: Request, res: Response) {
     res.clearCookie("oauth_state", { path: "/v1/auth" });
     res.clearCookie("pkce_verifier", { path: "/v1/auth" });
 
+    // ✅ NEW: if mobile redirect cookie exists, redirect to app
+    const appRedirect = req.cookies?.post_login_redirect;
+    res.clearCookie("post_login_redirect", { path: "/v1/auth" });
+
+    if (appRedirect && isAllowedAppRedirect(appRedirect)) {
+      const u = new URL(appRedirect);
+
+      // ⚠️ أبسط حل: ابعت access token في deep link (سهل)
+      u.searchParams.set("token", accessToken);
+
+      return res.redirect(u.toString());
+    }
+
+    // web fallback
     return res.redirect(`${frontendUrl}/auth/success`);
   } catch (err: any) {
     if (axios.isAxiosError(err)) {

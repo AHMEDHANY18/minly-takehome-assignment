@@ -109,7 +109,7 @@ export default function LoginPage() {
               </div>
 
               <h1 className="text-2xl font-bold text-gray-900">
-                Welcome back
+                Welcome to Minly
               </h1>
               <p className="mt-2 text-gray-500 text-[15px] leading-relaxed max-w-[280px]">
                 Sign in to create, discover and share your best moments.
