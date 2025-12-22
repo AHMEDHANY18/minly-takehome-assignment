@@ -93,8 +93,8 @@ export default function HomeScreen() {
               <FeedCard
                 item={item}
                 onOpenComments={() =>
-                  router.push({pathname: "/media/[id]",params: { id: item.id },})
-                  
+                  router.push({pathname: "/media/[id]/details",params: { id: item.id },})
+
                 }
                 onOpenProfile={() =>
                   router.push({

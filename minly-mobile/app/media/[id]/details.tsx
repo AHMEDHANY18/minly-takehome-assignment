@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import {
   ActivityIndicator,
   FlatList,
@@ -14,8 +14,12 @@ import {
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useLocalSearchParams, useRouter } from "expo-router";
-import { useMediaDetails } from "@/hooks/useMediaDetails";
 
+import { useMediaDetails } from "@/hooks/useMediaDetails";
+import { useCommentReplies } from "@/hooks/useCommentReplies";
+import type { MediaComment, ReplyItem } from "@/api/mediaDetails.api";
+
+/* ---------- Helpers ---------- */
 
 function timeAgoUpper(dateLike?: string) {
   if (!dateLike) return "";
@@ -30,6 +34,18 @@ function timeAgoUpper(dateLike?: string) {
   return `${days} DAYS AGO`;
 }
 
+function timeAgoSmall(dateLike?: string) {
+  if (!dateLike) return "";
+  const d = new Date(dateLike);
+  const diff = Math.max(0, Date.now() - d.getTime());
+  const mins = Math.floor(diff / 60000);
+  if (mins < 60) return `${mins}m`;
+  const hrs = Math.floor(mins / 60);
+  if (hrs < 24) return `${hrs}h`;
+  const days = Math.floor(hrs / 24);
+  return `${days}d`;
+}
+
 function formatNumber(n: number) {
   try {
     return new Intl.NumberFormat("en-US").format(n);
@@ -38,10 +54,127 @@ function formatNumber(n: number) {
   }
 }
 
+/* ---------- Comment Item (with replies) ---------- */
+
+function CommentItem({
+  item,
+  onPressReply,
+  injectedReplies,
+  onConsumeInjected,
+}: {
+  item: MediaComment;
+  onPressReply: (commentId: string, username: string) => void;
+  injectedReplies?: ReplyItem[];
+  onConsumeInjected: (commentId: string) => void;
+}) {
+  const [expanded, setExpanded] = useState(false);
+  const replies = useCommentReplies(item.id, 10);
+
+  const repliesCount = item?._count?.replies ?? 0;
+
+  const toggle = async () => {
+    if (!expanded) {
+      setExpanded(true);
+      await replies.loadFirst();
+    } else {
+      setExpanded(false);
+    }
+  };
+
+  // inject newly-created replies immediately if replies are expanded
+  useEffect(() => {
+    if (!expanded) return;
+    if (!injectedReplies?.length) return;
+
+    for (const r of injectedReplies) replies.addLocalReply(r);
+    onConsumeInjected(item.id);
+  }, [expanded, injectedReplies?.length]);
+
+  return (
+    <View style={styles.commentRow}>
+      <View style={styles.commentAvatarWrap}>
+        {item.user.avatarUrl ? (
+          <Image source={{ uri: item.user.avatarUrl }} style={styles.commentAvatar} />
+        ) : (
+          <View style={[styles.commentAvatar, { backgroundColor: "#E9EAF0" }]} />
+        )}
+      </View>
+
+      <View style={{ flex: 1 }}>
+        <Text style={styles.commentText}>
+          <Text style={styles.commentUser}>{item.user.name} </Text>
+          {item.text}
+        </Text>
+
+        {/* meta row */}
+        <View style={styles.commentMetaRow}>
+          <Text style={styles.commentMetaTime}>{timeAgoSmall(item.createdAt)}</Text>
+
+          <Pressable hitSlop={10} onPress={() => onPressReply(item.id, item.user.name)}>
+            <Text style={styles.replyBtnText}>Reply</Text>
+          </Pressable>
+        </View>
+
+        {/* View replies */}
+        {repliesCount > 0 ? (
+          <Pressable hitSlop={10} onPress={toggle} style={{ marginTop: 8 }}>
+            <Text style={styles.viewRepliesText}>
+              {expanded ? "Hide replies" : `View replies (${repliesCount})`}
+            </Text>
+          </Pressable>
+        ) : null}
+
+        {/* Replies list */}
+        {expanded ? (
+          <View style={styles.repliesWrap}>
+            {replies.loading ? (
+              <ActivityIndicator />
+            ) : (
+              <>
+                {replies.items.map((r) => (
+                  <View key={r.id} style={styles.replyRow}>
+                    <View style={styles.replyAvatarWrap}>
+                      {r.user.avatarUrl ? (
+                        <Image source={{ uri: r.user.avatarUrl }} style={styles.replyAvatar} />
+                      ) : (
+                        <View style={[styles.replyAvatar, { backgroundColor: "#E9EAF0" }]} />
+                      )}
+                    </View>
+
+                    <View style={{ flex: 1 }}>
+                      <Text style={styles.replyText}>
+                        <Text style={styles.replyUser}>{r.user.name} </Text>
+                        {r.text}
+                      </Text>
+                      <Text style={styles.replyTime}>{timeAgoSmall(r.createdAt)}</Text>
+                    </View>
+                  </View>
+                ))}
+
+                {replies.loadingMore ? <ActivityIndicator /> : null}
+
+                <Pressable hitSlop={10} onPress={replies.loadMore} style={{ marginTop: 6 }}>
+                  <Text style={styles.loadMoreReplies}>Load more replies</Text>
+                </Pressable>
+              </>
+            )}
+          </View>
+        ) : null}
+      </View>
+    </View>
+  );
+}
+
+/* ---------- Screen ---------- */
+
+type ReplyTarget = { commentId: string; username: string };
+
 export default function PostDetails() {
   const router = useRouter();
   const { id } = useLocalSearchParams<{ id: string }>();
   const mediaId = String(id);
+
+  const inputRef = useRef<TextInput>(null);
 
   const {
     media,
@@ -61,11 +194,12 @@ export default function PostDetails() {
   } = useMediaDetails(mediaId, 20);
 
   const [text, setText] = useState("");
+  const [replyTarget, setReplyTarget] = useState<ReplyTarget | null>(null);
 
-  const createdLabel = useMemo(
-    () => timeAgoUpper(media?.createdAt),
-    [media?.createdAt]
-  );
+  // for instant UI: keep newly-created reply per commentId
+  const [injectedReplies, setInjectedReplies] = useState<Record<string, ReplyItem[]>>({});
+
+  const createdLabel = useMemo(() => timeAgoUpper(media?.createdAt), [media?.createdAt]);
 
   if (initialLoading) {
     return (
@@ -86,7 +220,7 @@ export default function PostDetails() {
         keyboardVerticalOffset={Platform.OS === "ios" ? 8 : 0}
       >
         <View style={styles.shell}>
-          {/* Header bar (back + POST + menu) */}
+          {/* Header */}
           <View style={styles.header}>
             <Pressable hitSlop={10} onPress={() => router.back()}>
               <Ionicons name="chevron-back" size={22} color="#111" />
@@ -129,19 +263,14 @@ export default function PostDetails() {
                     <View style={styles.userLeft}>
                       <View style={styles.avatarWrap}>
                         {media?.uploader?.avatarUrl ? (
-                          <Image
-                            source={{ uri: media.uploader.avatarUrl }}
-                            style={styles.avatar}
-                          />
+                          <Image source={{ uri: media.uploader.avatarUrl }} style={styles.avatar} />
                         ) : (
                           <View style={[styles.avatar, { backgroundColor: "#E9EAF0" }]} />
                         )}
                       </View>
 
                       <View style={{ gap: 2 }}>
-                        <Text style={styles.username}>
-                          {media?.uploader?.name ?? "user"}
-                        </Text>
+                        <Text style={styles.username}>{media?.uploader?.name ?? "user"}</Text>
                         <Text style={styles.location}> </Text>
                       </View>
                     </View>
@@ -156,7 +285,7 @@ export default function PostDetails() {
                     )}
                   </View>
 
-                  {/* Actions row (heart, comment, play/share, bookmark) */}
+                  {/* Actions */}
                   <View style={styles.actions}>
                     <View style={styles.actionsLeft}>
                       <Pressable hitSlop={10} onPress={toggleLike}>
@@ -173,7 +302,6 @@ export default function PostDetails() {
 
                       <Pressable hitSlop={10}>
                         <Ionicons
-                          // في التصميم عندك باين play. خليناه play لو فيديو، وإلا paper-plane
                           name={media?.type === "VIDEO" ? "play-outline" : "paper-plane-outline"}
                           size={20}
                           color="#111"
@@ -197,36 +325,32 @@ export default function PostDetails() {
                     </Text>
 
                     <Text style={styles.caption}>
-                      <Text style={styles.captionUser}>
-                        {media?.uploader?.name ?? "user"}{" "}
-                      </Text>
+                      <Text style={styles.captionUser}>{media?.uploader?.name ?? "user"} </Text>
                       {media?.description ?? media?.title ?? ""}
                     </Text>
 
                     <Text style={styles.time}>{createdLabel}</Text>
                   </View>
 
-                  {/* Divider */}
                   <View style={styles.divider} />
                 </>
               }
               renderItem={({ item }) => (
-                <View style={styles.commentRow}>
-                  <View style={styles.commentAvatarWrap}>
-                    {item.user.avatarUrl ? (
-                      <Image source={{ uri: item.user.avatarUrl }} style={styles.commentAvatar} />
-                    ) : (
-                      <View style={[styles.commentAvatar, { backgroundColor: "#E9EAF0" }]} />
-                    )}
-                  </View>
-
-                  <View style={{ flex: 1 }}>
-                    <Text style={styles.commentText}>
-                      <Text style={styles.commentUser}>{item.user.name} </Text>
-                      {item.text}
-                    </Text>
-                  </View>
-                </View>
+                <CommentItem
+                  item={item}
+                  onPressReply={(commentId, username) => {
+                    setReplyTarget({ commentId, username });
+                    setTimeout(() => inputRef.current?.focus(), 50);
+                  }}
+                  injectedReplies={injectedReplies[item.id]}
+                  onConsumeInjected={(commentId) => {
+                    setInjectedReplies((prev) => {
+                      const copy = { ...prev };
+                      delete copy[commentId];
+                      return copy;
+                    });
+                  }}
+                />
               )}
               ListFooterComponent={
                 loadingMore ? (
@@ -240,7 +364,7 @@ export default function PostDetails() {
               contentContainerStyle={{ paddingBottom: 6 }}
             />
 
-            {/* Composer bottom */}
+            {/* Composer */}
             <View style={styles.composer}>
               <View style={styles.composerAvatarWrap}>
                 {meAvatarUrl ? (
@@ -250,18 +374,41 @@ export default function PostDetails() {
                 )}
               </View>
 
+              {replyTarget ? (
+                <Pressable hitSlop={10} onPress={() => setReplyTarget(null)} style={{ marginRight: 6 }}>
+                  <Text style={styles.cancelReply}>Cancel</Text>
+                </Pressable>
+              ) : null}
+
               <TextInput
+                ref={inputRef}
                 value={text}
                 onChangeText={setText}
-                placeholder="Add a comment..."
+                placeholder={replyTarget ? `Reply to ${replyTarget.username}...` : "Add a comment..."}
                 placeholderTextColor="#9AA0AA"
                 style={styles.input}
                 returnKeyType="send"
                 onSubmitEditing={async () => {
                   const v = text.trim();
                   if (!v) return;
-                  const ok = await addComment(v);
-                  if (ok) setText("");
+
+                  const res = await addComment(v, replyTarget?.commentId);
+
+                  if (res.ok) {
+                    // inject reply instantly if server returned object
+                    if (replyTarget?.commentId && res.created?.id) {
+                      setInjectedReplies((prev) => ({
+                        ...prev,
+                        [replyTarget.commentId]: [
+                          res.created as ReplyItem,
+                          ...(prev[replyTarget.commentId] ?? []),
+                        ],
+                      }));
+                    }
+
+                    setText("");
+                    setReplyTarget(null);
+                  }
                 }}
               />
 
@@ -271,16 +418,26 @@ export default function PostDetails() {
                 onPress={async () => {
                   const v = text.trim();
                   if (!v) return;
-                  const ok = await addComment(v);
-                  if (ok) setText("");
+
+                  const res = await addComment(v, replyTarget?.commentId);
+
+                  if (res.ok) {
+                    if (replyTarget?.commentId && res.created?.id) {
+                      setInjectedReplies((prev) => ({
+                        ...prev,
+                        [replyTarget.commentId]: [
+                          res.created as ReplyItem,
+                          ...(prev[replyTarget.commentId] ?? []),
+                        ],
+                      }));
+                    }
+
+                    setText("");
+                    setReplyTarget(null);
+                  }
                 }}
               >
-                <Text
-                  style={[
-                    styles.postBtn,
-                    (addingComment || !text.trim()) && { opacity: 0.4 },
-                  ]}
-                >
+                <Text style={[styles.postBtn, (addingComment || !text.trim()) && { opacity: 0.4 }]}>
                   {addingComment ? "Posting..." : "Post"}
                 </Text>
               </Pressable>
@@ -291,6 +448,8 @@ export default function PostDetails() {
     </SafeAreaView>
   );
 }
+
+/* ---------- Styles ---------- */
 
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: "#F2F2F4" },
@@ -307,12 +466,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: "#ECECF1",
   },
-  headerTitle: {
-    fontSize: 12,
-    fontWeight: "900",
-    color: "#111",
-    letterSpacing: 1,
-  },
+  headerTitle: { fontSize: 12, fontWeight: "900", color: "#111", letterSpacing: 1 },
 
   card: {
     marginTop: 10,
@@ -363,6 +517,21 @@ const styles = StyleSheet.create({
   commentText: { fontSize: 12, color: "#111", lineHeight: 16 },
   commentUser: { fontWeight: "900" },
 
+  commentMetaRow: { flexDirection: "row", gap: 14, marginTop: 6, alignItems: "center" },
+  commentMetaTime: { fontSize: 11, color: "#8A8F99" },
+  replyBtnText: { fontSize: 11, color: "#6B7280", fontWeight: "800" },
+
+  viewRepliesText: { fontSize: 11, color: "#6B7280", fontWeight: "800" },
+
+  repliesWrap: { marginTop: 10, paddingLeft: 10, gap: 10 },
+  replyRow: { flexDirection: "row", gap: 8, alignItems: "flex-start" },
+  replyAvatarWrap: { width: 22, height: 22, borderRadius: 11, overflow: "hidden" },
+  replyAvatar: { width: 22, height: 22, borderRadius: 11 },
+  replyText: { fontSize: 12, color: "#111", lineHeight: 16 },
+  replyUser: { fontWeight: "900" },
+  replyTime: { fontSize: 11, color: "#8A8F99", marginTop: 4 },
+  loadMoreReplies: { fontSize: 11, color: "#2F80ED", fontWeight: "900" },
+
   composer: {
     borderTopWidth: 1,
     borderTopColor: "#EFEFF3",
@@ -385,6 +554,7 @@ const styles = StyleSheet.create({
     fontSize: 12,
   },
   postBtn: { fontSize: 12, fontWeight: "900", color: "#2F80ED" },
+  cancelReply: { fontSize: 12, fontWeight: "900", color: "#6B7280" },
 
   center: { flex: 1, alignItems: "center", justifyContent: "center", gap: 10 },
   dim: { color: "#777" },

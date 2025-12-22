@@ -35,7 +35,7 @@ export function useMediaDetails(mediaId: string, pageSize = 20) {
       ]);
 
       if (detailsRes.status === "fulfilled") {
-        const payload = detailsRes.value.data.data; // ✅ AxiosResponse -> {status,data}
+        const payload = detailsRes.value.data.data;
         setMedia(payload.media);
         setComments(payload.comments ?? []);
         hasMoreRef.current = Boolean(payload.pagination?.hasMore);
@@ -107,13 +107,12 @@ export function useMediaDetails(mediaId: string, pageSize = 20) {
     const nextLiked = !prev.isLiked;
     const nextLikes = nextLiked ? prev.likesCount + 1 : Math.max(0, prev.likesCount - 1);
 
-    // optimistic
     setMedia({ ...prev, isLiked: nextLiked, likesCount: nextLikes });
 
     try {
       await InteractionsAPI.toggleLike(mediaId);
     } catch {
-      setMedia(prev); // rollback
+      setMedia(prev);
     }
   }, [media, mediaId]);
 
@@ -132,30 +131,46 @@ export function useMediaDetails(mediaId: string, pageSize = 20) {
     }
   }, [media, mediaId]);
 
+  /**
+   * ✅ add comment or reply
+   * - comment: parentCommentId undefined
+   * - reply: parentCommentId = comment.id
+   */
   const addComment = useCallback(
-    async (text: string) => {
+    async (text: string, parentCommentId?: string) => {
       const v = text.trim();
-      if (!v) return false;
+      if (!v) return { ok: false as const, created: null as any };
 
       setAddingComment(true);
 
       try {
-        // ✅ addComment عندك بيرجع Body مباشرة (مش AxiosResponse wrapper)
-        const res = await MediaDetailsAPI.addComment(mediaId, { text: v });
+        const res = await MediaDetailsAPI.addComment(mediaId, { text: v, parentCommentId });
 
-        // لو الباك بيرجع comment object داخل res.data
-        const created = (res as any)?.data;
+        // AxiosResponse => res.data
+        const body = (res as any)?.data ?? res;
+        const created = body?.data;
 
-        if (created && created.id) {
-          setComments((prev) => [created as MediaComment, ...prev]);
-        } else {
-          // fallback: reload علشان نضمن ال UI
-          await reload();
+        if (created?.id) {
+          if (!parentCommentId) {
+            setComments((prev) => [created, ...prev]);
+          } else {
+            // reply: زوّد replies count على الـ parent comment
+            setComments((prev) =>
+              prev.map((c) =>
+                c.id === parentCommentId
+                  ? { ...c, _count: { replies: (c._count?.replies ?? 0) + 1 } }
+                  : c
+              )
+            );
+          }
+
+          return { ok: true as const, created };
         }
 
-        return true;
+        await reload();
+        return { ok: true as const, created: null };
       } catch {
-        return false;
+        return { ok: false as const, created: null };
       } finally {
         setAddingComment(false);
       }
