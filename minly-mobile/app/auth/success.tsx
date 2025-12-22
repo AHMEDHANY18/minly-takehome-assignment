@@ -1,21 +1,23 @@
-import { useEffect } from "react";
-import { useLocalSearchParams, router } from "expo-router";
-import * as SecureStore from "expo-secure-store";
+import React, { useEffect } from "react";
+import { ActivityIndicator, View } from "react-native";
+import { useLocalSearchParams, useRouter } from "expo-router";
+import { useAuthStore } from "../../stores/auth.store";
 
 export default function AuthSuccess() {
   const { token } = useLocalSearchParams<{ token?: string }>();
+  const setToken = useAuthStore((s) => s.setToken);
+  const router = useRouter();
 
   useEffect(() => {
     (async () => {
-      if (!token) {
-        router.replace("/auth/login");
-        return;
-      }
-
-      await SecureStore.setItemAsync("token", String(token));
+      if (token) await setToken(String(token));
       router.replace("/(tabs)/home");
     })();
   }, [token]);
 
-  return null;
+  return (
+    <View style={{ flex: 1, alignItems: "center", justifyContent: "center" }}>
+      <ActivityIndicator />
+    </View>
+  );
 }

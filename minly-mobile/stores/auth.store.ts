@@ -1,46 +1,55 @@
 import { create } from "zustand";
 import * as SecureStore from "expo-secure-store";
-import { AuthAPI } from "../api/auth.api";
-import type { User } from "../types/user";
+import { setApiAccessToken, api } from "../api/apiClient";
 
-type Status = "loading" | "authenticated" | "unauthenticated";
+type AuthStatus = "booting" | "guest" | "authed";
+const KEY = "access_token";
 
-type AuthState = {
-  status: Status;
-  user: User | null;
+export const useAuthStore = create<{
+  status: AuthStatus;
+  token: string | null;
+
   bootstrap: () => Promise<void>;
-  setSession: (token: string, user: User) => Promise<void>;
+  setToken: (t: string) => Promise<void>;
   logout: () => Promise<void>;
-};
-
-export const useAuthStore = create<AuthState>((set) => ({
-  status: "loading",
-  user: null,
+}>((set) => ({
+  status: "booting",
+  token: null,
 
   bootstrap: async () => {
-    try {
-      const token = await SecureStore.getItemAsync("token");
-      if (!token) {
-        set({ status: "unauthenticated", user: null });
-        return;
-      }
+    set({ status: "booting" });
 
-      // optional: verify token by calling /auth/me
-      const res = await AuthAPI.me();
-      set({ status: "authenticated", user: res.data.user ?? null });
-    } catch {
-      await SecureStore.deleteItemAsync("token");
-      set({ status: "unauthenticated", user: null });
+    const token = await SecureStore.getItemAsync(KEY);
+    console.log("TOKEN?", token?.slice(0, 20));
+
+    if (!token) {
+      setApiAccessToken(null);
+      set({ status: "guest", token: null });
+      return;
+    }
+
+    setApiAccessToken(token);
+    set({ token });
+
+    try {
+      await api.get("/auth/me"); // verify token
+      set({ status: "authed" });
+    } catch (e) {
+      await SecureStore.deleteItemAsync(KEY);
+      setApiAccessToken(null);
+      set({ status: "guest", token: null });
     }
   },
 
-  setSession: async (token, user) => {
-    await SecureStore.setItemAsync("token", token);
-    set({ status: "authenticated", user });
+  setToken: async (t) => {
+    await SecureStore.setItemAsync(KEY, t);
+    setApiAccessToken(t);
+    set({ status: "authed", token: t });
   },
 
   logout: async () => {
-    await SecureStore.deleteItemAsync("token");
-    set({ status: "unauthenticated", user: null });
+    await SecureStore.deleteItemAsync(KEY);
+    setApiAccessToken(null);
+    set({ status: "guest", token: null });
   },
 }));

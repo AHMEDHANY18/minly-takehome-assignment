@@ -1,17 +1,15 @@
 import React from "react";
 import { SafeAreaView, StyleSheet, Text, View } from "react-native";
-import { Stack, useLocalSearchParams } from "expo-router";
+import { Stack } from "expo-router";
 
-export default function UserProfileScreen() {
-  const { id } = useLocalSearchParams<{ id: string }>();
-
+export default function NotificationScreen() {
   return (
     <>
-      <Stack.Screen options={{ title: "Profile" }} />
+      <Stack.Screen options={{ title: "Notifications" }} />
       <SafeAreaView style={styles.safe}>
         <View style={styles.card}>
-          <Text style={styles.title}>User Profile</Text>
-          <Text style={styles.sub}>id: {String(id)}</Text>
+          <Text style={styles.title}>Notifications</Text>
+          <Text style={styles.sub}>Coming soon</Text>
         </View>
       </SafeAreaView>
     </>

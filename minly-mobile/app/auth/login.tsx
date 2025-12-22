@@ -3,7 +3,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import * as WebBrowser from "expo-web-browser";
 import * as Linking from "expo-linking";
 import { router } from "expo-router";
-import { API_BASE_URL } from "../../api/axios";
+import { API_BASE_URL } from "@/api/apiClient";
 
 WebBrowser.maybeCompleteAuthSession();
 

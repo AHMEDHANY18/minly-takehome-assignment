@@ -19,8 +19,8 @@ import { SuggestedUsers } from "../../components/home/SuggestedUsers";
 
 export default function HomeScreen() {
   const router = useRouter();
-
   const [mode, setMode] = useState<FeedMode>("home");
+
   const {
     items,
     initialLoading,
@@ -37,21 +37,15 @@ export default function HomeScreen() {
 
   return (
     <SafeAreaView style={styles.safe}>
-      {/* Top bar */}
+      {/* Top bar (logo + title) */}
       <View style={styles.topBar}>
-        <View style={{ width: 28 }} />
+        <View style={styles.brandLeft}>
+          <View style={styles.brandDot} />
+          <Text style={styles.brandText}>Minly</Text>
+        </View>
 
-        <Text style={styles.brand}>Minly</Text>
-
-        <Pressable
-          hitSlop={10}
-          onPress={() =>
-            router.push({
-              pathname: "/notification",
-            })
-          }
-        >
-          <Ionicons name="notifications-outline" size={22} color="#111" />
+        <Pressable hitSlop={10} onPress={() => router.push("/notification")}>
+          <Ionicons name="notifications-outline" size={20} color="#111" />
         </Pressable>
       </View>
 
@@ -69,8 +63,8 @@ export default function HomeScreen() {
         <FlatList
           data={data}
           keyExtractor={(x) => x.id}
-          contentContainerStyle={{ paddingBottom: 24 }}
           showsVerticalScrollIndicator={false}
+          contentContainerStyle={styles.listContent}
           refreshing={refreshing}
           onRefresh={reload}
           onEndReachedThreshold={0.6}
@@ -86,15 +80,16 @@ export default function HomeScreen() {
                   <Text style={styles.retryText}>Retry</Text>
                 </Pressable>
               </View>
-            ) : null
+            ) : (
+              <View style={{ height: 6 }} />
+            )
           }
           renderItem={({ item, index }) => (
             <View>
               <FeedCard
                 item={item}
                 onOpenComments={() =>
-                  router.push({pathname: "/media/[id]",params: { id: item.id },})
-                  
+                  router.push({ pathname: "/media/[id]", params: { id: item.id } })
                 }
                 onOpenProfile={() =>
                   router.push({
@@ -114,7 +109,9 @@ export default function HomeScreen() {
               <View style={{ paddingVertical: 16 }}>
                 <ActivityIndicator />
               </View>
-            ) : null
+            ) : (
+              <View style={{ height: 16 }} />
+            )
           }
         />
       )}
@@ -123,10 +120,7 @@ export default function HomeScreen() {
 }
 
 const styles = StyleSheet.create({
-  safe: {
-    flex: 1,
-    backgroundColor: "#FAFAFC",
-  },
+  safe: { flex: 1, backgroundColor: "#FFFFFF" },
 
   topBar: {
     paddingHorizontal: 14,
@@ -135,29 +129,25 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: "#EFEFF3",
   },
 
-  brand: {
-    fontWeight: "900",
-    fontSize: 16,
-    color: "#111",
+  brandLeft: { flexDirection: "row", alignItems: "center", gap: 8 },
+  brandDot: {
+    width: 16,
+    height: 16,
+    borderRadius: 8,
+    backgroundColor: "#2F80ED",
   },
+  brandText: { fontSize: 16, fontWeight: "900", color: "#111" },
 
-  tabsWrap: {
-    paddingHorizontal: 12,
-    paddingBottom: 6,
-  },
+  tabsWrap: { paddingHorizontal: 12, paddingTop: 10, paddingBottom: 8 },
 
-  center: {
-    flex: 1,
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 10,
-  },
+  listContent: { paddingBottom: 28 },
 
-  dim: {
-    color: "#777",
-  },
+  center: { flex: 1, alignItems: "center", justifyContent: "center", gap: 10 },
+  dim: { color: "#777" },
 
   errorBox: {
     backgroundColor: "#FFF",
@@ -168,17 +158,8 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: "#F1F1F4",
   },
-
-  errorTitle: {
-    fontWeight: "900",
-    color: "#111",
-  },
-
-  errorMsg: {
-    marginTop: 4,
-    color: "#777",
-  },
-
+  errorTitle: { fontWeight: "900", color: "#111" },
+  errorMsg: { marginTop: 4, color: "#777" },
   retryBtn: {
     marginTop: 10,
     backgroundColor: "#111",
@@ -186,9 +167,5 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     alignItems: "center",
   },
-
-  retryText: {
-    color: "#FFF",
-    fontWeight: "900",
-  },
+  retryText: { color: "#FFF", fontWeight: "900" },
 });

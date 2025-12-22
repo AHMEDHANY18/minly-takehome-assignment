@@ -1,21 +1,27 @@
 import { useEffect } from "react";
-import { Redirect } from "expo-router";
+import { useRouter } from "expo-router";
+import { ActivityIndicator, View } from "react-native";
 import { useAuthStore } from "../stores/auth.store";
 
 export default function Index() {
-  const status = useAuthStore((s) => s.status);
-  const bootstrap = useAuthStore((s) => s.bootstrap);
+  const router = useRouter();
+  const { status, bootstrap } = useAuthStore();
 
   useEffect(() => {
     bootstrap();
-  }, [bootstrap]);
+  }, []);
 
-  // ممكن تحط Splash Screen هنا بدل null
-  if (status === "loading") return null;
+  useEffect(() => {
+    if (status === "authed") {
+      router.replace("/(tabs)/home");
+    } else if (status === "guest") {
+      router.replace("/auth/login");
+    }
+  }, [status]);
 
-  if (status === "authenticated") {
-    return <Redirect href="/(tabs)/home" />;
-  }
-
-  return <Redirect href="/auth/login" />;
+  return (
+    <View style={{ flex: 1, alignItems: "center", justifyContent: "center" }}>
+      <ActivityIndicator />
+    </View>
+  );
 }

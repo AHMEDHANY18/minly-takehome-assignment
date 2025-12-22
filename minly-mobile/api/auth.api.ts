@@ -1,5 +1,5 @@
-import { apiClient } from "./apiClient";
 import type { User } from "../types/user";
+import { api } from "./apiClient";
 
 export type AuthResponse = {
   token: string;
@@ -8,7 +8,7 @@ export type AuthResponse = {
 
 export const AuthAPI = {
   login(payload: { email: string; password: string }) {
-    return apiClient.post<AuthResponse>("/auth/login", payload);
+    return api.post<AuthResponse>("/auth/login", payload);
   },
 
   register(payload: {
@@ -17,10 +17,10 @@ export const AuthAPI = {
     password: string;
     confirmPassword: string;
   }) {
-    return apiClient.post<AuthResponse>("/auth/register", payload);
+    return api.post<AuthResponse>("/auth/register", payload);
   },
 
   me() {
-    return apiClient.get<{ user: User }>("/auth/me");
+    return api.get<{ user: User }>("/auth/me");
   },
 };
