@@ -1,9 +1,5 @@
-import { SafeAreaView, Text } from "react-native";
+import SavedScreen from "@/features/saved/screen/SavedScreen";
 
-export default function SavedScreen() {
-  return (
-    <SafeAreaView style={{ flex: 1, alignItems: "center", justifyContent: "center" }}>
-      <Text>Saved (Coming soon)</Text>
-    </SafeAreaView>
-  );
+export default function HomeRoute() {
+  return <SavedScreen />;
 }
