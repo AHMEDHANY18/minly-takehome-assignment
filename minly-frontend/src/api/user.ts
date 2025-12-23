@@ -17,7 +17,7 @@ type UserResponse = { status: string; data: MeData };
 
 export const UserAPI = {
   getMe(): Promise<AxiosResponse<UserResponse>> {
-    return api.get<UserResponse>("/user/me");
+    return api.get<UserResponse>("/auth/me");
   },
   getById(userId: string): Promise<AxiosResponse<UserResponse>> {
     return api.get<UserResponse>(`/user/${userId}`);

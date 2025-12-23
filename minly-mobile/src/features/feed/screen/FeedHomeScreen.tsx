@@ -98,7 +98,7 @@ export default function HomeScreen() {
                 }
                 onOpenProfile={() =>
                   router.push({
-                    pathname: "/profile/[id]",
+                    pathname: "/user/profile/[id]" as any,
                     params: { id: item.uploader.id },
                   })
                 }

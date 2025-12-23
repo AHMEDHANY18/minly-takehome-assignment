@@ -1,28 +1,19 @@
-import type { AxiosResponse } from "axios";
 import { api } from "@/api/client";
-import type { MediaItem } from "@/types/media";
-import type { User } from "@/types/user";
+import type { AxiosResponse } from "axios";
 
-export type MeData = User & {
-  mediaCount: number;
-  totalLikesReceived: number;
-  totalLikesGiven: number;
-  media: MediaItem[];
+export type ProfileUser = {
+  id: string;
+  name: string;
+  avatarUrl: string | null;
 };
 
-type MeResponse = { status: string; data: MeData };
+export type UpdateMeBody = {
+  name?: string;
+  avatarKey?: string;
+};
 
 export const UserAPI = {
-  getMe(): Promise<AxiosResponse<MeResponse>> {
-    return api.get<MeResponse>("/user/me");
-  },
-  getById(userId: string): Promise<AxiosResponse<MeResponse>> {
-    return api.get<MeResponse>(`/user/${userId}`);
-  },
-  updateMe(form: FormData): Promise<AxiosResponse<MeResponse>> {
-    return api.patch<MeResponse>("/user", form, {
-      headers: { "Content-Type": "multipart/form-data" },
-      transformRequest: (d) => d,
-    });
+  updateMe(body: UpdateMeBody) {
+    return api.patch<{ status: "success"; data: ProfileUser }>("/user", body);
   },
 };

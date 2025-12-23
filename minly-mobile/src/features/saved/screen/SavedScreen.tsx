@@ -39,32 +39,8 @@ export default function SavedScreen() {
 
       <Text style={styles.subtitle}>Your personal collection</Text>
 
-      {/* Search */}
-      <View style={styles.searchBox}>
-        <Ionicons name="search" size={16} color="#888" />
-        <TextInput
-          placeholder="Search saved items..."
-          style={styles.searchInput}
-        />
-      </View>
 
-      {/* Filters */}
-      <View style={styles.filters}>
-        {FILTERS.map((f) => {
-          const active = type === f.value;
-          return (
-            <Pressable
-              key={f.label}
-              onPress={() => setType(f.value)}
-              style={[styles.filterBtn, active && styles.filterActive]}
-            >
-              <Text style={[styles.filterText, active && styles.filterTextActive]}>
-                {f.label}
-              </Text>
-            </Pressable>
-          );
-        })}
-      </View>
+
 
       <Text style={styles.count}>{items.length} Items</Text>
 
