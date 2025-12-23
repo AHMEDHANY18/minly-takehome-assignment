@@ -1,22 +1,20 @@
+// app/index.tsx
 import { useEffect } from "react";
-import { useRouter } from "expo-router";
 import { ActivityIndicator, View } from "react-native";
-import { useAuthStore } from "../stores/auth.store";
+import { router } from "expo-router";
+import { useAuthStore } from "@/store/auth.store";
 
 export default function Index() {
-  const router = useRouter();
-  const { status, bootstrap } = useAuthStore();
+  const status = useAuthStore((s) => s.status);
+  const bootstrap = useAuthStore((s) => s.bootstrap);
 
   useEffect(() => {
-    bootstrap();
-  }, []);
+    void bootstrap();
+  }, [bootstrap]);
 
   useEffect(() => {
-    if (status === "authed") {
-      router.replace("/(tabs)/home");
-    } else if (status === "guest") {
-      router.replace("/auth/login");
-    }
+    if (status === "authed") router.replace("/(tabs)");
+    if (status === "guest") router.replace("/auth/login");
   }, [status]);
 
   return (
