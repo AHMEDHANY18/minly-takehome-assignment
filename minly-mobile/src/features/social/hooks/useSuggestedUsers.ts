@@ -1,46 +1,36 @@
-import { useCallback, useEffect, useState } from "react";
-import { SocialAPI, type SuggestedUser } from "../api/social.api";
+import { useEffect, useState } from "react";
+import { SocialAPI, SuggestedUser } from "../api/social.api";
 
 export function useSuggestedUsers(limit = 10) {
   const [items, setItems] = useState<SuggestedUser[]>([]);
   const [loading, setLoading] = useState(true);
 
-  const fetchIt = useCallback(async () => {
+  async function load() {
     setLoading(true);
-    try {
-      const res = await SocialAPI.suggested(limit);
-      setItems(res);
-    } finally {
-      setLoading(false);
-    }
-  }, [limit]);
+    const data = await SocialAPI.suggested(limit);
+    setItems(data);
+    setLoading(false);
+  }
 
   useEffect(() => {
-    fetchIt();
-  }, [fetchIt]);
+    load();
+  }, [limit]);
 
-  const toggleFollow = useCallback(async (userId: string) => {
-    setItems((prev) =>
-      prev.map((u) =>
-        u.id === userId ? { ...u, isFollowing: !u.isFollowing } : u
-      )
-    );
-
-    const current = items.find((x) => x.id === userId);
-    const next = !(current?.isFollowing ?? false);
+  async function toggleFollow(userId: string) {
+    // ✅ optimistic update: شيل اليوزر فورًا
+    setItems((prev) => prev.filter((u) => u.id !== userId));
 
     try {
-      if (next) await SocialAPI.follow(userId);
-      else await SocialAPI.follow(userId);
-    } catch {
-      // rollback
-      setItems((prev) =>
-        prev.map((u) =>
-          u.id === userId ? { ...u, isFollowing: !u.isFollowing } : u
-        )
-      );
+      await SocialAPI.toggleFollow(userId);
+    } catch (e) {
+      // ❌ لو فشل رجّع الداتا
+      load();
     }
-  }, [items]);
+  }
 
-  return { items, loading, refetch: fetchIt, toggleFollow };
+  return {
+    items,
+    loading,
+    toggleFollow,
+  };
 }

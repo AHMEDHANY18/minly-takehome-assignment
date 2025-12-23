@@ -1,27 +1,23 @@
 // app/_layout.tsx
-import { Stack, router } from "expo-router";
-import { useEffect } from "react";
-import { setOnUnauthorized } from "@/api/authEvents";
-import { useAuthStore } from "@/store/auth.store";
+import { Stack } from "expo-router";
 
 export default function RootLayout() {
-  useEffect(() => {
-    setOnUnauthorized(() => {
-      // امسح التوكن وارجع guest
-      void useAuthStore.getState().logout();
-      // ودّيه للوجين
-      router.replace("/auth/login");
-    });
-
-    return () => setOnUnauthorized(null);
-  }, []);
-
   return (
     <Stack screenOptions={{ headerShown: false }}>
+      {/* شاشة index هي اللي هتقرر تودّي المستخدم فين (auth ولا tabs) */}
       <Stack.Screen name="index" />
+
+      {/* جروب التابات */}
       <Stack.Screen name="(tabs)" />
+
+      {/* جروب الأوث (login + register) */}
       <Stack.Screen name="auth" />
-      <Stack.Screen name="modal" options={{ presentation: "modal" }} />
+
+      {/* لو عندك مودال */}
+      <Stack.Screen
+        name="modal"
+        options={{ presentation: "modal" }}
+      />
     </Stack>
   );
 }
