@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
-import { SocialAPI, type SuggestedUser } from "../../../api/social";
+import { SocialAPI, type SuggestedUser } from "@/shared/api/social.api";
 
 export function useSuggestedUsers() {
   const [users, setUsers] = useState<SuggestedUser[]>([]);
@@ -15,8 +15,8 @@ export function useSuggestedUsers() {
       if (res.data.status !== "success") throw new Error("Suggested users failed");
 
       setUsers(res.data.data);
-    } catch (e: any) {
-      setError(e?.message || "Failed to load suggested users");
+    } catch (error) {
+      setError(error instanceof Error ? error.message : "Failed to load suggested users");
     } finally {
       setLoading(false);
     }

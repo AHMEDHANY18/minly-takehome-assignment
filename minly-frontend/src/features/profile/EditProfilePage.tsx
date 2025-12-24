@@ -1,8 +1,9 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import axios from "axios";
+import type { AxiosError } from "axios";
+import { http } from "@/shared/api/http";
 import { useNavigate } from "react-router-dom";
-import { ProfileAPI } from "../../api/profile";
-import { MediaAPI } from "../../api/media";
+import { ProfileAPI } from "@/features/profile/api/profile.api";
+import { MediaAPI } from "@/features/media/api/media.api";
 
 const MAX_AVATAR_MB = 5;
 const MAX_AVATAR_BYTES = MAX_AVATAR_MB * 1024 * 1024;
@@ -61,7 +62,7 @@ export default function EditProfilePage() {
     setError(null);
 
     ProfileAPI.me()
-      .then((res: any) => {
+      .then((res) => {
         if (!alive) return;
         const u = res.data?.data?.user;
         const n = String(u?.name ?? "");
@@ -71,9 +72,9 @@ export default function EditProfilePage() {
         setInitialAvatarUrl(a);
         setName(n);
       })
-      .catch((e: any) => {
+      .catch((error) => {
         if (!alive) return;
-        setError(e?.response?.data?.message ?? "Failed to load profile");
+        setError(getErrorMessage(error, "Failed to load profile"));
       })
       .finally(() => {
         if (!alive) return;
@@ -120,7 +121,7 @@ export default function EditProfilePage() {
     const { key, uploadUrl } = presignRes.data.data;
 
     // 2) PUT to S3
-    await axios.put(uploadUrl, file, {
+    await http.put(uploadUrl, file, {
       headers: { "Content-Type": file.type },
       onUploadProgress: (evt) => {
         if (!evt.total) return;
@@ -129,14 +130,14 @@ export default function EditProfilePage() {
     });
 
     // 3) finalize (kind=avatar) -> backend يحدث user.avatarUrl
-    const finalizeRes = await MediaAPI.finalize({
+    const finalizeRes = await MediaAPI.finalize<{ avatarUrl?: string | null }>({
       kind: "avatar",
       key,
     });
 
     // نتوقع يرجع user
     const updatedUser = finalizeRes.data.data;
-    const newAvatarUrl = (updatedUser?.avatarUrl ?? null) as string | null;
+    const newAvatarUrl = updatedUser?.avatarUrl ?? null;
     setInitialAvatarUrl(newAvatarUrl);
 
     return updatedUser;
@@ -173,9 +174,8 @@ export default function EditProfilePage() {
 
       // ارجع للبروفايل
       nav("/profile");
-    } catch (e: any) {
-      const msg = e?.response?.data?.message || e?.message || "Failed to update profile";
-      setError(String(msg));
+    } catch (error) {
+      setError(getErrorMessage(error, "Failed to update profile."));
     } finally {
       setSaving(false);
       setUploadingAvatar(false);
@@ -363,5 +363,14 @@ export default function EditProfilePage() {
         </div>
       </div>
     </div>
+  );
+}
+
+
+function getErrorMessage(error: unknown, fallback: string) {
+  const axiosError = error as AxiosError<{ message?: string }>;
+  return (
+    axiosError.response?.data?.message ??
+    (error instanceof Error ? error.message : fallback)
   );
 }

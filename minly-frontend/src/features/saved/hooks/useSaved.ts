@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { BookmarksAPI, type SavedMedia, type SavedSort, type SavedType } from "../../../api/bookmarks";
+import type { AxiosError } from "axios";
+import { BookmarksAPI, type SavedMedia, type SavedSort, type SavedType } from "@/features/saved/api/bookmarks.api";
 
 export type SavedTab = "ALL" | "IMAGE" | "VIDEO";
 
@@ -36,8 +37,8 @@ export function useSaved(limit = 24) {
 
         setItems((prev) => (mode === "append" ? [...prev, ...data] : data));
         setPage(p);
-      } catch (e: any) {
-        setError(e?.response?.data?.message ?? "Failed to load saved items.");
+      } catch (error) {
+        setError(getErrorMessage(error, "Failed to load saved items."));
       }
     },
     [limit, sort, type]
@@ -75,4 +76,12 @@ export function useSaved(limit = 24) {
     reload,
     loadMore,
   };
+}
+
+function getErrorMessage(error: unknown, fallback: string) {
+  const axiosError = error as AxiosError<{ message?: string }>;
+  return (
+    axiosError.response?.data?.message ??
+    (error instanceof Error ? error.message : fallback)
+  );
 }

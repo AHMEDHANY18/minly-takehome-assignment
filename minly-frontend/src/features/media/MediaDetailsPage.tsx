@@ -1,13 +1,14 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import type { AxiosError } from "axios";
 import { useNavigate, useParams } from "react-router-dom";
 import {
   MediaDetailsAPI,
   type MediaComment,
   type ReplyItem,
   type MediaDetailsResponse,
-} from "../../api/mediaDetails";
-import { SocialAPI } from "../../api/social";
-import { useUserStore } from "../../store/user.store";
+} from "@/features/media/api/media-details.api";
+import { SocialAPI } from "@/shared/api/social.api";
+import { useUserStore } from "@/shared/store/user.store";
 import { IconBookmark, IconComment, IconHeart, IconSend } from "../feed/icons";
 
 /* ---------------- Types ---------------- */
@@ -66,8 +67,8 @@ export default function MediaDetailsPage() {
         setComments((prev) => [...prev, ...(d.comments ?? [])]);
         setPage(targetPage);
       }
-    } catch (e: any) {
-      setErr(e?.response?.data?.message ?? "Failed to load media details.");
+    } catch (error) {
+      setErr((error as AxiosError<{ message?: string }>).response?.data?.message ?? (error instanceof Error ? error.message : "Failed to load media details."));
     } finally {
       if (mode === "replace") setLoading(false);
     }
@@ -184,9 +185,16 @@ export default function MediaDetailsPage() {
       if (!replyTo) {
         setComments((prev) => [...prev, optimisticComment]);
       } else {
+        const optimisticReply: ReplyItem = {
+          id: optimisticComment.id,
+          text: optimisticComment.text,
+          createdAt: optimisticComment.createdAt,
+          user: optimisticComment.user,
+        };
+
         setReplies((prev) => ({
           ...prev,
-          [replyTo.id]: [...(prev[replyTo.id] ?? []), optimisticComment as any],
+          [replyTo.id]: [...(prev[replyTo.id] ?? []), optimisticReply],
         }));
 
         setExpanded((p) => ({ ...p, [replyTo.id]: true }));

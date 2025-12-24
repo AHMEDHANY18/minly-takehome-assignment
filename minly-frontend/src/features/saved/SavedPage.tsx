@@ -1,6 +1,6 @@
 import { useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import type { SavedMedia, SavedSort } from "../../api/bookmarks";
+import type { SavedMedia, SavedSort } from "@/features/saved/api/bookmarks.api";
 import { useSaved } from "./hooks/useSaved";
 
 export default function SavedPage() {
@@ -207,7 +207,9 @@ function MediaCard({ m, onClick }: { m: SavedMedia; onClick: () => void }) {
             if (!v) return;
             try {
               v.currentTime = 0.01; // يساعد يظهر أول فريم بدل شاشة سوداء
-            } catch {}
+            } catch {
+              // no-op
+            }
           }}
           onSeeked={() => {
             const v = videoRef.current;

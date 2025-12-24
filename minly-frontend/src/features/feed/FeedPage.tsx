@@ -1,8 +1,8 @@
 import { useNavigate } from "react-router-dom";
-import { useUserStore } from "../../store/user.store";
-import { SocialAPI, type SuggestedUser } from "../../api/social";
+import { useUserStore } from "@/shared/store/user.store";
+import { SocialAPI, type SuggestedUser } from "@/shared/api/social.api";
 import { useSuggestedUsers } from "./hooks/useSuggestedUsers";
-import type { FeedItem, FeedMode } from "../../api/feed";
+import type { FeedItem, FeedMode } from "@/features/feed/api/feed.api";
 import { useFeed } from "./hooks/useFeed";
 import { useEffect, useState } from "react";
 import { IconBookmark, IconComment, IconHeart, IconSend } from "./icons";
@@ -273,7 +273,7 @@ function RightRail({
     try {
       await SocialAPI.follow(u.id);
       onFollowSuccess?.(); // optional: increase followingCount in UI
-    } catch (e) {
+    } catch {
       // ❌ rollback
       restoreUser(u, index);
     } finally {

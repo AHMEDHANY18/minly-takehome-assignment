@@ -1,7 +1,7 @@
 import { useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { SocialAPI } from "../../api/social";
-import type { NotificationItem } from "../../api/notifications";
+import { SocialAPI } from "@/shared/api/social.api";
+import type { NotificationItem } from "@/features/notifications/api/notifications.api";
 import {
   useNotifications,
   type NotificationsTab,
@@ -136,7 +136,7 @@ function renderSection(
 
       <div className="rounded-2xl bg-white border border-gray-100 shadow-sm overflow-hidden">
         {rows.map((n, idx) => {
-          const mediaId = (n as any).mediaId ?? n.media?.id;
+          const mediaId = n.mediaId ?? n.media?.id;
 
           const openMedia = () => {
             if (!n.isRead) markRead(n.id);
@@ -172,7 +172,9 @@ function renderSection(
                 onClick={(e) => {
                   e.stopPropagation();
                   if (!n.isRead) markRead(n.id);
-                  n.actor?.id && nav(`/users/${n.actor.id}`);
+                  if (n.actor?.id) {
+                    nav(`/users/${n.actor.id}`);
+                  }
                 }}
                 aria-label="Open actor profile"
               >
@@ -186,7 +188,9 @@ function renderSection(
                     onClick={(e) => {
                       e.stopPropagation();
                       if (!n.isRead) markRead(n.id);
-                      n.actor?.id && nav(`/users/${n.actor.id}`);
+                      if (n.actor?.id) {
+                        nav(`/users/${n.actor.id}`);
+                      }
                     }}
                   >
                     {n.actor?.name ?? "Someone"}
@@ -203,7 +207,9 @@ function renderSection(
                   onClick={(e) => {
                     e.stopPropagation();
                     if (!n.isRead) markRead(n.id);
-                    n.actor?.id && onFollowBack(n.actor.id, n.id);
+                    if (n.actor?.id) {
+                      onFollowBack(n.actor.id, n.id);
+                    }
                   }}
                   disabled={!n.actor?.id || !!pendingFollow[n.id]}
                   className="h-9 px-4 rounded-full bg-blue-600 text-white text-sm font-semibold hover:bg-blue-700 transition disabled:opacity-60"
@@ -219,7 +225,7 @@ function renderSection(
                     openMedia();
                   }}
                 >
-                  <MediaThumb media={n.media as any} />
+                  <MediaThumb media={n.media ?? {}} />
                 </button>
               ) : (
                 <div className="h-12 w-12 rounded-xl border border-gray-100 bg-gray-50 shrink-0" />
@@ -232,7 +238,7 @@ function renderSection(
   );
 }
 
-function guessMediaTypeFromUrl(url?: string): "IMAGE" | "VIDEO" | undefined {
+function guessMediaTypeFromUrl(url?: string | null): "IMAGE" | "VIDEO" | undefined {
   if (!url) return undefined;
   const clean = url.split("?")[0].toLowerCase();
 
@@ -251,7 +257,7 @@ function normalizeMediaType(t?: string): "IMAGE" | "VIDEO" | undefined {
 function MediaThumb({
   media,
 }: {
-  media: { url?: string; type?: string; thumbnailUrl?: string | null };
+  media: { url?: string | null; type?: string; thumbnailUrl?: string | null };
 }) {
   const [broken, setBroken] = useState(false);
 
@@ -309,7 +315,9 @@ function VideoFirstFrame({ url }: { url: string }) {
           if (!v) return;
           try {
             v.currentTime = 0.01;
-          } catch {}
+          } catch {
+            // no-op
+          }
         }}
         onSeeked={() => {
           ref.current?.pause();

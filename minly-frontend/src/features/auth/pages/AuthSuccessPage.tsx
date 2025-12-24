@@ -1,6 +1,6 @@
 import { useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { AuthAPI } from "../../../api/auth";
+import { AuthAPI } from "@/features/auth/api/auth.api";
 
 export default function AuthSuccessPage() {
   const nav = useNavigate();
@@ -8,7 +8,7 @@ export default function AuthSuccessPage() {
   useEffect(() => {
     (async () => {
       try {
-        await AuthAPI.me(); // يثبت إن الكوكيز شغالة
+        await AuthAPI.me();
         nav("/", { replace: true });
       } catch {
         nav("/login", { replace: true });
@@ -16,5 +16,5 @@ export default function AuthSuccessPage() {
     })();
   }, [nav]);
 
-  return <div style={{ padding: 24 }}>Signing you in…</div>;
+  return <div style={{ padding: 24 }}>Signing you in...</div>;
 }

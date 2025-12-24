@@ -1,16 +1,12 @@
-import type { NotificationItem } from "../../store/notification.store";
+import type { NotificationItem } from "@/features/notifications/store/notification.store";
 
 export function presentNotification(n: NotificationItem) {
-  console.log("🚀 presentNotification:", n);
-
   const actorName = n.actor?.name ?? "Someone";
   const actorId = n.actor?.id ?? null;
-
   const mediaId = n.media?.id ?? null;
   const commentText = n.comment?.text?.trim() ?? null;
 
-  // Adjust routes if needed
-  const postHref = mediaId ? `/posts/${mediaId}` : "/notifications";
+  const postHref = mediaId ? `/media/${mediaId}` : "/notifications";
   const profileHref = actorId ? `/profile/${actorId}` : "/notifications";
 
   switch (n.type) {
@@ -21,15 +17,13 @@ export function presentNotification(n: NotificationItem) {
         href: postHref,
         rightThumb: n.media?.thumbnailUrl ?? null,
       };
-
     case "COMMENT":
       return {
         primaryText: `${actorName} commented on your post`,
-        secondaryText: commentText ? `“${truncate(commentText, 80)}”` : null,
+        secondaryText: commentText ? `"${truncate(commentText, 80)}"` : null,
         href: postHref,
         rightThumb: n.media?.thumbnailUrl ?? null,
       };
-
     case "FOLLOW":
       return {
         primaryText: `${actorName} started following you`,
@@ -37,11 +31,10 @@ export function presentNotification(n: NotificationItem) {
         href: profileHref,
         rightThumb: null,
       };
-
     case "SYSTEM":
     default:
       return {
-        primaryText: `System notification`,
+        primaryText: "System notification",
         secondaryText: commentText ? truncate(commentText, 120) : null,
         href: "/notifications",
         rightThumb: null,
@@ -50,5 +43,5 @@ export function presentNotification(n: NotificationItem) {
 }
 
 function truncate(text: string, max: number) {
-  return text.length > max ? text.slice(0, max - 1) + "…" : text;
+  return text.length > max ? `${text.slice(0, max - 1)}...` : text;
 }

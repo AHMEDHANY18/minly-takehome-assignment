@@ -1,10 +1,10 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { FeedAPI, type FeedItem, type FeedMode, type FeedPagination } from "../../../api/feed";
+import { FeedAPI, type FeedItem, type FeedMode, type FeedPagination } from "@/features/feed/api/feed.api";
 
 type State = {
   items: FeedItem[];
   pagination: FeedPagination | null;
-  meta: any | null;
+  meta: Record<string, unknown> | null;
   initialLoading: boolean;
   loadingMore: boolean;
   error: string | null;
@@ -54,12 +54,12 @@ export function useFeed(mode: FeedMode, limit = 20) {
           loadingMore: false,
           error: null,
         }));
-      } catch (e: any) {
+      } catch (error) {
         if (!alive) return;
         setState((prev) => ({
           ...prev,
           initialLoading: false,
-          error: e?.message || "Failed to load feed",
+          error: (error instanceof Error ? error.message : "Failed to load feed"),
         }));
       }
     })();
@@ -67,7 +67,7 @@ export function useFeed(mode: FeedMode, limit = 20) {
     return () => {
       alive = false;
     };
-  }, [mode, limit]); // ✅ ده اللي بيخلي explore/trending يتغيروا فورًا
+  }, [mode, limit]);
 
   const hasMore = useMemo(() => {
     if (!state.pagination) return false;

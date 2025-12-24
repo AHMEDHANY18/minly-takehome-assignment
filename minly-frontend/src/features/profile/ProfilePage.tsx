@@ -1,7 +1,7 @@
-import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+﻿import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { useNavigate } from "react-router-dom";
-import { ProfileAPI, type ProfileMediaItem, type ProfileResponse } from "../../api/profile";
-import { MediaAPI } from "../../api/media";
+import { ProfileAPI, type ProfileMediaItem, type ProfileResponse } from "./api/profile.api";
+import { MediaAPI } from "../media";
 
 type Tab = "ALL" | "VIDEOS" | "PHOTOS";
 

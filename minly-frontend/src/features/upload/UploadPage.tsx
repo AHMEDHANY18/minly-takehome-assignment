@@ -1,8 +1,9 @@
 // src/features/upload/UploadPage.tsx
 import { useMemo, useRef, useState } from "react";
-import axios from "axios";
+import type { AxiosError } from "axios";
+import { http } from "@/shared/api/http";
 import { useNavigate } from "react-router-dom";
-import { MediaAPI, type MediaType } from "../../api/media";
+import { MediaAPI, type MediaType } from "@/features/media/api/media.api";
 
 const MAX_SIZE_MB = 50;
 const MAX_SIZE_BYTES = MAX_SIZE_MB * 1024 * 1024;
@@ -76,8 +77,8 @@ export default function UploadPage() {
 
     try {
       detectMediaType(f);
-    } catch (e: any) {
-      setError(e?.message ?? "Unsupported file type");
+    } catch (error) {
+      setError(error instanceof Error ? error.message : "Unsupported file type");
       return;
     }
 
@@ -87,7 +88,7 @@ export default function UploadPage() {
 
   async function uploadToPresignedUrl(uploadUrl: string, f: File) {
     // ✅ axios gives progress in browser
-    await axios.put(uploadUrl, f, {
+    await http.put(uploadUrl, f, {
       headers: {
         "Content-Type": f.type,
       },
@@ -135,13 +136,8 @@ export default function UploadPage() {
 
       // ✅ go back to feed
       nav("/feed");
-    } catch (e: any) {
-      // Backend: MISSING_CONTENT_TYPE, TYPE_MISMATCH, ...
-      const msg =
-        e?.response?.data?.message ||
-        e?.message ||
-        "Upload failed. Please try again.";
-      setError(String(msg));
+    } catch (error) {
+      setError(getErrorMessage(error, "Upload failed. Please try again."));
     } finally {
       setUploading(false);
     }
@@ -373,5 +369,13 @@ export default function UploadPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+function getErrorMessage(error: unknown, fallback: string) {
+  const axiosError = error as AxiosError<{ message?: string }>;
+  return (
+    axiosError.response?.data?.message ??
+    (error instanceof Error ? error.message : fallback)
   );
 }

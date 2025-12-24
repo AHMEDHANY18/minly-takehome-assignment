@@ -1,9 +1,10 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
+import type { AxiosError } from "axios";
 import {
   NotificationsAPI,
   type NotificationItem,
   type NotificationType,
-} from "../../../api/notifications";
+} from "@/features/notifications/api/notifications.api";
 
 export type NotificationsTab = "ALL" | "LIKE" | "COMMENT" | "FOLLOW" | "SYSTEM";
 
@@ -28,8 +29,8 @@ export function useNotifications(limit = 20) {
         setHasMore(!!pag?.hasNext);
         setItems((prev) => (mode === "append" ? [...prev, ...data] : data));
         setPage(p);
-      } catch (e: any) {
-        setError(e?.response?.data?.message ?? "Failed to load notifications.");
+      } catch (error) {
+        setError(getErrorMessage(error, "Failed to load notifications."));
       }
     },
     [limit]
@@ -57,30 +58,26 @@ export function useNotifications(limit = 20) {
   );
 
   const markAllRead = useCallback(async () => {
-    // ✅ Optimistic UI
     setItems((prev) => prev.map((n) => (n.isRead ? n : { ...n, isRead: true })));
 
     try {
-      await NotificationsAPI.readAll(); // MUST hit: POST /notification/read-all
-    } catch (e: any) {
-      setError(e?.response?.data?.message ?? "Failed to mark all as read.");
-      // رجّع البيانات من الباك عشان تظبط الحالة
+      await NotificationsAPI.readAll();
+    } catch (error) {
+      setError(getErrorMessage(error, "Failed to mark all as read."));
       await fetchPage(1, "replace");
     }
   }, [fetchPage]);
 
   const markRead = useCallback(
     async (id: string) => {
-      // ✅ Optimistic UI
       setItems((prev) =>
         prev.map((n) => (n.id === id ? { ...n, isRead: true } : n))
       );
 
       try {
-        await NotificationsAPI.markRead(id); // MUST hit: POST/PATCH /notification/:id/read
-      } catch (e: any) {
-        setError(e?.response?.data?.message ?? "Failed to mark as read.");
-        // optional: sync from server
+        await NotificationsAPI.markRead(id);
+      } catch (error) {
+        setError(getErrorMessage(error, "Failed to mark as read."));
         await fetchPage(1, "replace");
       }
     },
@@ -99,19 +96,23 @@ export function useNotifications(limit = 20) {
     markAllRead,
     markRead,
     unreadCount,
-    setItems, // useful for future optimistic updates
+    setItems,
   };
 }
-
 
 export function normalizeType(type: string): NotificationType | "SYSTEM" | string {
   return type || "SYSTEM";
 }
 
-export function matchesTab(
-  type: string,
-  tab: NotificationsTab
-) {
+export function matchesTab(type: string, tab: NotificationsTab) {
   if (tab === "ALL") return true;
   return type === tab;
+}
+
+function getErrorMessage(error: unknown, fallback: string) {
+  const axiosError = error as AxiosError<{ message?: string }>;
+  return (
+    axiosError.response?.data?.message ??
+    (error instanceof Error ? error.message : fallback)
+  );
 }
