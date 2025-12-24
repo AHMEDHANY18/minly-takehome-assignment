@@ -426,7 +426,6 @@ function normalizeMediaType(t?: string): "IMAGE" | "VIDEO" | undefined {
   if (up === "IMAGE" || up === "VIDEO") return up;
   return undefined;
 }
-
 function MediaThumb({
   media,
 }: {
@@ -485,7 +484,6 @@ function VideoFirstFrame({ url }: { url: string }) {
           try {
             v.currentTime = 0.01;
           } catch {
-            // no-op
           }
         }}
         onSeeked={() => {
