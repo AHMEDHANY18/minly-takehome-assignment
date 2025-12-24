@@ -391,22 +391,23 @@ function FollowButton({
 
   return (
     <button
-    onClick={(e) => {
-      e.stopPropagation();
-      markRead(notifId);
-      toggleFollow(actorId);
-    }}
-    disabled={!ready || busy}
-    className={[
-      "h-9 px-4 rounded-full text-sm font-semibold transition disabled:opacity-60",
-      following
-        ? "bg-white border border-gray-300 text-gray-900 hover:bg-gray-50"
-        : "bg-blue-600 text-white hover:bg-blue-700",
-    ].join(" ")}
-  >
-    {!ready || busy ? "..." : following ? "Following" : "Follow Back"}
-  </button>
+      onClick={(e) => {
+        e.stopPropagation();
+        markRead(notifId);
+        toggleFollow(actorId);
+      }}
+      disabled={!ready || busy}
+      className={[
+        "h-9 px-4 rounded-full text-sm font-semibold transition disabled:opacity-60",
+        following
+          ? "bg-white border border-gray-300 text-gray-900 hover:bg-gray-50"
+          : "bg-blue-600 text-white hover:bg-blue-700",
+      ].join(" ")}
+    >
+      {label}
+    </button>
   );
+
 }
 
 /* ---------------- Helpers (زي ما هي) ---------------- */

@@ -20,9 +20,7 @@ export default function App() {
           <Route path="/auth/success" element={<AuthSuccessPage />} />
 
           <Route element={<AuthBootstrap />}>
-            <Route path="/profile" element={<ProfilePage />} />
-            <Route path="/profile/edit" element={<EditProfilePage />} />
-
+            {/* ✅ كل صفحات التطبيق جوّه MainLayout عشان الـ Bottom Nav يبان في كل حتة */}
             <Route element={<MainLayout />}>
               <Route path="/" element={<FeedPage mode="home" />} />
               <Route path="/explore" element={<FeedPage mode="explore" />} />
@@ -31,6 +29,10 @@ export default function App() {
               <Route path="/saved" element={<SavedPage />} />
               <Route path="/upload" element={<UploadPage />} />
               <Route path="/media/:mediaId" element={<MediaDetailsPage />} />
+
+              {/* ✅ بقى profile جوّه layout */}
+              <Route path="/profile" element={<ProfilePage />} />
+              <Route path="/profile/edit" element={<EditProfilePage />} />
             </Route>
           </Route>
 
