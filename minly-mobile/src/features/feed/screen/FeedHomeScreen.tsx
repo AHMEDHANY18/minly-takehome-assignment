@@ -34,13 +34,13 @@ export default function HomeScreen() {
   } = useFeed(mode, 20);
 
   const data = useMemo(() => items, [items]);
+  const isEmpty = !initialLoading && !error && data.length === 0;
 
   return (
     <SafeAreaView style={styles.safe}>
       {/* Top bar */}
       <View style={styles.topBar}>
         <View style={{ width: 28 }} />
-
         <Text style={styles.brand}>Minly</Text>
 
         <Pressable
@@ -60,10 +60,27 @@ export default function HomeScreen() {
         <SegmentedTabs value={mode} onChange={setMode} />
       </View>
 
+      {/* Body */}
       {initialLoading ? (
         <View style={styles.center}>
           <ActivityIndicator />
           <Text style={styles.dim}>Loading feed...</Text>
+        </View>
+      ) : isEmpty ? (
+        <View style={{ flex: 1 }}>
+          <View style={styles.emptyBox}>
+            <Ionicons name="people-outline" size={26} color="#111" />
+            <Text style={styles.emptyTitle}>تابع ناس علشان المحتوى يظهر</Text>
+            <Text style={styles.emptySub}>
+              جرّب تتابع شوية حسابات، وهتلاقي الـ Home اتملت فورًا.
+            </Text>
+
+            <Pressable style={styles.emptyBtn} onPress={reload}>
+              <Text style={styles.emptyBtnText}>Refresh</Text>
+            </Pressable>
+          </View>
+
+          <SuggestedUsers />
         </View>
       ) : (
         <FlatList
@@ -93,8 +110,10 @@ export default function HomeScreen() {
               <FeedCard
                 item={item}
                 onOpenComments={() =>
-                  router.push({pathname: "/media/[id]/details",params: { id: item.id },})
-
+                  router.push({
+                    pathname: "/media/[id]/details",
+                    params: { id: item.id },
+                  })
                 }
                 onOpenProfile={() =>
                   router.push({
@@ -187,6 +206,44 @@ const styles = StyleSheet.create({
   },
 
   retryText: {
+    color: "#FFF",
+    fontWeight: "900",
+  },
+
+  emptyBox: {
+    backgroundColor: "#FFF",
+    marginHorizontal: 12,
+    marginTop: 12,
+    borderRadius: 16,
+    padding: 14,
+    borderWidth: 1,
+    borderColor: "#F1F1F4",
+    alignItems: "center",
+    gap: 8,
+  },
+
+  emptyTitle: {
+    fontWeight: "900",
+    fontSize: 14,
+    color: "#111",
+    textAlign: "center",
+  },
+
+  emptySub: {
+    color: "#777",
+    textAlign: "center",
+    lineHeight: 18,
+  },
+
+  emptyBtn: {
+    marginTop: 6,
+    backgroundColor: "#111",
+    borderRadius: 12,
+    paddingVertical: 10,
+    paddingHorizontal: 14,
+  },
+
+  emptyBtnText: {
     color: "#FFF",
     fontWeight: "900",
   },
