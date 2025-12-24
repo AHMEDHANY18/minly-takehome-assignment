@@ -60,7 +60,7 @@ export default function TabsLayout() {
     >
       {/* Home */}
       <Tabs.Screen
-        name="index"
+        name="home"
         options={{
           tabBarIcon: ({ color, focused }) => (
             <Ionicons
@@ -155,7 +155,7 @@ const styles = StyleSheet.create({
     position: "absolute",
     top: -22,
     left: "50%",
-    transform: [{ translateX: -29 }], 
+    transform: [{ translateX: -29 }],
     alignItems: "center",
     justifyContent: "center",
     zIndex: 10,
