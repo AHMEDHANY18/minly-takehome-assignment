@@ -19,7 +19,7 @@ export default function FeedPage({ mode = "home" }: { mode?: FeedMode }) {
     loadMore,
     reload,
     updateItem,
-  } = useFeed(mode, 20);
+  } = useFeed(mode, 2);
 
   const followingCountFromMeta =
     meta && typeof meta === "object" && "followingCount" in meta
@@ -270,7 +270,7 @@ function RightRail({
 
     try {
       await SocialAPI.follow(u.id);
-      onFollowSuccess?.(); 
+      onFollowSuccess?.();
     } catch {
       // ❌ rollback
       restoreUser(u, index);

@@ -90,7 +90,6 @@ export const FeedRepository = {
       where: {
         uploaderId: { notIn: excludeUploaderIds },
       },
-      // ✅ استخدم الـ scalars الموجودة عندك (أفضل أداء من _count relations)
       orderBy: [
         { likesCount: "desc" },
         { commentCount: "desc" },
