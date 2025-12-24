@@ -41,7 +41,6 @@ export default function MainLayout() {
             <div className="font-semibold text-gray-900 tracking-tight">Minly</div>
           </button>
 
-          {/* Desktop top nav only */}
           <nav className="hidden md:flex items-center gap-1.5">
             <TopLink to="/" label="Home" end />
             <TopLink to="/explore" label="Explore" />
@@ -85,8 +84,8 @@ export default function MainLayout() {
         </div>
       </header>
 
-      {/* ✅ مهم: padding-bottom للموبايل عشان الـ bottom nav ما يغطيش المحتوى */}
-      <main className="mx-auto max-w-[1240px] px-4 pt-6 pb-24 md:py-6">
+      {/* ✅ padding-bottom للموبايل عشان bottom nav ما يغطيش المحتوى */}
+      <main className="mx-auto max-w-[1240px] px-4 py-6 pb-24 md:pb-6">
         <div
           className={
             hideSidebar
@@ -121,11 +120,10 @@ export default function MainLayout() {
         </div>
       </main>
 
-      {/* ✅ Bottom Tab Bar للموبايل فقط */}
+      {/* ✅ Bottom Nav للموبايل فقط — يظهر حتى في /notifications */}
       <MobileBottomNav unread={unread} />
 
       {!unlocked && (
-        // ✅ ارفعها فوق الـ bottom nav في الموبايل
         <div className="fixed bottom-20 md:bottom-5 left-1/2 -translate-x-1/2 z-50">
           <button
             onClick={unlock}
@@ -145,29 +143,30 @@ function MobileBottomNav({ unread }: { unread: number }) {
   return (
     <nav className="md:hidden fixed bottom-0 left-0 right-0 z-50 border-t border-gray-200/70 bg-white/90 backdrop-blur">
       <div className="mx-auto max-w-[1240px] px-4 h-16 flex items-center justify-between">
-        <BottomTabLink to="/" ariaLabel="Home" icon={<IconHome />} end />
+        <BottomLink to="/" ariaLabel="Home" end icon={<IconHome />} />
+        <BottomLink to="/explore" ariaLabel="Explore" icon={<IconCompass />} />
 
-        <BottomTabLink to="/explore" ariaLabel="Explore" icon={<IconCompass />} />
+        {/* Create في النص */}
+        <NavLink to="/upload" aria-label="Create" className="h-12 w-12">
+          <div className="h-12 w-12 rounded-2xl bg-blue-600 text-white grid place-items-center shadow-sm">
+            <IconPlus />
+          </div>
+        </NavLink>
 
-        {/* زرار Create في النص */}
-        <BottomCreateLink to="/upload" ariaLabel="Create" />
-
-        <BottomTabLink to="/trending" ariaLabel="Trending" icon={<IconTrending />} />
-
-        <BottomTabLink
+        <BottomLink to="/trending" ariaLabel="Trending" icon={<IconTrending />} />
+        <BottomLink
           to="/notifications"
           ariaLabel="Notifications"
           icon={<IconBell />}
           badge={unread}
         />
-
-        <BottomTabLink to="/profile" ariaLabel="Profile" icon={<IconUser />} />
+        <BottomLink to="/profile" ariaLabel="Profile" icon={<IconUser />} />
       </div>
     </nav>
   );
 }
 
-function BottomTabLink({
+function BottomLink({
   to,
   icon,
   ariaLabel,
@@ -193,29 +192,11 @@ function BottomTabLink({
       }
     >
       {icon}
-
       {badge && badge > 0 ? (
         <span className="absolute -top-1 -right-1 h-5 min-w-[20px] px-1 rounded-full bg-blue-600 text-white text-[11px] font-semibold grid place-items-center shadow">
           {badge > 99 ? "99+" : badge}
         </span>
       ) : null}
-    </NavLink>
-  );
-}
-
-function BottomCreateLink({ to, ariaLabel }: { to: string; ariaLabel: string }) {
-  return (
-    <NavLink to={to} aria-label={ariaLabel} className="h-12 w-12">
-      {({ isActive }) => (
-        <div
-          className={[
-            "h-12 w-12 rounded-2xl grid place-items-center shadow-sm transition",
-            isActive ? "bg-blue-700 text-white" : "bg-blue-600 text-white",
-          ].join(" ")}
-        >
-          <IconPlus />
-        </div>
-      )}
     </NavLink>
   );
 }
