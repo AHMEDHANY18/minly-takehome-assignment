@@ -25,7 +25,8 @@ export default function MediaDetailsPage() {
   const [media, setMedia] = useState<MediaState | null>(null);
 
   const [comments, setComments] = useState<MediaComment[]>([]);
-  const [pagination, setPagination] = useState<MediaDetailsResponse["pagination"] | null>(null);
+  const [pagination, setPagination] =
+    useState<MediaDetailsResponse["pagination"] | null>(null);
 
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState<string | null>(null);
@@ -33,51 +34,82 @@ export default function MediaDetailsPage() {
   // replies
   const [expanded, setExpanded] = useState<Record<string, boolean>>({});
   const [replies, setReplies] = useState<Record<string, ReplyItem[]>>({});
-  const [repliesLoading, setRepliesLoading] = useState<Record<string, boolean>>({});
+  const [repliesLoading, setRepliesLoading] = useState<Record<string, boolean>>(
+    {}
+  );
 
   // composer
   const [commentText, setCommentText] = useState("");
   const [posting, setPosting] = useState(false);
-  const [replyTo, setReplyTo] = useState<{ id: string; name: string } | null>(null);
+  const [replyTo, setReplyTo] = useState<{ id: string; name: string } | null>(
+    null
+  );
   const commentInputRef = useRef<HTMLInputElement | null>(null);
 
   const uploader = media?.uploader;
-// follow uploader
-const [isFollowing, setIsFollowing] = useState<boolean | null>(null);
-const [followBusy, setFollowBusy] = useState(false);
 
-  /* ---------------- Load details (media + comments) ---------------- */
+  /* ---------------- FOLLOW (uploader) ---------------- */
+
+  const [isFollowing, setIsFollowing] = useState<boolean | null>(null);
+  const [followBusy, setFollowBusy] = useState(false);
+
+  // ✅ checkFollow لما uploader يتغير
+  useEffect(() => {
+    const uploaderId = uploader?.id;
+
+    // reset state عند تبديل media/uploader
+    setIsFollowing(null);
+    setFollowBusy(false);
+
+    if (!uploaderId) return;
+    if (!me) return;
+
+    let cancelled = false;
+
+    SocialAPI.checkFollow(uploaderId)
+      .then((v) => {
+        if (!cancelled) setIsFollowing(v);
+      })
+      .catch(() => {
+        if (!cancelled) setIsFollowing(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [uploader?.id, me]);
+
   const toggleUploaderFollow = async () => {
-    if (!uploader?.id) return;
-    if (followBusy) return;
+    const uploaderId = uploader?.id;
+    if (!uploaderId) return;
+    if (!me) return;
+
+    // لسه ماعرفناش الحالة
     if (isFollowing === null) return;
+    if (followBusy) return;
 
     const before = isFollowing;
 
+    // optimistic
     setIsFollowing(!before);
     setFollowBusy(true);
 
     try {
-      const serverNext = await SocialAPI.toggleFollow(uploader.id);
+      const serverNext = await SocialAPI.toggleFollow(uploaderId);
       if (typeof serverNext === "boolean") {
         setIsFollowing(serverNext);
       }
     } catch {
-      setIsFollowing(before); // rollback
+      // rollback
+      setIsFollowing(before);
     } finally {
       setFollowBusy(false);
     }
   };
 
-  const [page, setPage] = useState(1);
-  useEffect(() => {
-    if (!uploader?.id) return;
-    if (!me) return;
+  /* ---------------- Load details (media + comments) ---------------- */
 
-    SocialAPI.checkFollow(uploader.id)
-      .then((v) => setIsFollowing(v))
-      .catch(() => setIsFollowing(false));
-  }, [uploader?.id, me]);
+  const [page, setPage] = useState(1);
 
   const fetchDetails = async (targetPage: number, mode: "replace" | "append") => {
     if (!mediaId) return;
@@ -86,7 +118,10 @@ const [followBusy, setFollowBusy] = useState(false);
     if (mode === "replace") setLoading(true);
 
     try {
-      const res = await MediaDetailsAPI.getDetails(mediaId, { page: targetPage, limit: 20 });
+      const res = await MediaDetailsAPI.getDetails(mediaId, {
+        page: targetPage,
+        limit: 20,
+      });
       const d = res.data.data;
 
       setMedia(d.media);
@@ -100,7 +135,12 @@ const [followBusy, setFollowBusy] = useState(false);
         setPage(targetPage);
       }
     } catch (error) {
-      setErr((error as AxiosError<{ message?: string }>).response?.data?.message ?? (error instanceof Error ? error.message : "Failed to load media details."));
+      setErr(
+        (error as AxiosError<{ message?: string }>).response?.data?.message ??
+          (error instanceof Error
+            ? error.message
+            : "Failed to load media details.")
+      );
     } finally {
       if (mode === "replace") setLoading(false);
     }
@@ -195,7 +235,6 @@ const [followBusy, setFollowBusy] = useState(false);
 
     setPosting(true);
 
-    // ✅ optimistic comment
     const optimisticComment: MediaComment = {
       id: crypto.randomUUID(),
       text,
@@ -256,7 +295,9 @@ const [followBusy, setFollowBusy] = useState(false);
       {/* Header */}
       <div className="flex items-center justify-between mb-3">
         <div className="flex items-center gap-2">
-          <div className="h-8 w-8 rounded-lg bg-blue-600 grid place-items-center text-white font-bold">M</div>
+          <div className="h-8 w-8 rounded-lg bg-blue-600 grid place-items-center text-white font-bold">
+            M
+          </div>
           <div className="font-semibold text-gray-900">Minly</div>
         </div>
 
@@ -272,17 +313,26 @@ const [followBusy, setFollowBusy] = useState(false);
         {/* Media */}
         <div className="bg-gray-50">
           {loading && !media ? (
-            <div className="h-[78vh] grid place-items-center text-sm text-gray-500">Loading media…</div>
+            <div className="h-[78vh] grid place-items-center text-sm text-gray-500">
+              Loading media…
+            </div>
           ) : !media ? (
             <div className="h-[78vh] grid place-items-center text-sm text-gray-500">
               {err ? "Failed to load media." : "No media found."}
             </div>
           ) : media.type === "VIDEO" ? (
-            <video className="w-full h-full max-h-[78vh] object-cover" controls preload="metadata">
+            <video
+              className="w-full h-full max-h-[78vh] object-cover"
+              controls
+              preload="metadata"
+            >
               <source src={media.url} />
             </video>
           ) : (
-            <img src={media.url} className="w-full h-full max-h-[78vh] object-cover" />
+            <img
+              src={media.url}
+              className="w-full h-full max-h-[78vh] object-cover"
+            />
           )}
         </div>
 
@@ -291,28 +341,34 @@ const [followBusy, setFollowBusy] = useState(false);
           {/* Uploader */}
           <div className="px-4 py-3 flex items-center justify-between border-b border-gray-100">
             <div className="flex items-center gap-3">
-              <Avatar name={uploader?.name ?? "User"} src={uploader?.avatarUrl ?? null} />
-              <div className="text-sm font-semibold">{uploader?.name ?? "User"}</div>
-              {uploader?.id && me?.id !== uploader.id && (
-  <button
-    onClick={toggleUploaderFollow}
-    disabled={followBusy || isFollowing === null}
-    className={[
-      "h-8 px-4 rounded-full text-sm font-semibold transition disabled:opacity-60",
-      isFollowing
-        ? "bg-white border border-gray-300 text-gray-900 hover:bg-gray-50"
-        : "bg-blue-600 text-white hover:bg-blue-700",
-    ].join(" ")}
-  >
-    {isFollowing === null || followBusy
-      ? "..."
-      : isFollowing
-      ? "Following"
-      : "Follow"}
-  </button>
-)}
+              <Avatar
+                name={uploader?.name ?? "User"}
+                src={uploader?.avatarUrl ?? null}
+              />
+              <div className="text-sm font-semibold">
+                {uploader?.name ?? "User"}
+              </div>
 
+              {uploader?.id && me?.id !== uploader.id && (
+                <button
+                  onClick={toggleUploaderFollow}
+                  disabled={followBusy || isFollowing === null}
+                  className={[
+                    "h-8 px-4 rounded-full text-sm font-semibold transition disabled:opacity-60",
+                    isFollowing
+                      ? "bg-white border border-gray-300 text-gray-900 hover:bg-gray-50"
+                      : "bg-blue-600 text-white hover:bg-blue-700",
+                  ].join(" ")}
+                >
+                  {isFollowing === null || followBusy
+                    ? "..."
+                    : isFollowing
+                    ? "Following"
+                    : "Follow"}
+                </button>
+              )}
             </div>
+
             <button className="h-9 w-9 rounded-full hover:bg-gray-50">⋯</button>
           </div>
 
@@ -320,10 +376,18 @@ const [followBusy, setFollowBusy] = useState(false);
           {!!media?.title || !!media?.description ? (
             <div className="px-4 py-3 border-b border-gray-100">
               <div className="flex gap-3">
-                <Avatar name={uploader?.name ?? "User"} src={uploader?.avatarUrl ?? null} size="sm" />
+                <Avatar
+                  name={uploader?.name ?? "User"}
+                  src={uploader?.avatarUrl ?? null}
+                  size="sm"
+                />
                 <div className="text-sm">
-                  <span className="font-semibold">{uploader?.name ?? "User"}</span>{" "}
-                  <span className="text-gray-700">{media?.description || media?.title}</span>
+                  <span className="font-semibold">
+                    {uploader?.name ?? "User"}
+                  </span>{" "}
+                  <span className="text-gray-700">
+                    {media?.description || media?.title}
+                  </span>
                 </div>
               </div>
             </div>
@@ -340,7 +404,11 @@ const [followBusy, setFollowBusy] = useState(false);
                 <div className="space-y-4">
                   {comments.map((c) => (
                     <div key={c.id} className="flex gap-3">
-                      <Avatar name={c.user.name} src={c.user.avatarUrl ?? null} size="sm" />
+                      <Avatar
+                        name={c.user.name}
+                        src={c.user.avatarUrl ?? null}
+                        size="sm"
+                      />
                       <div>
                         <div className="text-sm">
                           <span className="font-semibold">{c.user.name}</span>{" "}
@@ -359,8 +427,13 @@ const [followBusy, setFollowBusy] = useState(false);
                             Reply
                           </button>
                           {c._count?.replies ? (
-                            <button onClick={() => toggleReplies(c)} className="hover:underline">
-                              {expanded[c.id] ? "Hide replies" : `View replies (${c._count.replies})`}
+                            <button
+                              onClick={() => toggleReplies(c)}
+                              className="hover:underline"
+                            >
+                              {expanded[c.id]
+                                ? "Hide replies"
+                                : `View replies (${c._count.replies})`}
                             </button>
                           ) : null}
                         </div>
@@ -369,9 +442,15 @@ const [followBusy, setFollowBusy] = useState(false);
                           <div className="mt-3 pl-3 border-l border-gray-100 space-y-3">
                             {replies[c.id].map((r) => (
                               <div key={r.id} className="flex gap-3">
-                                <Avatar name={r.user.name} src={r.user.avatarUrl ?? null} size="xs" />
+                                <Avatar
+                                  name={r.user.name}
+                                  src={r.user.avatarUrl ?? null}
+                                  size="xs"
+                                />
                                 <div className="text-sm">
-                                  <span className="font-semibold">{r.user.name}</span>{" "}
+                                  <span className="font-semibold">
+                                    {r.user.name}
+                                  </span>{" "}
                                   <span className="text-gray-700">{r.text}</span>
                                 </div>
                               </div>
@@ -401,18 +480,24 @@ const [followBusy, setFollowBusy] = useState(false);
           {/* Actions */}
           <div className="border-t border-gray-100">
             <div className="px-4 py-3 flex items-center">
-              <button onClick={onToggleLike} className="h-10 w-10 rounded-full hover:bg-gray-50 grid place-items-center">
+              <button
+                onClick={onToggleLike}
+                className="h-10 w-10 rounded-full hover:bg-gray-50 grid place-items-center"
+              >
                 <IconHeart filled={!!media?.isLiked} />
               </button>
+
               <button
                 onClick={() => commentInputRef.current?.focus()}
                 className="h-10 w-10 rounded-full hover:bg-gray-50 grid place-items-center"
               >
                 <IconComment />
               </button>
+
               <button className="h-10 w-10 rounded-full hover:bg-gray-50 grid place-items-center">
                 <IconSend />
               </button>
+
               <button
                 onClick={onToggleBookmark}
                 className="ml-auto h-10 w-10 rounded-full hover:bg-gray-50 grid place-items-center"
@@ -423,7 +508,9 @@ const [followBusy, setFollowBusy] = useState(false);
 
             <div className="px-4 pb-2">
               <div className="text-sm font-semibold">{likeCountLabel}</div>
-              <div className="text-[11px] text-gray-400">{formatDate(media?.createdAt)}</div>
+              <div className="text-[11px] text-gray-400">
+                {formatDate(media?.createdAt)}
+              </div>
             </div>
 
             {replyTo && (
@@ -431,21 +518,30 @@ const [followBusy, setFollowBusy] = useState(false);
                 <span>
                   Replying to <b>{replyTo.name}</b>
                 </span>
-                <button onClick={() => setReplyTo(null)} className="text-blue-700 hover:underline">
+                <button
+                  onClick={() => setReplyTo(null)}
+                  className="text-blue-700 hover:underline"
+                >
                   Cancel
                 </button>
               </div>
             )}
 
             <div className="px-4 py-3 flex items-center gap-3">
-              <Avatar name={me?.name ?? "You"} src={me?.avatarUrl ?? null} size="sm" />
+              <Avatar
+                name={me?.name ?? "You"}
+                src={me?.avatarUrl ?? null}
+                size="sm"
+              />
               <input
                 ref={commentInputRef}
                 value={commentText}
                 onChange={(e) => setCommentText(e.target.value)}
                 onKeyDown={(e) => e.key === "Enter" && submitComment()}
                 className="flex-1 h-11 rounded-full bg-gray-50 border border-gray-200 px-4 text-sm"
-                placeholder={replyTo ? `Reply to ${replyTo.name}…` : "Add a comment…"}
+                placeholder={
+                  replyTo ? `Reply to ${replyTo.name}…` : "Add a comment…"
+                }
               />
               <button
                 disabled={posting || !commentText.trim()}
@@ -477,7 +573,11 @@ function Avatar({
   const initial = (name?.[0] ?? "U").toUpperCase();
 
   return src ? (
-    <img src={src} style={{ width: dim, height: dim }} className="rounded-full object-cover" />
+    <img
+      src={src}
+      style={{ width: dim, height: dim }}
+      className="rounded-full object-cover"
+    />
   ) : (
     <div
       style={{ width: dim, height: dim }}
@@ -502,5 +602,7 @@ function formatDate(iso?: string | null) {
   if (!iso) return "";
   const d = new Date(iso);
   if (Number.isNaN(d.getTime())) return "";
-  return d.toLocaleDateString("en-US", { month: "long", day: "numeric" }).toUpperCase();
+  return d
+    .toLocaleDateString("en-US", { month: "long", day: "numeric" })
+    .toUpperCase();
 }
