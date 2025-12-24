@@ -60,10 +60,7 @@ export const SocialAPI = {
     return pickIsFollowing(payload);
   },
 
-  /**
-   * Legacy alias (some screens might call follow()).
-   * Since your endpoint is toggle, this actually toggles.
-   */
+
   async follow(userId: string): Promise<boolean | undefined> {
     return this.toggleFollow(userId);
   },

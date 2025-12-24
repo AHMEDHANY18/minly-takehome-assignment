@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { SocialAPI } from "@/shared/api/social.api";
 import type { NotificationItem } from "@/features/notifications/api/notifications.api";
@@ -26,7 +26,6 @@ export default function NotificationsPage() {
   } = useNotifications(20);
 
   const [tab, setTab] = useState<NotificationsTab>("ALL");
-  const [pendingFollow, setPendingFollow] = useState<Record<string, boolean>>({});
 
   const filtered = useMemo(() => {
     return items.filter((n) => {
@@ -38,26 +37,85 @@ export default function NotificationsPage() {
 
   const grouped = useMemo(() => groupByTime(filtered), [filtered]);
 
-  const onFollowBack = async (actorId: string, notifId: string) => {
-    if (pendingFollow[notifId]) return;
-    setPendingFollow((p) => ({ ...p, [notifId]: true }));
-    try {
-      await SocialAPI.follow(actorId);
-    } finally {
-      setPendingFollow((p) => {
-        const copy = { ...p };
-        delete copy[notifId];
-        return copy;
-      });
-    }
-  };
+  /* ---------------- FOLLOW CACHE LOGIC (بدون تغيير الديزاين) ---------------- */
+
+  const [followMap, setFollowMap] = useState<Record<string, boolean>>({});
+  const [busyMap, setBusyMap] = useState<Record<string, boolean>>({});
+  const inFlightRef = useRef<Set<string>>(new Set());
+
+  const followHasValue = useCallback(
+    (userId: string) =>
+      Object.prototype.hasOwnProperty.call(followMap, userId),
+    [followMap]
+  );
+
+  const followValue = useCallback(
+    (userId: string) => followMap[userId] ?? false,
+    [followMap]
+  );
+
+  const followBusy = useCallback(
+    (userId: string) => !!busyMap[userId],
+    [busyMap]
+  );
+
+  const ensureFollow = useCallback(
+    (userId: string) => {
+      if (!userId) return;
+      if (Object.prototype.hasOwnProperty.call(followMap, userId)) return;
+      if (inFlightRef.current.has(userId)) return;
+
+      inFlightRef.current.add(userId);
+
+      SocialAPI.checkFollow(userId)
+        .then((v) => {
+          setFollowMap((prev) => ({ ...prev, [userId]: v }));
+        })
+        .catch(() => {
+          // fallback
+          setFollowMap((prev) => ({ ...prev, [userId]: false }));
+        })
+        .finally(() => {
+          inFlightRef.current.delete(userId);
+        });
+    },
+    [followMap]
+  );
+
+  const toggleFollow = useCallback(
+    async (userId: string) => {
+      if (!userId) return;
+      if (!!busyMap[userId]) return;
+
+      const before = followMap[userId] ?? false;
+
+      // optimistic
+      setFollowMap((prev) => ({ ...prev, [userId]: !before }));
+      setBusyMap((prev) => ({ ...prev, [userId]: true }));
+
+      try {
+        const serverNext = await SocialAPI.toggleFollow(userId);
+        if (typeof serverNext === "boolean") {
+          setFollowMap((prev) => ({ ...prev, [userId]: serverNext }));
+        }
+      } catch {
+        // rollback
+        setFollowMap((prev) => ({ ...prev, [userId]: before }));
+      } finally {
+        setBusyMap((prev) => ({ ...prev, [userId]: false }));
+      }
+    },
+    [busyMap, followMap]
+  );
 
   return (
     <div className="mx-auto max-w-[720px]">
       {/* Header */}
       <div className="flex items-center justify-between mb-4">
         <div>
-          <div className="text-2xl font-semibold text-gray-900">Notifications</div>
+          <div className="text-2xl font-semibold text-gray-900">
+            Notifications
+          </div>
           <div className="text-sm text-gray-500 mt-1">
             {unreadCount > 0 ? `${unreadCount} unread` : "You're all caught up."}
           </div>
@@ -73,19 +131,34 @@ export default function NotificationsPage() {
 
       {/* Tabs */}
       <div className="flex items-center gap-2 mb-4">
-        <Pill active={tab === "ALL"} onClick={() => setTab("ALL")}>All</Pill>
-        <Pill active={tab === "LIKE"} onClick={() => setTab("LIKE")}>Likes</Pill>
-        <Pill active={tab === "COMMENT"} onClick={() => setTab("COMMENT")}>Comments</Pill>
-        <Pill active={tab === "FOLLOW"} onClick={() => setTab("FOLLOW")}>Follows</Pill>
-        <Pill active={tab === "SYSTEM"} onClick={() => setTab("SYSTEM")}>System</Pill>
+        <Pill active={tab === "ALL"} onClick={() => setTab("ALL")}>
+          All
+        </Pill>
+        <Pill active={tab === "LIKE"} onClick={() => setTab("LIKE")}>
+          Likes
+        </Pill>
+        <Pill active={tab === "COMMENT"} onClick={() => setTab("COMMENT")}>
+          Comments
+        </Pill>
+        <Pill active={tab === "FOLLOW"} onClick={() => setTab("FOLLOW")}>
+          Follows
+        </Pill>
+        <Pill active={tab === "SYSTEM"} onClick={() => setTab("SYSTEM")}>
+          System
+        </Pill>
       </div>
 
       {/* Content */}
       {error && (
         <div className="rounded-2xl bg-white border border-red-100 shadow-sm p-4 mb-4">
-          <div className="text-sm font-semibold text-red-600">Failed to load notifications</div>
+          <div className="text-sm font-semibold text-red-600">
+            Failed to load notifications
+          </div>
           <div className="text-xs text-gray-500 mt-1">{error}</div>
-          <button onClick={reload} className="mt-3 text-sm font-semibold text-blue-700 hover:underline">
+          <button
+            onClick={reload}
+            className="mt-3 text-sm font-semibold text-blue-700 hover:underline"
+          >
             Retry
           </button>
         </div>
@@ -95,9 +168,41 @@ export default function NotificationsPage() {
         <Skeleton />
       ) : (
         <div className="space-y-6">
-          {renderSection("TODAY", grouped.today, nav, onFollowBack, pendingFollow, markRead)}
-          {renderSection("THIS WEEK", grouped.thisWeek, nav, onFollowBack, pendingFollow, markRead)}
-          {renderSection("EARLIER", grouped.earlier, nav, onFollowBack, pendingFollow, markRead)}
+          {renderSection(
+            "TODAY",
+            grouped.today,
+            nav,
+            markRead,
+            ensureFollow,
+            toggleFollow,
+            followHasValue,
+            followValue,
+            followBusy
+          )}
+
+          {renderSection(
+            "THIS WEEK",
+            grouped.thisWeek,
+            nav,
+            markRead,
+            ensureFollow,
+            toggleFollow,
+            followHasValue,
+            followValue,
+            followBusy
+          )}
+
+          {renderSection(
+            "EARLIER",
+            grouped.earlier,
+            nav,
+            markRead,
+            ensureFollow,
+            toggleFollow,
+            followHasValue,
+            followValue,
+            followBusy
+          )}
 
           <div className="py-2 flex justify-center">
             {hasMore ? (
@@ -124,9 +229,12 @@ function renderSection(
   title: string,
   rows: NotificationItem[],
   nav: ReturnType<typeof useNavigate>,
-  onFollowBack: (actorId: string, notifId: string) => void,
-  pendingFollow: Record<string, boolean>,
-  markRead: (id: string) => void
+  markRead: (id: string) => void,
+  ensureFollow: (userId: string) => void,
+  toggleFollow: (userId: string) => void,
+  followHasValue: (userId: string) => boolean,
+  followValue: (userId: string) => boolean,
+  followBusy: (userId: string) => boolean
 ) {
   if (!rows.length) return null;
 
@@ -164,7 +272,9 @@ function renderSection(
             >
               {/* unread dot */}
               <div className="w-2">
-                {!n.isRead ? <span className="block h-2 w-2 rounded-full bg-blue-600" /> : null}
+                {!n.isRead ? (
+                  <span className="block h-2 w-2 rounded-full bg-blue-600" />
+                ) : null}
               </div>
 
               <button
@@ -198,24 +308,23 @@ function renderSection(
                   <span className="text-gray-700">{buildMessage(n)}</span>
                 </div>
 
-                <div className="text-xs text-gray-400 mt-1">{formatTime(n.createdAt)}</div>
+                <div className="text-xs text-gray-400 mt-1">
+                  {formatTime(n.createdAt)}
+                </div>
               </div>
 
               {/* Right side */}
               {normalizeType(n.type) === "FOLLOW" ? (
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    if (!n.isRead) markRead(n.id);
-                    if (n.actor?.id) {
-                      onFollowBack(n.actor.id, n.id);
-                    }
-                  }}
-                  disabled={!n.actor?.id || !!pendingFollow[n.id]}
-                  className="h-9 px-4 rounded-full bg-blue-600 text-white text-sm font-semibold hover:bg-blue-700 transition disabled:opacity-60"
-                >
-                  {pendingFollow[n.id] ? "Following…" : "Follow Back"}
-                </button>
+                <FollowButton
+                  actorId={n.actor?.id ?? null}
+                  notifId={n.id}
+                  markRead={markRead}
+                  ensureFollow={ensureFollow}
+                  toggleFollow={toggleFollow}
+                  followHasValue={followHasValue}
+                  followValue={followValue}
+                  followBusy={followBusy}
+                />
               ) : n.media ? (
                 <button
                   className="h-12 w-12 rounded-xl overflow-hidden border border-gray-100 bg-gray-50 shrink-0"
@@ -237,6 +346,70 @@ function renderSection(
     </div>
   );
 }
+
+/* ---------------- Follow Button (Logic only) ---------------- */
+
+function FollowButton({
+  actorId,
+  notifId,
+  markRead,
+  ensureFollow,
+  toggleFollow,
+  followHasValue,
+  followValue,
+  followBusy,
+}: {
+  actorId: string | null;
+  notifId: string;
+  markRead: (id: string) => void;
+  ensureFollow: (userId: string) => void;
+  toggleFollow: (userId: string) => void;
+  followHasValue: (userId: string) => boolean;
+  followValue: (userId: string) => boolean;
+  followBusy: (userId: string) => boolean;
+}) {
+  useEffect(() => {
+    if (actorId) ensureFollow(actorId);
+  }, [actorId, ensureFollow]);
+
+  if (!actorId) {
+    return (
+      <button
+        disabled
+        className="h-9 px-4 rounded-full bg-blue-600 text-white text-sm font-semibold hover:bg-blue-700 transition disabled:opacity-60"
+      >
+        Follow Back
+      </button>
+    );
+  }
+
+  const ready = followHasValue(actorId);
+  const busy = followBusy(actorId);
+  const following = followValue(actorId);
+
+  const label = !ready || busy ? "..." : following ? "Following" : "Follow Back";
+
+  return (
+    <button
+    onClick={(e) => {
+      e.stopPropagation();
+      markRead(notifId);
+      toggleFollow(actorId);
+    }}
+    disabled={!ready || busy}
+    className={[
+      "h-9 px-4 rounded-full text-sm font-semibold transition disabled:opacity-60",
+      following
+        ? "bg-white border border-gray-300 text-gray-900 hover:bg-gray-50"
+        : "bg-blue-600 text-white hover:bg-blue-700",
+    ].join(" ")}
+  >
+    {!ready || busy ? "..." : following ? "Following" : "Follow Back"}
+  </button>
+  );
+}
+
+/* ---------------- Helpers (زي ما هي) ---------------- */
 
 function guessMediaTypeFromUrl(url?: string | null): "IMAGE" | "VIDEO" | undefined {
   if (!url) return undefined;
@@ -269,12 +442,9 @@ function MediaThumb({
   const isVideo = type === "VIDEO";
   const imgSrc = media.thumbnailUrl ?? (!isVideo ? media.url : undefined);
 
-  // لو Image و src فاضي/فشل
   if (!imgSrc || broken) {
-    // لو فيديو: استخدم أول فريم (أو Placeholder لو حابب)
     if (isVideo && media.url) return <VideoFirstFrame url={media.url} />;
 
-    // Placeholder عام
     return (
       <div className="h-full w-full bg-gray-100 grid place-items-center text-[10px] text-gray-400">
         No preview
@@ -293,7 +463,6 @@ function MediaThumb({
     />
   );
 }
-
 
 function VideoFirstFrame({ url }: { url: string }) {
   const ref = useRef<HTMLVideoElement | null>(null);
@@ -363,7 +532,13 @@ function Avatar({ name, src }: { name: string; src: string | null }) {
   const initial = (name?.[0] ?? "U").toUpperCase();
 
   if (src) {
-    return <img src={src} alt={name} className="h-10 w-10 rounded-full object-cover" />;
+    return (
+      <img
+        src={src}
+        alt={name}
+        className="h-10 w-10 rounded-full object-cover"
+      />
+    );
   }
 
   return (
@@ -408,7 +583,11 @@ function formatTime(iso: string) {
 
 function groupByTime(items: NotificationItem[]) {
   const now = new Date();
-  const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+  const startOfToday = new Date(
+    now.getFullYear(),
+    now.getMonth(),
+    now.getDate()
+  ).getTime();
   const weekAgo = now.getTime() - 7 * 24 * 60 * 60 * 1000;
 
   const today: NotificationItem[] = [];
