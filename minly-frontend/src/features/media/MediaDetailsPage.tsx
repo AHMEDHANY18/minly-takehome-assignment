@@ -42,10 +42,42 @@ export default function MediaDetailsPage() {
   const commentInputRef = useRef<HTMLInputElement | null>(null);
 
   const uploader = media?.uploader;
+// follow uploader
+const [isFollowing, setIsFollowing] = useState<boolean | null>(null);
+const [followBusy, setFollowBusy] = useState(false);
 
   /* ---------------- Load details (media + comments) ---------------- */
+  const toggleUploaderFollow = async () => {
+    if (!uploader?.id) return;
+    if (followBusy) return;
+    if (isFollowing === null) return;
+
+    const before = isFollowing;
+
+    setIsFollowing(!before);
+    setFollowBusy(true);
+
+    try {
+      const serverNext = await SocialAPI.toggleFollow(uploader.id);
+      if (typeof serverNext === "boolean") {
+        setIsFollowing(serverNext);
+      }
+    } catch {
+      setIsFollowing(before); // rollback
+    } finally {
+      setFollowBusy(false);
+    }
+  };
 
   const [page, setPage] = useState(1);
+  useEffect(() => {
+    if (!uploader?.id) return;
+    if (!me) return;
+
+    SocialAPI.checkFollow(uploader.id)
+      .then((v) => setIsFollowing(v))
+      .catch(() => setIsFollowing(false));
+  }, [uploader?.id, me]);
 
   const fetchDetails = async (targetPage: number, mode: "replace" | "append") => {
     if (!mediaId) return;
@@ -262,8 +294,24 @@ export default function MediaDetailsPage() {
               <Avatar name={uploader?.name ?? "User"} src={uploader?.avatarUrl ?? null} />
               <div className="text-sm font-semibold">{uploader?.name ?? "User"}</div>
               {uploader?.id && me?.id !== uploader.id && (
-                <button className="text-sm font-semibold text-blue-700 hover:underline">Follow</button>
-              )}
+  <button
+    onClick={toggleUploaderFollow}
+    disabled={followBusy || isFollowing === null}
+    className={[
+      "h-8 px-4 rounded-full text-sm font-semibold transition disabled:opacity-60",
+      isFollowing
+        ? "bg-white border border-gray-300 text-gray-900 hover:bg-gray-50"
+        : "bg-blue-600 text-white hover:bg-blue-700",
+    ].join(" ")}
+  >
+    {isFollowing === null || followBusy
+      ? "..."
+      : isFollowing
+      ? "Following"
+      : "Follow"}
+  </button>
+)}
+
             </div>
             <button className="h-9 w-9 rounded-full hover:bg-gray-50">⋯</button>
           </div>
