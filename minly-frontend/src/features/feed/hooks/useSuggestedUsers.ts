@@ -31,7 +31,6 @@ export function useSuggestedUsers() {
     setUsers((prev) => prev.filter((u) => u.id !== userId));
   }, []);
 
-  // ✅ Restore (in case API fails)
   const restoreUser = useCallback((user: SuggestedUser, index = 0) => {
     setUsers((prev) => {
       if (prev.some((x) => x.id === user.id)) return prev;

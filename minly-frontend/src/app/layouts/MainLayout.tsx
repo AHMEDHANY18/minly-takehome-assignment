@@ -120,7 +120,6 @@ export default function MainLayout() {
         </div>
       </main>
 
-      {/* ✅ Bottom Nav للموبايل فقط — يظهر حتى في /notifications */}
       <MobileBottomNav unread={unread} />
 
       {!unlocked && (

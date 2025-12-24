@@ -1,4 +1,5 @@
 // src/features/upload/UploadPage.tsx
+//المره دي احسن من المره اللي فاتت؟
 import { useMemo, useRef, useState } from "react";
 import type { AxiosError } from "axios";
 import { http } from "@/shared/api/http";
@@ -87,7 +88,6 @@ export default function UploadPage() {
   }
 
   async function uploadToPresignedUrl(uploadUrl: string, f: File) {
-    // ✅ axios gives progress in browser
     await http.put(uploadUrl, f, {
       headers: {
         "Content-Type": f.type,
@@ -196,8 +196,6 @@ export default function UploadPage() {
                   className="mt-2 w-full resize-none rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm outline-none focus:border-blue-300"
                 />
               </div>
-
-              {/* ✅ Removed: hashtags, mention, location (as requested) */}
             </div>
           </div>
 
@@ -261,7 +259,6 @@ export default function UploadPage() {
                       onChange={(e) => {
                         const f = e.target.files?.[0];
                         if (f) validateAndSetFile(f);
-                        // reset so selecting same file again triggers change
                         e.currentTarget.value = "";
                       }}
                     />

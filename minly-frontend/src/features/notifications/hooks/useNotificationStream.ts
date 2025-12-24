@@ -36,7 +36,6 @@ export function useNotificationStream(enabled: boolean) {
         const payload = JSON.parse(evt.data) as NotificationItem;
         pushIncoming(payload);
       } catch {
-        // Ignore keep-alive messages.
       }
     };
 
@@ -45,7 +44,6 @@ export function useNotificationStream(enabled: boolean) {
         const payload = JSON.parse((evt as MessageEvent).data) as NotificationItem;
         pushIncoming(payload);
       } catch {
-        // no-op
       }
     });
 

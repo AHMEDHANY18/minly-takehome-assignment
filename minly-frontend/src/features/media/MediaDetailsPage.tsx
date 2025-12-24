@@ -53,11 +53,11 @@ export default function MediaDetailsPage() {
   const [isFollowing, setIsFollowing] = useState<boolean | null>(null);
   const [followBusy, setFollowBusy] = useState(false);
 
-  // ✅ checkFollow لما uploader يتغير
+  // ✅ checkFollow
   useEffect(() => {
     const uploaderId = uploader?.id;
 
-    // reset state عند تبديل media/uploader
+    // reset state
     setIsFollowing(null);
     setFollowBusy(false);
 
@@ -84,7 +84,6 @@ export default function MediaDetailsPage() {
     if (!uploaderId) return;
     if (!me) return;
 
-    // لسه ماعرفناش الحالة
     if (isFollowing === null) return;
     if (followBusy) return;
 
@@ -149,7 +148,6 @@ export default function MediaDetailsPage() {
   useEffect(() => {
     if (!mediaId) return;
     fetchDetails(1, "replace");
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [mediaId]);
 
   const loadMoreComments = () => {

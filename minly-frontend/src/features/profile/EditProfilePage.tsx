@@ -115,7 +115,6 @@ export default function EditProfilePage() {
     const presignRes = await MediaAPI.presign({
       kind: "avatar",
       contentType: file.type,
-      // type ممنوع هنا
     });
 
     const { key, uploadUrl } = presignRes.data.data;
@@ -135,7 +134,6 @@ export default function EditProfilePage() {
       key,
     });
 
-    // نتوقع يرجع user
     const updatedUser = finalizeRes.data.data;
     const newAvatarUrl = updatedUser?.avatarUrl ?? null;
     setInitialAvatarUrl(newAvatarUrl);

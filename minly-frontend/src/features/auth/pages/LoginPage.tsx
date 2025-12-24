@@ -3,7 +3,6 @@ import { motion, type Variants } from "framer-motion";
 import { AuthAPI } from "@/features/auth/api/auth.api";
 
 function Background() {
-  // 2. تحديد النوع Variants لحل مشكلة TypeScript
   const blobVariants: Variants = {
     animate: {
       x: [0, 30, -20, 0],
@@ -12,7 +11,7 @@ function Background() {
       transition: {
         duration: 10,
         repeat: Infinity,
-        repeatType: "mirror", // الآن سيقبلها بدون أخطاء
+        repeatType: "mirror",
         ease: "easeInOut",
       },
     },
@@ -20,11 +19,6 @@ function Background() {
 
   return (
     <div className="fixed inset-0 z-0 overflow-hidden pointer-events-none bg-[#f8f9fa]">
-      {/* تم تغيير الألوان هنا لتناسب "Minly"
-         استخدمنا درجات الأزرق (Blue/Indigo) بدلاً من البنفسجي والوردي
-      */}
-
-      {/* Top Left - Blue */}
       <motion.div
         variants={blobVariants}
         animate="animate"
@@ -52,7 +46,6 @@ function Background() {
   );
 }
 
-// أيقونة جوجل
 function GoogleIcon() {
   return (
     <svg className="w-5 h-5" viewBox="0 0 24 24" aria-hidden="true">
@@ -64,7 +57,6 @@ function GoogleIcon() {
   );
 }
 
-// أيقونة اللوجو المشابهة للصورة (زر التشغيل الأزرق)
 function MinlyLogo() {
   return (
     <div className="w-12 h-12 bg-[#2563eb] rounded-2xl flex items-center justify-center shadow-lg shadow-blue-500/20">
@@ -95,12 +87,12 @@ export default function LoginPage() {
           transition={{ duration: 0.5, ease: "easeOut" }}
           className="w-full max-w-[400px]"
         >
-          {/* تصميم الكارت: أبيض نظيف مثل الموقع الأصلي */}
+
           <div className="bg-white rounded-[24px] border border-gray-100 shadow-[0_8px_40px_rgba(0,0,0,0.04)] p-8 md:p-10">
 
             {/* Header Section */}
             <div className="flex flex-col items-center text-center">
-              {/* اللوجو الجديد بالأزرق */}
+
               <div className="flex items-center gap-3 mb-6">
                 <MinlyLogo />
                 <span className="text-2xl font-bold tracking-tight text-gray-900">
@@ -124,7 +116,6 @@ export default function LoginPage() {
                 whileTap={!isRedirecting ? { scale: 0.98 } : {}}
                 onClick={onContinueWithGoogle}
                 disabled={isRedirecting}
-                // تنسيق الزر ليطابق ستايل الموقع (Clean border style)
                 className="group relative w-full flex items-center justify-center gap-3 rounded-xl border border-gray-200 bg-white py-3.5 px-4 text-[15px] font-semibold text-gray-700 shadow-sm transition-all duration-200 hover:border-gray-300 hover:shadow disabled:opacity-70 disabled:cursor-not-allowed"
               >
                 {isRedirecting ? (

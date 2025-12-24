@@ -44,7 +44,6 @@ export function useSaved(limit = 24) {
     [limit, sort, type]
   );
 
-  // initial + when sort/type changes
   useEffect(() => {
     setInitialLoading(true);
     fetchPage(1, "replace").finally(() => setInitialLoading(false));

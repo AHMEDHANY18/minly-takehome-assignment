@@ -26,10 +26,8 @@ export default function FeedPage({ mode = "home" }: { mode?: FeedMode }) {
       ? Number(meta.followingCount ?? 0)
       : 0;
 
-  // ✅ local state علشان optimistic update
   const [followingCount, setFollowingCount] = useState(0);
 
-  // ✅ أول ما meta تتغير (home feed) نحدّث الرقم
   useEffect(() => {
     setFollowingCount(followingCountFromMeta);
   }, [followingCountFromMeta]);
@@ -272,7 +270,7 @@ function RightRail({
 
     try {
       await SocialAPI.follow(u.id);
-      onFollowSuccess?.(); // optional: increase followingCount in UI
+      onFollowSuccess?.(); 
     } catch {
       // ❌ rollback
       restoreUser(u, index);

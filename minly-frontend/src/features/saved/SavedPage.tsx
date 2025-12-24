@@ -191,7 +191,6 @@ function MediaCard({ m, onClick }: { m: SavedMedia; onClick: () => void }) {
       aria-label="Open saved media"
     >
       <div className="relative w-full aspect-[4/5] bg-gray-100">
-        {/* placeholder بسيط لحد ما الفيديو يبقى جاهز */}
         {!videoReady && <div className="absolute inset-0 bg-gray-200" />}
 
         <video
@@ -202,13 +201,11 @@ function MediaCard({ m, onClick }: { m: SavedMedia; onClick: () => void }) {
           playsInline
           className="absolute inset-0 w-full h-full object-cover pointer-events-none"
           onLoadedMetadata={() => {
-            // نخلي المتصفح يجيب جزء صغير ويثبت أول فريم
             const v = videoRef.current;
             if (!v) return;
             try {
-              v.currentTime = 0.01; // يساعد يظهر أول فريم بدل شاشة سوداء
+              v.currentTime = 0.01;
             } catch {
-              // no-op
             }
           }}
           onSeeked={() => {

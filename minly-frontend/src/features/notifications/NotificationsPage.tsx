@@ -37,7 +37,6 @@ export default function NotificationsPage() {
 
   const grouped = useMemo(() => groupByTime(filtered), [filtered]);
 
-  /* ---------------- FOLLOW CACHE LOGIC (بدون تغيير الديزاين) ---------------- */
 
   const [followMap, setFollowMap] = useState<Record<string, boolean>>({});
   const [busyMap, setBusyMap] = useState<Record<string, boolean>>({});

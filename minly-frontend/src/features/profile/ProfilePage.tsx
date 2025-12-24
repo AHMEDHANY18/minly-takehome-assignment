@@ -208,7 +208,7 @@ export default function ProfilePage() {
                     <MediaTile
                       key={m.id}
                       media={m}
-                      onOpen={() => nav(`/media/${m.id}`)} // ✅ guaranteed open on click
+                      onOpen={() => nav(`/media/${m.id}`)} 
                       onEdit={() => setEditing(m)}
                       onDelete={() => setDeleting(m)}
                     />
