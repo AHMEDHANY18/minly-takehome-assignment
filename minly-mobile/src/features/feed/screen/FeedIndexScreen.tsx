@@ -100,7 +100,6 @@ export default function HomeScreen() {
                 onUpdated={(patch) => updateItem(item.id, patch)}
               />
 
-              {/* Suggested users block بعد أول بوست */}
               {index === 0 ? <SuggestedUsers /> : null}
             </View>
           )}

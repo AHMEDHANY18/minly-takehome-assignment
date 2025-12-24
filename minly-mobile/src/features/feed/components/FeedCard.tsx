@@ -40,9 +40,8 @@ export function FeedCard({
     try {
       const serverLiked = await InteractionsAPI.toggleLike(item.id);
 
-      // لو السيرفر رجّع boolean: اعمله مصدر الحقيقة + عدّل count بدقة بناء على الفرق
       if (typeof serverLiked === "boolean") {
-        const delta = (serverLiked ? 1 : 0) - (prevLiked ? 1 : 0); // +1 أو -1 أو 0
+        const delta = (serverLiked ? 1 : 0) - (prevLiked ? 1 : 0); 
         onUpdated({
           isLiked: serverLiked,
           likesCount: prevCount + delta,

@@ -9,10 +9,7 @@ WebBrowser.maybeCompleteAuthSession();
 
 export default function LoginScreen() {
   const onContinueWithGoogle = async () => {
-    // deep link اللي الباك هيرجع عليه
     const returnUrl = Linking.createURL("/auth/success");
-
-    // backend login endpoint
     const startUrl =
       `${API_BASE_URL}/auth/login` +
       `?app_redirect=${encodeURIComponent(returnUrl)}`;
@@ -21,11 +18,7 @@ export default function LoginScreen() {
       startUrl,
       returnUrl
     );
-
-    // لو المستخدم قفل الصفحة
     if (result.type !== "success" || !result.url) return;
-
-    // لو لأي سبب رجع هنا (fallback)
     router.replace("/auth/success");
   };
 

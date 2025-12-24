@@ -12,7 +12,7 @@ import {
 } from "react-native";
 import { router } from "expo-router";
 import * as ImagePicker from "expo-image-picker";
-import { UserAPI, type MeData } from "@/features/profile/api/user.api";
+import { UserAPI} from "@/features/profile/api/user.api";
 
 export default function EditProfileScreen() {
   const [loading, setLoading] = useState(true);
@@ -28,7 +28,7 @@ export default function EditProfileScreen() {
     try {
       setLoading(true);
       const res = await UserAPI.getMe();
-      const me = res.data.data;
+      const me = res.data.user;
       setName(me.name || "");
       setEmail(me.email || "");
       setAvatarUrl(me.avatarUrl || null);
@@ -65,41 +65,45 @@ export default function EditProfileScreen() {
     }
   }, []);
 
-  const saveProfile = useCallback(async () => {
-    if (!name.trim()) {
-      Alert.alert("Validation", "Name is required.");
-      return;
+const saveProfile = useCallback(async () => {
+  if (!name.trim()) {
+    Alert.alert("Validation", "Name is required.");
+    return;
+  }
+
+  setSaving(true);
+
+  try {
+    const form = new FormData();
+    form.append("name", name.trim());
+
+    // ❌ غالبًا لا ترسل email لو الباك مش داعمه
+    // if (email.trim()) form.append("email", email.trim());
+
+    if (pickedAvatar) {
+      const fileName = pickedAvatar.fileName || `avatar_${Date.now()}.jpg`;
+      const mimeType = pickedAvatar.mimeType || "image/jpeg";
+
+      // ⚠️ اسم الحقل لازم يطابق اللي في الباك (file/avatar/image ...)
+      form.append("file", {
+        uri: pickedAvatar.uri,
+        name: fileName,
+        type: mimeType,
+      } as any);
     }
 
-    setSaving(true);
+    await UserAPI.updateMeFormData(form);
 
-    try {
-      const form = new FormData();
-      form.append("name", name.trim());
-      if (email.trim()) form.append("email", email.trim());
+    Alert.alert("Success", "Profile updated!");
+    router.back();
+  } catch (err: any) {
+    console.log("update profile error:", err?.response?.data || err);
+    Alert.alert("Error", err?.response?.data?.message || "Update failed");
+  } finally {
+    setSaving(false);
+  }
+}, [name, pickedAvatar]);
 
-      if (pickedAvatar) {
-        const fileName = pickedAvatar.fileName || `avatar_${Date.now()}.jpg`;
-        const mimeType = pickedAvatar.mimeType || "image/jpeg";
-
-        form.append("file", {
-          uri: pickedAvatar.uri,
-          name: fileName,
-          type: mimeType,
-        } as any);
-      }
-
-      await UserAPI.updateMe(form);
-
-      Alert.alert("Success", "Profile updated!");
-      router.back();
-    } catch (err: any) {
-      console.log("update profile error:", err?.response?.data || err);
-      Alert.alert("Error", err?.response?.data?.message || "Update failed");
-    } finally {
-      setSaving(false);
-    }
-  }, [name, email, pickedAvatar]);
 
   if (loading) {
     return (

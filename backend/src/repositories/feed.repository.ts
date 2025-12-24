@@ -1,3 +1,4 @@
+// src/repositories/feed.repository.ts
 import { prisma } from "../config/prisma";
 
 function feedSelect(viewerId: string) {
@@ -35,7 +36,6 @@ export const FeedRepository = {
       where: { followerId: viewerId },
       select: { followingId: true },
     });
-
     return rows.map((r) => r.followingId);
   },
 
@@ -49,8 +49,6 @@ export const FeedRepository = {
     followingIds: string[];
   }) {
     const { skip, take, viewerId, followingIds } = params;
-
-    // Safety guard (حتى لو الـ service عمل check)
     if (followingIds.length === 0) return [];
 
     return prisma.media.findMany({
@@ -66,12 +64,48 @@ export const FeedRepository = {
 
   async countHomeFeed(params: { followingIds: string[] }) {
     const { followingIds } = params;
-
     if (followingIds.length === 0) return 0;
 
     return prisma.media.count({
       where: {
         uploaderId: { in: followingIds },
+      },
+    });
+  },
+
+  // -------------------------
+  // Fallback feed (Recommended)
+  // -------------------------
+  async findFallbackFeedWithViewer(params: {
+    skip: number;
+    take: number;
+    viewerId: string;
+    excludeUploaderIds: string[];
+  }) {
+    const { skip, take, viewerId, excludeUploaderIds } = params;
+
+    return prisma.media.findMany({
+      skip,
+      take,
+      where: {
+        uploaderId: { notIn: excludeUploaderIds },
+      },
+      // ✅ استخدم الـ scalars الموجودة عندك (أفضل أداء من _count relations)
+      orderBy: [
+        { likesCount: "desc" },
+        { commentCount: "desc" },
+        { createdAt: "desc" },
+      ],
+      select: feedSelect(viewerId),
+    });
+  },
+
+  async countFallbackFeed(params: { excludeUploaderIds: string[] }) {
+    const { excludeUploaderIds } = params;
+
+    return prisma.media.count({
+      where: {
+        uploaderId: { notIn: excludeUploaderIds },
       },
     });
   },
@@ -83,7 +117,7 @@ export const FeedRepository = {
     skip: number;
     take: number;
     viewerId: string;
-    excludeUploaderIds: string[]; // غالبًا: [viewerId, ...followingIds]
+    excludeUploaderIds: string[];
   }) {
     const { skip, take, viewerId, excludeUploaderIds } = params;
 
@@ -93,7 +127,6 @@ export const FeedRepository = {
       where: {
         uploaderId: { notIn: excludeUploaderIds },
       },
-      // Explore v1: popular then recent
       orderBy: [
         { likesCount: "desc" },
         { commentCount: "desc" },
@@ -114,13 +147,13 @@ export const FeedRepository = {
   },
 
   // -------------------------
-  // Trending (Ranking v1) - Prisma only
+  // Trending
   // -------------------------
   async findTrendingFeedWithViewer(params: {
     skip: number;
     take: number;
     viewerId: string;
-    windowHours: number; // default 48 (clamp in controller/service)
+    windowHours: number;
   }) {
     const { skip, take, viewerId, windowHours } = params;
 
@@ -132,7 +165,6 @@ export const FeedRepository = {
       where: {
         createdAt: { gte: windowStart },
       },
-      // Trending v1: engagement within window + recent as tiebreaker
       orderBy: [
         { likesCount: "desc" },
         { commentCount: "desc" },

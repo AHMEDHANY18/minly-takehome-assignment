@@ -9,17 +9,11 @@ import {
 import type { BottomTabBarButtonProps } from "@react-navigation/bottom-tabs";
 import { PlatformPressable } from "@react-navigation/elements";
 
-/* -------------------------------------------------------
- * Types
- * ----------------------------------------------------- */
 
 type TabButtonProps = BottomTabBarButtonProps & {
-  href?: string; // injected by expo-router
+  href?: string;
 };
 
-/* -------------------------------------------------------
- * Custom (+) Tab Button
- * ----------------------------------------------------- */
 
 function PlusTabBarButton(props: TabButtonProps) {
   const { style, children, ...rest } = props;
@@ -134,9 +128,6 @@ export default function TabsLayout() {
   );
 }
 
-/* -------------------------------------------------------
- * Styles
- * ----------------------------------------------------- */
 
 const styles = StyleSheet.create({
   tabBar: {
@@ -164,7 +155,7 @@ const styles = StyleSheet.create({
     position: "absolute",
     top: -22,
     left: "50%",
-    transform: [{ translateX: -29 }], // نص عرض الزر
+    transform: [{ translateX: -29 }], 
     alignItems: "center",
     justifyContent: "center",
     zIndex: 10,

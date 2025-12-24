@@ -1,6 +1,5 @@
 import { api } from "@/api/client";
 
-/* ---------- Types ---------- */
 
 export type MediaComment = {
   id: string;
@@ -50,7 +49,7 @@ export type AddCommentBody = {
 
 export type AddCommentResponse = {
   status: "success" | "error";
-  data?: any; // sometimes comment object, sometimes nothing
+  data?: any;
   message?: string;
 };
 

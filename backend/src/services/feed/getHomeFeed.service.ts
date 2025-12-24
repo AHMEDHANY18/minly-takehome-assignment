@@ -1,3 +1,4 @@
+// src/services/feed/getHomeFeed.service.ts
 import { FeedRepository } from "../../repositories/feed.repository";
 import { FeedMediaItem } from "../../types/feed";
 
@@ -16,21 +17,15 @@ export async function getHomeFeedService({
 
   const followingIds = await FeedRepository.getFollowingIds(viewerId);
 
-  // Home = following فقط
+  // ✅ Case 1: user is not following anyone => fallback
   if (followingIds.length === 0) {
-    return {
-      items: [],
-      pagination: {
-        page,
-        limit,
-        total: 0,
-        totalPages: 0,
-      },
-      meta: {
-        mode: "empty",
-        message: "Follow users to see posts in your home feed",
-      },
-    };
+    return getFallbackFeed({
+      page,
+      limit,
+      viewerId,
+      excludeUploaderIds: [viewerId],
+      reason: "NO_FOLLOWING",
+    });
   }
 
   const [rawItems, total] = await Promise.all([
@@ -41,6 +36,55 @@ export async function getHomeFeedService({
       followingIds,
     }),
     FeedRepository.countHomeFeed({ followingIds }),
+  ]);
+
+  // ✅ Case 2: following exists but no posts => fallback
+  if (total === 0 || rawItems.length === 0) {
+    return getFallbackFeed({
+      page,
+      limit,
+      viewerId,
+      // اختياري: استبعد نفسك + اللي بتتابعهم (عشان مايبقاش fallback نفسهم)
+      excludeUploaderIds: [viewerId, ...followingIds],
+      reason: "NO_POSTS_FROM_FOLLOWING",
+    });
+  }
+
+  const items = mapFeedItems(rawItems);
+
+  return {
+    items,
+    pagination: {
+      page,
+      limit,
+      total,
+      totalPages: Math.ceil(total / limit),
+    },
+    meta: {
+      mode: "home" as const,
+      followingCount: followingIds.length,
+    },
+  };
+}
+
+async function getFallbackFeed(params: {
+  page: number;
+  limit: number;
+  viewerId: string;
+  excludeUploaderIds: string[];
+  reason: "NO_FOLLOWING" | "NO_POSTS_FROM_FOLLOWING";
+}) {
+  const { page, limit, viewerId, excludeUploaderIds, reason } = params;
+  const skip = (page - 1) * limit;
+
+  const [rawItems, total] = await Promise.all([
+    FeedRepository.findFallbackFeedWithViewer({
+      skip,
+      take: limit,
+      viewerId,
+      excludeUploaderIds,
+    }),
+    FeedRepository.countFallbackFeed({ excludeUploaderIds }),
   ]);
 
   const items = mapFeedItems(rawItems);
@@ -54,8 +98,10 @@ export async function getHomeFeedService({
       totalPages: Math.ceil(total / limit),
     },
     meta: {
-      mode: "home",
-      followingCount: followingIds.length,
+      mode: "fallback" as const,
+      reason,
+      message:
+        "Showing recommended posts. Follow users to personalize your home feed.",
     },
   };
 }

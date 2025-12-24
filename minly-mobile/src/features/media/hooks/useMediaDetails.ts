@@ -44,7 +44,8 @@ export function useMediaDetails(mediaId: string, pageSize = 20) {
       }
 
       if (meRes.status === "fulfilled") {
-        setMeAvatarUrl(meRes.value.data?.data?.avatarUrl ?? null);
+        setMeAvatarUrl(meRes.value.data.user.avatarUrl ?? null);
+
       }
     } catch (e: any) {
       setError(e?.response?.data?.message ?? e?.message ?? "Failed to load details");
