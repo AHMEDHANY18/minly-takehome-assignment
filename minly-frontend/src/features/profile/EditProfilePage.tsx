@@ -4,6 +4,7 @@ import { http } from "@/shared/api/http";
 import { useNavigate } from "react-router-dom";
 import { ProfileAPI } from "@/features/profile/api/profile.api";
 import { MediaAPI } from "@/features/media/api/media.api";
+import { presignKind } from "@/shared/constant";
 
 const MAX_AVATAR_MB = 5;
 const MAX_AVATAR_BYTES = MAX_AVATAR_MB * 1024 * 1024;
@@ -113,7 +114,7 @@ export default function EditProfilePage() {
 
     // 1) presign (kind=avatar)
     const presignRes = await MediaAPI.presign({
-      kind: "avatar",
+      kind: presignKind.AVATAR,
       contentType: file.type,
     });
 

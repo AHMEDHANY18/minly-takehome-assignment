@@ -5,6 +5,7 @@ import type { AxiosError } from "axios";
 import { http } from "@/shared/api/http";
 import { useNavigate } from "react-router-dom";
 import { MediaAPI, type MediaType } from "@/features/media/api/media.api";
+import { presignKind } from "@/shared/constant";
 
 const MAX_SIZE_MB = 50;
 const MAX_SIZE_BYTES = MAX_SIZE_MB * 1024 * 1024;
@@ -115,7 +116,7 @@ export default function UploadPage() {
 
       // 1) presign
       const presignRes = await MediaAPI.presign({
-        kind: "media",
+        kind: presignKind.MEDIA,
         contentType: file.type,
         type,
       });
@@ -127,7 +128,7 @@ export default function UploadPage() {
 
       // 3) finalize (create DB record)
       await MediaAPI.finalize({
-        kind: "media",
+        kind: presignKind.MEDIA,
         key,
         title: title.trim() || undefined,
         description: description.trim() || undefined,

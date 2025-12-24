@@ -4,8 +4,9 @@ import { SocialAPI, type SuggestedUser } from "@/shared/api/social.api";
 import { useSuggestedUsers } from "./hooks/useSuggestedUsers";
 import type { FeedItem, FeedMode } from "@/features/feed/api/feed.api";
 import { useFeed } from "./hooks/useFeed";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { IconBookmark, IconComment, IconHeart, IconSend } from "./icons";
+import { PAGINATION } from "@/shared/constant";
 
 export default function FeedPage({ mode = "home" }: { mode?: FeedMode }) {
   const {
@@ -19,11 +20,11 @@ export default function FeedPage({ mode = "home" }: { mode?: FeedMode }) {
     loadMore,
     reload,
     updateItem,
-  } = useFeed(mode, 2);
+  } = useFeed(mode, PAGINATION.DEFAULT_LIMIT);
 
   const followingCountFromMeta =
     meta && typeof meta === "object" && "followingCount" in meta
-      ? Number(meta.followingCount ?? 0)
+      ? Number((meta as any).followingCount ?? 0)
       : 0;
 
   const [followingCount, setFollowingCount] = useState(0);
@@ -32,6 +33,34 @@ export default function FeedPage({ mode = "home" }: { mode?: FeedMode }) {
     setFollowingCount(followingCountFromMeta);
   }, [followingCountFromMeta]);
 
+  /* -------------------- Infinite Scroll -------------------- */
+  const sentinelRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    const el = sentinelRef.current;
+    if (!el) return;
+
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting && hasMore && !loadingMore) {
+          loadMore();
+        }
+      },
+      {
+        root: null,
+        rootMargin: "200px",
+        threshold: 0,
+      }
+    );
+
+    observer.observe(el);
+
+    return () => {
+      observer.disconnect();
+    };
+  }, [hasMore, loadingMore, loadMore]);
+
+  /* -------------------- Actions -------------------- */
 
   const onToggleLike = async (mediaId: string) => {
     let snapshot: { isLiked: boolean; likesCount: number } | null = null;
@@ -66,8 +95,8 @@ export default function FeedPage({ mode = "home" }: { mode?: FeedMode }) {
   };
 
   return (
-<div className="grid grid-cols-1 lg:grid-cols-[minmax(0,680px)_320px] gap-6">
-<div className="min-w-0 space-y-4">
+    <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,680px)_320px] gap-6">
+      <div className="min-w-0 space-y-4">
         {error && (
           <div className="rounded-2xl bg-white border border-red-100 p-4 shadow-sm">
             <div className="text-sm text-red-600 font-semibold">
@@ -98,15 +127,16 @@ export default function FeedPage({ mode = "home" }: { mode?: FeedMode }) {
               />
             ))}
 
-            <div className="py-2 flex justify-center">
+            {/* ✅ Infinite Scroll Sentinel (بديل Load more) */}
+            <div
+              ref={sentinelRef}
+              className="py-2 flex justify-center"
+              aria-hidden="true"
+            >
               {hasMore ? (
-                <button
-                  onClick={loadMore}
-                  disabled={loadingMore}
-                  className="h-10 px-5 rounded-xl bg-white border border-gray-200 shadow-sm hover:bg-gray-50 transition text-sm font-semibold disabled:opacity-60"
-                >
-                  {loadingMore ? "Loading…" : "Load more"}
-                </button>
+                <div className="text-sm text-gray-400">
+                  {loadingMore ? "Loading…" : "Scroll to load more"}
+                </div>
               ) : (
                 <div className="text-xs text-gray-400">
                   {pagination
@@ -120,10 +150,11 @@ export default function FeedPage({ mode = "home" }: { mode?: FeedMode }) {
       </div>
 
       <aside className="hidden lg:block">
-      <RightRail
-  followingCount={followingCount}
-  onFollowSuccess={() => setFollowingCount((c) => c + 1)}
-/>      </aside>
+        <RightRail
+          followingCount={followingCount}
+          onFollowSuccess={() => setFollowingCount((c) => c + 1)}
+        />
+      </aside>
     </div>
   );
 }
@@ -153,10 +184,15 @@ function PostCard({
             <div className="text-sm font-semibold text-gray-900">
               {item.uploader.name}
             </div>
-            <div className="text-xs text-gray-500">{formatTime(item.createdAt)}</div>
+            <div className="text-xs text-gray-500">
+              {formatTime(item.createdAt)}
+            </div>
           </div>
         </div>
-        <button className="h-9 w-9 rounded-full hover:bg-gray-50 transition" aria-label="More">
+        <button
+          className="h-9 w-9 rounded-full hover:bg-gray-50 transition"
+          aria-label="More"
+        >
           ⋯
         </button>
       </div>
@@ -184,7 +220,11 @@ function PostCard({
               </div>
             </div>
           ) : (
-            <video className="w-full max-h-[520px] object-cover" controls preload="metadata">
+            <video
+              className="w-full max-h-[520px] object-cover"
+              controls
+              preload="metadata"
+            >
               <source src={item.url} />
             </video>
           )
@@ -222,13 +262,19 @@ function PostCard({
             <span className="text-sm font-medium">{item.commentCount}</span>
           </button>
 
-          <button className="inline-flex items-center gap-2 hover:opacity-80 transition" aria-label="Share">
+          <button
+            className="inline-flex items-center gap-2 hover:opacity-80 transition"
+            aria-label="Share"
+          >
             <IconSend />
           </button>
 
           <button
             onClick={() => onToggleBookmark(item.id)}
-            className={"ml-auto hover:opacity-80 transition " + (item.isBookmarked ? "text-blue-600" : "")}
+            className={
+              "ml-auto hover:opacity-80 transition " +
+              (item.isBookmarked ? "text-blue-600" : "")
+            }
             aria-label="Bookmark"
           >
             <IconBookmark filled={item.isBookmarked} />
@@ -236,8 +282,16 @@ function PostCard({
         </div>
 
         <div className="mt-3">
-          {item.title && <div className="text-base font-semibold text-gray-900">{item.title}</div>}
-          {item.description && <p className="mt-1 text-sm text-gray-600 leading-relaxed">{item.description}</p>}
+          {item.title && (
+            <div className="text-base font-semibold text-gray-900">
+              {item.title}
+            </div>
+          )}
+          {item.description && (
+            <p className="mt-1 text-sm text-gray-600 leading-relaxed">
+              {item.description}
+            </p>
+          )}
         </div>
       </div>
     </div>
@@ -282,27 +336,29 @@ function RightRail({
       });
     }
   };
+
   const followers = user?.followerCount ?? 0;
 
   const followingUi =
-    typeof followingCount === "number"
-      ? followingCount
-      : user?.followingCount ?? 0;
+    typeof followingCount === "number" ? followingCount : user?.followingCount ?? 0;
+
   return (
     <div className="sticky top-16 space-y-4">
       <div className="rounded-2xl bg-white border border-gray-100 shadow-sm p-4">
         <div className="flex flex-col items-center text-center">
           <div className="h-16 w-16 rounded-full bg-gray-100 grid place-items-center">
-            <Avatar name={user?.name ?? "User"} src={user?.avatarUrl ?? null} size="lg" />
+            <Avatar
+              name={user?.name ?? "User"}
+              src={user?.avatarUrl ?? null}
+              size="lg"
+            />
           </div>
           <div className="mt-3 font-semibold">{user?.name ?? "—"}</div>
           <div className="text-xs text-gray-500">{user?.email ?? ""}</div>
 
           <div className="mt-4 grid grid-cols-2 gap-3 w-full">
-
-
-<Stat label="Followers" value={String(followers)} />
-<Stat label="Following" value={String(followingUi)} />
+            <Stat label="Followers" value={String(followers)} />
+            <Stat label="Following" value={String(followingUi)} />
           </div>
         </div>
       </div>
@@ -323,7 +379,9 @@ function RightRail({
       <div className="rounded-2xl bg-white border border-gray-100 shadow-sm p-4">
         <div className="flex items-center justify-between">
           <div className="font-semibold text-sm">Suggested for you</div>
-          <button className="text-xs text-purple-700 hover:underline">See all</button>
+          <button className="text-xs text-purple-700 hover:underline">
+            See all
+          </button>
         </div>
 
         <div className="mt-3 space-y-3">
