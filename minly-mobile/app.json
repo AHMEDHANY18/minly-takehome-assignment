@@ -50,6 +50,13 @@
       "eas": {
         "projectId": "39c8d91f-d17b-4f58-aa51-fbf25815132b"
       }
+    },
+    "owner": "ahmedhany2003",
+    "runtimeVersion": {
+      "policy": "appVersion"
+    },
+    "updates": {
+      "url": "https://u.expo.dev/39c8d91f-d17b-4f58-aa51-fbf25815132b"
     }
   }
 }
