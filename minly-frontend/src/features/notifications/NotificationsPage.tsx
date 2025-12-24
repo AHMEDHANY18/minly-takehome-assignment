@@ -410,7 +410,6 @@ function FollowButton({
 
 }
 
-/* ---------------- Helpers (زي ما هي) ---------------- */
 
 function guessMediaTypeFromUrl(url?: string | null): "IMAGE" | "VIDEO" | undefined {
   if (!url) return undefined;
