@@ -70,9 +70,9 @@ export default function HomeScreen() {
         <View style={{ flex: 1 }}>
           <View style={styles.emptyBox}>
             <Ionicons name="people-outline" size={26} color="#111" />
-            <Text style={styles.emptyTitle}>تابع ناس علشان المحتوى يظهر</Text>
+            <Text style={styles.emptyTitle}>Follow people to see content</Text>
             <Text style={styles.emptySub}>
-              جرّب تتابع شوية حسابات، وهتلاقي الـ Home اتملت فورًا.
+            Try following a few accounts and your Home feed will fill up instantly.
             </Text>
 
             <Pressable style={styles.emptyBtn} onPress={reload}>
