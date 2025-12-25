@@ -1,6 +1,6 @@
 import { Router } from "express";
-import { authLogout, authMe, authRefresh, cognitoCallback, cognitoLogin } from "../../controllers/auth.controller/cognito";
 import { requireAuth } from "../../middleware/auth/requireAuth";
+import { authLogout, authMe, authRefresh, cognitoCallback, cognitoLogin } from "../../controllers/auth.controller/auth.controller";
 
 
 const router = Router();

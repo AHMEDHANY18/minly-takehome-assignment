@@ -1,7 +1,5 @@
 import { Router } from "express";
 import { requireAuth } from "../../middleware/auth/requireAuth";
-import { mediaUpload } from "../../middleware/upload/mediaUpload";
-import { uploadMediaController } from "../../controllers/media.controller/uploadMedia.controller";
 import { getFeedController } from "../../controllers/media.controller/getFeed.controller";
 import { getMediaByIdController } from "../../controllers/media.controller/getMediaById.controller";
 import { validate } from "../../middleware/validate";

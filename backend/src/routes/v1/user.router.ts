@@ -6,7 +6,6 @@ import { updateProfileController } from "../../controllers/user.controller/updat
 // import { getMyProfileController } from "../../controllers/user.controller/getMyProfile.controller";
 // import { getUserProfileByIdController } from "../../controllers/user.controller/getUserProfileById.controller";
 import { getUserProfileByIdSchema } from "../../validation/user/getUserProfileByIdSchema";
-import { uploadImage } from "../../middleware/upload/imageUpload";
 import { getSuggestedUsersController } from "../../controllers/user.controller/getSuggestedUsers.controller";
 import { getUserProfileController } from "../../controllers/user.controller/getUserProfile.controller";
 
@@ -18,7 +17,6 @@ router.get("/suggested", requireAuth, getSuggestedUsersController);
 router.patch(
   "/",
   requireAuth,
-  uploadImage,
   validate(updateProfileSchema),
   updateProfileController
 );

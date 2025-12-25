@@ -26,8 +26,6 @@ app.options("*", cors(config.cors));
 app.use(preventHPP);
 
 /* ---------------- Rate limit ---------------- */
-
-// ✅ Limiter منفصل للـ auth (أوسع لأن فيه redirects/callback)
 const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   max: 1000,
@@ -36,7 +34,7 @@ const authLimiter = rateLimit({
   message: "Too many requests",
 });
 
-// ✅ Global limiter لباقي الـ API (واستثناء auth)
+// ✅ Global limiter
 const globalLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   max: 200,
@@ -47,8 +45,6 @@ const globalLimiter = rateLimit({
 });
 
 app.use(globalLimiter);
-
-// مهم: ركّب authLimiter قبل الراوتر العام
 app.use("/v1/auth", authLimiter);
 
 /* ---------------- Body parsing ---------------- */
