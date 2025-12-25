@@ -28,3 +28,20 @@ export type NotificationTypeConst =
   export function isProfileMediaTab(x: any): x is ProfileMediaTabConst {
     return x === PROFILE_MEDIA_TAB.ALL || x === PROFILE_MEDIA_TAB.IMAGE || x === PROFILE_MEDIA_TAB.VIDEO;
   }
+
+  export const BOOKMARK_SORT = {
+    RECENT: "recent",
+    OLDEST: "oldest",
+    POPULARITY: "popularity",
+  } as const;
+
+  export type BookmarkSortConst =
+    typeof BOOKMARK_SORT[keyof typeof BOOKMARK_SORT];
+
+  export const BOOKMARK_MEDIA_TYPE = {
+    IMAGE: "image",
+    VIDEO: "video",
+  } as const;
+
+  export type BookmarkMediaTypeConst =
+    typeof BOOKMARK_MEDIA_TYPE[keyof typeof BOOKMARK_MEDIA_TYPE];
