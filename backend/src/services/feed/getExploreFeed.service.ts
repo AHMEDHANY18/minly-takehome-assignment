@@ -18,15 +18,13 @@ export async function getExploreFeedService({
   const followingIds = await FeedRepository.getFollowingIds(viewerId);
   const excludeUploaderIds = [viewerId, ...followingIds];
 
-  const [rawItems, total] = await Promise.all([
-    FeedRepository.findExploreFeedWithViewer({
-      skip,
-      take: limit,
-      viewerId,
-      excludeUploaderIds,
-    }),
-    FeedRepository.countExploreFeed({ excludeUploaderIds }),
-  ]);
+  const [rawItems, total] =
+  await FeedRepository.findExploreFeedWithCount({
+    skip,
+    take: limit,
+    viewerId,
+    excludeUploaderIds,
+  });
 
   const items = rawItems.map((item: FeedMediaItem) => {
     const { likes, bookmarks, ...rest } = item;

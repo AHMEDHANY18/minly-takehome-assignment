@@ -112,7 +112,7 @@ export const FeedRepository = {
   // -------------------------
   // Explore (Discovery)
   // -------------------------
-  async findExploreFeedWithViewer(params: {
+  async findExploreFeedWithCount(params: {
     skip: number;
     take: number;
     viewerId: string;
@@ -120,29 +120,27 @@ export const FeedRepository = {
   }) {
     const { skip, take, viewerId, excludeUploaderIds } = params;
 
-    return prisma.media.findMany({
-      skip,
-      take,
-      where: {
-        uploaderId: { notIn: excludeUploaderIds },
-      },
-      orderBy: [
-        { likesCount: "desc" },
-        { commentCount: "desc" },
-        { createdAt: "desc" },
-      ],
-      select: feedSelect(viewerId),
-    });
-  },
+    return prisma.$transaction([
+      prisma.media.findMany({
+        skip,
+        take,
+        where: {
+          uploaderId: { notIn: excludeUploaderIds },
+        },
+        orderBy: [
+          { likesCount: "desc" },
+          { commentCount: "desc" },
+          { createdAt: "desc" },
+        ],
+        select: feedSelect(viewerId),
+      }),
 
-  async countExploreFeed(params: { excludeUploaderIds: string[] }) {
-    const { excludeUploaderIds } = params;
-
-    return prisma.media.count({
-      where: {
-        uploaderId: { notIn: excludeUploaderIds },
-      },
-    });
+      prisma.media.count({
+        where: {
+          uploaderId: { notIn: excludeUploaderIds },
+        },
+      }),
+    ]);
   },
 
   // -------------------------
