@@ -30,6 +30,11 @@ export const AuthAPI = {
     return api.get<MeResponse>("/auth/me");
   },
 
+  // Local development only (backend route active when DEV_AUTH=true)
+  devLogin(email = "dev@minly.local", name = "Dev User") {
+    return api.post("/auth/dev-login", { email, name });
+  },
+
   refresh() {
     return api.post("/auth/refresh");
   },

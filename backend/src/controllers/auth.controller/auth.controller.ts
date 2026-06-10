@@ -3,6 +3,7 @@ import { startLogin } from "../../services/auth/auth-login.service";
 import { handleCallback } from "../../services/auth/auth-callback.service";
 import { refresh } from "../../services/auth/auth-refresh.service";
 import { logout } from "../../services/auth/auth-logout.service";
+import { devLogin } from "../../services/auth/dev-login.service";
 
 export async function cognitoLogin(req: Request, res: Response) {
   return startLogin(req, res);
@@ -22,4 +23,8 @@ export async function authLogout(req: Request, res: Response) {
 
 export async function authMe(req: Request, res: Response) {
   return res.json({ user: req.user });
+}
+
+export async function authDevLogin(req: Request, res: Response) {
+  return devLogin(req, res);
 }

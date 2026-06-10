@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { motion, type Variants } from "framer-motion";
 import { AuthAPI } from "@/features/auth/api/auth.api";
 
@@ -69,11 +70,32 @@ function MinlyLogo() {
 
 export default function LoginPage() {
   const [isRedirecting, setIsRedirecting] = useState(false);
+  const [devBusy, setDevBusy] = useState(false);
+  const [devError, setDevError] = useState<string | null>(null);
+  const nav = useNavigate();
 
   const onContinueWithGoogle = () => {
     if (isRedirecting) return;
     setIsRedirecting(true);
     AuthAPI.startLogin();
+  };
+
+  const onDevLogin = async () => {
+    if (devBusy) return;
+    setDevBusy(true);
+    setDevError(null);
+    try {
+      await AuthAPI.devLogin();
+      nav("/", { replace: true });
+      window.location.reload();
+    } catch (e: unknown) {
+      const err = e as { response?: { data?: { message?: string } } };
+      setDevError(
+        err?.response?.data?.message ??
+          "Dev login failed. Is the backend running with DEV_AUTH=true?"
+      );
+      setDevBusy(false);
+    }
   };
 
   return (
@@ -130,6 +152,27 @@ export default function LoginPage() {
                   </>
                 )}
               </motion.button>
+
+              {import.meta.env.DEV && (
+                <>
+                  <div className="flex items-center gap-3 py-1">
+                    <span className="h-px flex-1 bg-gray-100" />
+                    <span className="text-xs font-medium text-gray-400">DEV</span>
+                    <span className="h-px flex-1 bg-gray-100" />
+                  </div>
+                  <button
+                    type="button"
+                    onClick={onDevLogin}
+                    disabled={devBusy}
+                    className="w-full flex items-center justify-center gap-2 rounded-xl border border-dashed border-blue-300 bg-blue-50/60 py-3 px-4 text-[15px] font-semibold text-blue-700 transition-all hover:bg-blue-50 disabled:opacity-70 disabled:cursor-not-allowed"
+                  >
+                    {devBusy ? "Signing in..." : "Continue as Dev User (local)"}
+                  </button>
+                  {devError && (
+                    <p className="text-center text-xs text-red-500">{devError}</p>
+                  )}
+                </>
+              )}
             </div>
 
             {/* Footer */}
