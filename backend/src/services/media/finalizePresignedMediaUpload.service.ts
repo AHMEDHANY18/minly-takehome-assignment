@@ -5,6 +5,8 @@ import { MediaRepository } from "../../repositories/media.repository";
 import { UserRepository } from "../../repositories/user.repository";
 import { extractS3Key } from "../../utilities/storage/extractS3Key";
 import { deleteFromS3 } from "../../utilities/storage/deleteFromS3";
+import { extractHashtags } from "../../utilities/extractHashtags";
+import { HashtagRepository } from "../../repositories/hashtag.repository";
 
 export async function finalizePresignedUploadService(params: {
   userId: string;
@@ -15,8 +17,9 @@ export async function finalizePresignedUploadService(params: {
   title?: string;
   description?: string;
   type?: "IMAGE" | "VIDEO";
+  thumbnailUrl?: string;
 }): Promise<{ kind: "media" | "avatar"; data: any }> {
-  const { userId, kind, key, title, description, type } = params;
+  const { userId, kind, key, title, description, type, thumbnailUrl } = params;
 
   if (!kind) throw new Error("MISSING_KIND");
   if (kind !== "media" && kind !== "avatar") throw new Error("INVALID_KIND");
@@ -51,8 +54,17 @@ if (!key.startsWith(expectedPrefix)) {
       type,
       title,
       description,
+      thumbnailUrl,
       uploaderId: userId,
     });
+
+    // sync #hashtags from title + description (best-effort)
+    try {
+      const tags = extractHashtags(`${title ?? ""} ${description ?? ""}`);
+      await HashtagRepository.syncMediaHashtags(created.id, tags);
+    } catch {
+      // ignore — hashtags are not critical
+    }
 
     return { kind: "media", data: created };
   }

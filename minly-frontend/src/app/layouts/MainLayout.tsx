@@ -5,17 +5,28 @@ import { useNotificationStore } from "@/features/notifications/store/notificatio
 import { useNotificationStream } from "@/features/notifications/hooks/useNotificationStream";
 import { useNotificationSound } from "@/features/notifications/hooks/useNotificationSound";
 import FloatingNotification from "@/features/notifications/components/FloatingNotification";
+import { useMessagesStore } from "@/features/messages/store/messages.store";
+import { MessagesAPI } from "@/features/messages/api/messages.api";
 
 export default function MainLayout() {
   const user = useUserStore((s) => s.user);
   const unread = useNotificationStore((s) => s.unread);
   const latest = useNotificationStore((s) => s.latest);
+  const dmUnread = useMessagesStore((s) => s.unread);
+  const setDmUnread = useMessagesStore((s) => s.setUnread);
 
   const { pathname } = useLocation();
   const nav = useNavigate();
 
   useNotificationStream(!!user);
   const { play, unlock, unlocked } = useNotificationSound();
+
+  useEffect(() => {
+    if (!user) return;
+    MessagesAPI.unreadCount()
+      .then((res) => setDmUnread(res.data.data.count))
+      .catch(() => {});
+  }, [user, setDmUnread]);
 
   useEffect(() => {
     if (!latest) return;
@@ -44,12 +55,35 @@ export default function MainLayout() {
           <nav className="hidden md:flex items-center gap-1.5">
             <TopLink to="/" label="Home" end />
             <TopLink to="/explore" label="Explore" />
+            <TopLink to="/search" label="Search" />
             <TopLink to="/upload" label="Create" />
+            <TopLink to="/messages" label="Messages" />
             <TopLink to="/notifications" label="Notifications" />
             <TopLink to="/profile" label="Profile" />
           </nav>
 
           <div className="flex items-center gap-2 shrink-0">
+            <button
+              onClick={() => nav("/search")}
+              className="h-10 w-10 rounded-full border border-transparent hover:border-gray-200 hover:bg-gray-100 transition grid place-items-center text-gray-700 md:hidden"
+              aria-label="Search"
+            >
+              <IconSearch />
+            </button>
+
+            <button
+              onClick={() => nav("/messages")}
+              className="relative h-10 w-10 rounded-full border border-transparent hover:border-gray-200 hover:bg-gray-100 transition grid place-items-center text-gray-700"
+              aria-label="Messages"
+            >
+              <IconChat />
+              {dmUnread > 0 && (
+                <span className="absolute -top-0.5 -right-0.5 h-5 min-w-[20px] px-1 rounded-full bg-blue-600 text-white text-[11px] font-semibold grid place-items-center shadow">
+                  {dmUnread > 99 ? "99+" : dmUnread}
+                </span>
+              )}
+            </button>
+
             <button
               onClick={() => nav("/notifications")}
               className="relative h-10 w-10 rounded-full border border-transparent hover:border-gray-200 hover:bg-gray-100 transition grid place-items-center text-gray-700"
@@ -100,7 +134,9 @@ export default function MainLayout() {
                   <nav className="space-y-1">
                     <SideLink to="/" label="Home" icon={<IconHome />} end />
                     <SideLink to="/explore" label="Explore" icon={<IconCompass />} />
+                    <SideLink to="/search" label="Search" icon={<IconSearch />} />
                     <SideLink to="/trending" label="Trending" icon={<IconTrending />} />
+                    <SideLink to="/messages" label="Messages" icon={<IconChat />} />
                     <SideLink to="/saved" label="Saved" icon={<IconBookmark />} />
                   </nav>
 
@@ -257,6 +293,43 @@ function SideLink({
 }
 
 /* ---------------- Icons ---------------- */
+
+function IconSearch() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true">
+      <circle
+        cx="11"
+        cy="11"
+        r="7"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="2"
+      />
+      <path
+        d="M21 21l-4.35-4.35"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
+      />
+    </svg>
+  );
+}
+
+function IconChat() {
+  return (
+    <svg width="20" height="20" viewBox="0 0 24 24" aria-hidden="true">
+      <path
+        d="M21 11.5a8.38 8.38 0 01-.9 3.8 8.5 8.5 0 01-7.6 4.7 8.38 8.38 0 01-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 01-.9-3.8 8.5 8.5 0 014.7-7.6 8.38 8.38 0 013.8-.9h.5a8.48 8.48 0 018 8v.5z"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
 
 function IconBell() {
   return (

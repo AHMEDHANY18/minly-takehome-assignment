@@ -356,6 +356,23 @@ export default function EditProfilePage() {
                     Loading profile…
                   </div>
                 )}
+
+                {/* Privacy */}
+                <div className="rounded-2xl border border-[#E7ECFF] bg-[#F6F8FF] p-4 flex items-center justify-between gap-4">
+                  <div>
+                    <div className="text-sm font-semibold text-gray-900">Blocked users</div>
+                    <div className="mt-1 text-xs text-gray-500">
+                      Manage the people you've blocked.
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => nav("/profile/blocked")}
+                    className="h-10 px-4 rounded-xl border border-[#E7ECFF] bg-white text-sm font-semibold text-gray-700 hover:bg-white/70 transition shrink-0"
+                  >
+                    Manage
+                  </button>
+                </div>
               </div>
             </div>
           </div>

@@ -1,4 +1,6 @@
 import { MediaRepository } from "../../repositories/media.repository";
+import { HashtagRepository } from "../../repositories/hashtag.repository";
+import { extractHashtags } from "../../utilities/extractHashtags";
 
 export async function updateMediaService(
   mediaId: string,
@@ -23,6 +25,16 @@ export async function updateMediaService(
     title: data.title,
     description: data.description,
   });
+
+  // re-sync #hashtags from the updated title + description (best-effort)
+  try {
+    const tags = extractHashtags(
+      `${updatedMedia.title ?? ""} ${updatedMedia.description ?? ""}`
+    );
+    await HashtagRepository.syncMediaHashtags(mediaId, tags);
+  } catch {
+    // ignore — hashtags are not critical
+  }
 
   return updatedMedia;
 }

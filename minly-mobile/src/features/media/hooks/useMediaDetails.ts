@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { MediaDetailsAPI, type MediaComment, type MediaDetailsResponse } from "@/features/media/api/mediaDetails.api";
+import { MediaAPI } from "@/features/media/api/media.api";
 import { UserAPI } from "@/features/profile/api/user.api";
 import { SocialAPI } from "@/features/social/api/social.api";
 import { InteractionsAPI } from "@/features/social/api/interactions.api";
@@ -10,6 +11,7 @@ export function useMediaDetails(mediaId: string, pageSize = 20) {
   const [media, setMedia] = useState<DetailsMedia | null>(null);
   const [comments, setComments] = useState<MediaComment[]>([]);
   const [meAvatarUrl, setMeAvatarUrl] = useState<string | null>(null);
+  const [meId, setMeId] = useState<string | null>(null);
 
   const [initialLoading, setInitialLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -45,7 +47,7 @@ export function useMediaDetails(mediaId: string, pageSize = 20) {
 
       if (meRes.status === "fulfilled") {
         setMeAvatarUrl(meRes.value.data.user.avatarUrl ?? null);
-
+        setMeId(meRes.value.data.user.id ?? null);
       }
     } catch (e: any) {
       setError(e?.response?.data?.message ?? e?.message ?? "Failed to load details");
@@ -179,6 +181,38 @@ export function useMediaDetails(mediaId: string, pageSize = 20) {
     [mediaId, reload]
   );
 
+  /** ✅ edit own comment — PATCH /comment/:commentId */
+  const editComment = useCallback(async (commentId: string, text: string) => {
+    const v = text.trim();
+    if (!v) return false;
+
+    try {
+      const res = await MediaDetailsAPI.editComment(commentId, v);
+      const updated = res.data?.data;
+
+      setComments((prev) =>
+        prev.map((c) =>
+          c.id === commentId
+            ? { ...c, text: updated?.text ?? v, isEdited: updated?.isEdited ?? true }
+            : c
+        )
+      );
+      return true;
+    } catch {
+      return false;
+    }
+  }, []);
+
+  /** ✅ delete media (owner) — DELETE /media/:id */
+  const deleteMedia = useCallback(async () => {
+    try {
+      await MediaAPI.remove(mediaId);
+      return true;
+    } catch {
+      return false;
+    }
+  }, [mediaId]);
+
   useEffect(() => {
     loadFirst();
   }, [loadFirst]);
@@ -187,6 +221,7 @@ export function useMediaDetails(mediaId: string, pageSize = 20) {
     media,
     comments,
     meAvatarUrl,
+    meId,
     initialLoading,
     refreshing,
     loadingMore,
@@ -198,5 +233,7 @@ export function useMediaDetails(mediaId: string, pageSize = 20) {
     toggleLike,
     toggleBookmark,
     addComment,
+    editComment,
+    deleteMedia,
   };
 }

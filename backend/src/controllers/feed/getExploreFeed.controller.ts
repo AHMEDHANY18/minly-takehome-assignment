@@ -12,12 +12,19 @@ export async function getExploreFeedController(
     const limitRaw = parseInt(req.query.limit as string, 10) || 20;
     const limit = Math.min(Math.max(limitRaw, 1), 50);
 
+    const cursor = (req.query.cursor as string) || null;
+
     const viewerId = req.user?.id;
     if (!viewerId) {
       return res.status(401).json({ status: "error", message: "Unauthorized" });
     }
 
-    const result = await getExploreFeedService({ page, limit, viewerId });
+    const result = await getExploreFeedService({
+      page,
+      limit,
+      viewerId,
+      cursor,
+    });
 
     return res.status(200).json({
       status: "success",

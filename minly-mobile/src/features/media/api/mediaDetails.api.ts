@@ -5,6 +5,7 @@ export type MediaComment = {
   id: string;
   text: string;
   createdAt: string;
+  isEdited?: boolean;
   user: { id: string; name: string; avatarUrl: string | null };
   _count?: { replies: number };
 };
@@ -76,5 +77,13 @@ export const MediaDetailsAPI = {
   // ✅ GET /comment/:commentId/replies
   getReplies(commentId: string, params?: { limit?: number; cursor?: string | null }) {
     return api.get<RepliesResponse>(`/comment/${commentId}/replies`, { params });
+  },
+
+  // ✅ PATCH /comment/:commentId (owner only)
+  editComment(commentId: string, text: string) {
+    return api.patch<{
+      status: "success";
+      data: { id: string; text: string; isEdited: boolean; updatedAt: string };
+    }>(`/comment/${commentId}`, { text });
   },
 };

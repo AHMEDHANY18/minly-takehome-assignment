@@ -10,6 +10,8 @@ import {
 import { SocialAPI } from "@/shared/api/social.api";
 import { useUserStore } from "@/shared/store/user.store";
 import { IconBookmark, IconComment, IconHeart, IconSend } from "../feed/icons";
+import ReportModal from "@/shared/components/ReportModal";
+import HashtagText from "@/shared/components/HashtagText";
 
 /* ---------------- Types ---------------- */
 
@@ -45,6 +47,20 @@ export default function MediaDetailsPage() {
     null
   );
   const commentInputRef = useRef<HTMLInputElement | null>(null);
+
+  // report modal target (media or comment)
+  const [report, setReport] = useState<{
+    targetType: "MEDIA" | "COMMENT";
+    targetId: string;
+    label?: string;
+  } | null>(null);
+
+  // inline comment edit
+  const [editingComment, setEditingComment] = useState<{
+    id: string;
+    text: string;
+  } | null>(null);
+  const [editSaving, setEditSaving] = useState(false);
 
   const uploader = media?.uploader;
 
@@ -286,6 +302,37 @@ export default function MediaDetailsPage() {
     }
   };
 
+  const saveCommentEdit = async () => {
+    if (!editingComment || editSaving) return;
+
+    const text = editingComment.text.trim();
+    if (!text) return;
+
+    setEditSaving(true);
+    try {
+      const res = await MediaDetailsAPI.editComment(editingComment.id, text);
+      const updated = res.data.data;
+
+      setComments((prev) =>
+        prev.map((c) =>
+          c.id === editingComment.id
+            ? {
+                ...c,
+                text: updated?.text ?? text,
+                isEdited: updated?.isEdited ?? true,
+                updatedAt: updated?.updatedAt ?? new Date().toISOString(),
+              }
+            : c
+        )
+      );
+      setEditingComment(null);
+    } catch (e) {
+      console.error("Failed to edit comment", e);
+    } finally {
+      setEditSaving(false);
+    }
+  };
+
   /* ---------------- Render ---------------- */
 
   return (
@@ -323,6 +370,7 @@ export default function MediaDetailsPage() {
               className="w-full h-full max-h-[78vh] object-cover"
               controls
               preload="metadata"
+              poster={media.thumbnailUrl ?? undefined}
             >
               <source src={media.url} />
             </video>
@@ -383,9 +431,10 @@ export default function MediaDetailsPage() {
                   <span className="font-semibold">
                     {uploader?.name ?? "User"}
                   </span>{" "}
-                  <span className="text-gray-700">
-                    {media?.description || media?.title}
-                  </span>
+                  <HashtagText
+                    text={(media?.description || media?.title) ?? ""}
+                    className="text-gray-700"
+                  />
                 </div>
               </div>
             </div>
@@ -407,11 +456,49 @@ export default function MediaDetailsPage() {
                         src={c.user.avatarUrl ?? null}
                         size="sm"
                       />
-                      <div>
-                        <div className="text-sm">
-                          <span className="font-semibold">{c.user.name}</span>{" "}
-                          <span className="text-gray-700">{c.text}</span>
-                        </div>
+                      <div className="flex-1 min-w-0">
+                        {editingComment?.id === c.id ? (
+                          <div>
+                            <textarea
+                              value={editingComment.text}
+                              onChange={(e) =>
+                                setEditingComment({
+                                  id: c.id,
+                                  text: e.target.value.slice(0, 500),
+                                })
+                              }
+                              rows={2}
+                              className="w-full rounded-xl border border-gray-200 bg-gray-50 p-2 text-sm outline-none focus:ring-2 focus:ring-blue-200 resize-none"
+                              autoFocus
+                            />
+                            <div className="mt-1 flex gap-3 text-xs">
+                              <button
+                                onClick={saveCommentEdit}
+                                disabled={editSaving || !editingComment.text.trim()}
+                                className="font-semibold text-blue-700 hover:underline disabled:opacity-50"
+                              >
+                                {editSaving ? "Saving…" : "Save"}
+                              </button>
+                              <button
+                                onClick={() => setEditingComment(null)}
+                                disabled={editSaving}
+                                className="text-gray-500 hover:underline disabled:opacity-50"
+                              >
+                                Cancel
+                              </button>
+                            </div>
+                          </div>
+                        ) : (
+                          <div className="text-sm">
+                            <span className="font-semibold">{c.user.name}</span>{" "}
+                            <span className="text-gray-700">{c.text}</span>
+                            {c.isEdited ? (
+                              <span className="ml-1 text-[11px] text-gray-400">
+                                (edited)
+                              </span>
+                            ) : null}
+                          </div>
+                        )}
 
                         <div className="mt-1 flex gap-3 text-xs text-gray-400">
                           <span>{formatTime(c.createdAt)}</span>
@@ -424,6 +511,31 @@ export default function MediaDetailsPage() {
                           >
                             Reply
                           </button>
+                          {me?.id === c.user.id ? (
+                            <button
+                              onClick={() =>
+                                setEditingComment({ id: c.id, text: c.text })
+                              }
+                              className="hover:underline"
+                            >
+                              Edit
+                            </button>
+                          ) : (
+                            <button
+                              onClick={() =>
+                                setReport({
+                                  targetType: "COMMENT",
+                                  targetId: c.id,
+                                  label: `${c.user.name}'s comment`,
+                                })
+                              }
+                              className="hover:underline inline-flex items-center gap-1"
+                              aria-label="Report comment"
+                            >
+                              <IconFlag size={11} />
+                              Report
+                            </button>
+                          )}
                           {c._count?.replies ? (
                             <button
                               onClick={() => toggleReplies(c)}
@@ -496,6 +608,22 @@ export default function MediaDetailsPage() {
                 <IconSend />
               </button>
 
+              {media && me?.id !== uploader?.id && (
+                <button
+                  onClick={() =>
+                    setReport({
+                      targetType: "MEDIA",
+                      targetId: media.id,
+                      label: media.title?.trim() || "this post",
+                    })
+                  }
+                  className="h-10 w-10 rounded-full hover:bg-gray-50 grid place-items-center text-gray-700"
+                  aria-label="Report media"
+                >
+                  <IconFlag />
+                </button>
+              )}
+
               <button
                 onClick={onToggleBookmark}
                 className="ml-auto h-10 w-10 rounded-full hover:bg-gray-50 grid place-items-center"
@@ -552,11 +680,34 @@ export default function MediaDetailsPage() {
           </div>
         </div>
       </div>
+
+      <ReportModal
+        open={!!report}
+        targetType={report?.targetType ?? "MEDIA"}
+        targetId={report?.targetId ?? ""}
+        targetLabel={report?.label}
+        onClose={() => setReport(null)}
+      />
     </div>
   );
 }
 
 /* ---------------- Helpers ---------------- */
+
+function IconFlag({ size = 18 }: { size?: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" aria-hidden="true">
+      <path
+        d="M4 21V4m0 1h13l-2.5 4L17 13H4"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
 
 function Avatar({
   name,

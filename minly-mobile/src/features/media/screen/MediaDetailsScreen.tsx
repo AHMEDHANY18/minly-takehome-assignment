@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import {
   ActivityIndicator,
+  Alert,
   FlatList,
   Image,
   KeyboardAvoidingView,
@@ -18,6 +19,9 @@ import { useLocalSearchParams, useRouter } from "expo-router";
 import { useMediaDetails } from "@/features/media/hooks/useMediaDetails";
 import { useCommentReplies } from "@/features/media/hooks/useCommentReplies";
 import type { MediaComment, ReplyItem } from "@/features/media/api/mediaDetails.api";
+import { HashtagText } from "@/shared/components/hashtag-text";
+import { ReportModal } from "@/features/social/components/ReportModal";
+import type { ReportTargetType } from "@/features/social/api/report.api";
 
 /* ---------- Helpers ---------- */
 
@@ -78,19 +82,45 @@ function createOptimisticReply(text: string, meAvatarUrl?: string | null): Reply
 
 function CommentItem({
   item,
+  meId,
   onPressReply,
+  onEditComment,
+  onReportComment,
   injectedReplies,
   onConsumeInjected,
 }: {
   item: MediaComment;
+  meId: string | null;
   onPressReply: (commentId: string, username: string) => void;
+  onEditComment: (commentId: string, text: string) => Promise<boolean>;
+  onReportComment: (commentId: string) => void;
   injectedReplies?: ReplyItem[];
   onConsumeInjected: (commentId: string) => void;
 }) {
   const [expanded, setExpanded] = useState(false);
   const replies = useCommentReplies(item.id, 10);
 
+  const isMine = !!meId && item.user?.id === meId;
+  const [editing, setEditing] = useState(false);
+  const [editText, setEditText] = useState(item.text);
+  const [savingEdit, setSavingEdit] = useState(false);
+
   const repliesCount = item?._count?.replies ?? 0;
+
+  const saveEdit = async () => {
+    const v = editText.trim();
+    if (!v || savingEdit) return;
+
+    setSavingEdit(true);
+    const ok = await onEditComment(item.id, v);
+    setSavingEdit(false);
+
+    if (ok) {
+      setEditing(false);
+    } else {
+      Alert.alert("Error", "Failed to edit comment");
+    }
+  };
 
   const toggle = async () => {
     if (!expanded) {
@@ -122,19 +152,68 @@ function CommentItem({
       </View>
 
       <View style={{ flex: 1 }}>
-        <Text style={styles.commentText}>
-          <Text style={styles.commentUser}>{item.user?.name ?? "User"} </Text>
-          {item.text}
-        </Text>
+        {editing ? (
+          <View>
+            <TextInput
+              value={editText}
+              onChangeText={setEditText}
+              style={styles.editInput}
+              autoFocus
+              multiline
+              maxLength={500}
+            />
+            <View style={styles.commentMetaRow}>
+              <Pressable hitSlop={10} disabled={savingEdit} onPress={saveEdit}>
+                <Text style={styles.editSaveText}>
+                  {savingEdit ? "Saving..." : "Save"}
+                </Text>
+              </Pressable>
+              <Pressable
+                hitSlop={10}
+                disabled={savingEdit}
+                onPress={() => {
+                  setEditing(false);
+                  setEditText(item.text);
+                }}
+              >
+                <Text style={styles.replyBtnText}>Cancel</Text>
+              </Pressable>
+            </View>
+          </View>
+        ) : (
+          <>
+            <Text style={styles.commentText}>
+              <Text style={styles.commentUser}>{item.user?.name ?? "User"} </Text>
+              {item.text}
+              {item.isEdited ? <Text style={styles.editedMark}> (edited)</Text> : null}
+            </Text>
 
-        {/* meta row */}
-        <View style={styles.commentMetaRow}>
-          <Text style={styles.commentMetaTime}>{timeAgoSmall(item.createdAt)}</Text>
+            {/* meta row */}
+            <View style={styles.commentMetaRow}>
+              <Text style={styles.commentMetaTime}>{timeAgoSmall(item.createdAt)}</Text>
 
-          <Pressable hitSlop={10} onPress={() => onPressReply(item.id, item.user?.name ?? "User")}>
-            <Text style={styles.replyBtnText}>Reply</Text>
-          </Pressable>
-        </View>
+              <Pressable hitSlop={10} onPress={() => onPressReply(item.id, item.user?.name ?? "User")}>
+                <Text style={styles.replyBtnText}>Reply</Text>
+              </Pressable>
+
+              {isMine ? (
+                <Pressable
+                  hitSlop={10}
+                  onPress={() => {
+                    setEditText(item.text);
+                    setEditing(true);
+                  }}
+                >
+                  <Text style={styles.replyBtnText}>Edit</Text>
+                </Pressable>
+              ) : (
+                <Pressable hitSlop={10} onPress={() => onReportComment(item.id)}>
+                  <Text style={styles.replyBtnText}>Report</Text>
+                </Pressable>
+              )}
+            </View>
+          </>
+        )}
 
         {/* View replies */}
         {repliesCount > 0 ? (
@@ -201,6 +280,7 @@ export default function PostDetails() {
     media,
     comments,
     meAvatarUrl,
+    meId,
     initialLoading,
     refreshing,
     loadingMore,
@@ -212,6 +292,8 @@ export default function PostDetails() {
     toggleLike,
     toggleBookmark,
     addComment,
+    editComment,
+    deleteMedia,
   } = useMediaDetails(mediaId, 20);
 
   const [text, setText] = useState("");
@@ -220,7 +302,38 @@ export default function PostDetails() {
   // for instant UI: keep newly-created reply per commentId
   const [injectedReplies, setInjectedReplies] = useState<Record<string, ReplyItem[]>>({});
 
+  // report modal target (media or a specific comment)
+  const [reportTarget, setReportTarget] = useState<{
+    type: ReportTargetType;
+    id: string;
+  } | null>(null);
+
+  const isMyPost = !!meId && media?.uploader?.id === meId;
+
   const createdLabel = useMemo(() => timeAgoUpper(media?.createdAt), [media?.createdAt]);
+
+  const confirmDeletePost = () => {
+    Alert.alert("Delete post", "Are you sure you want to delete this post?", [
+      { text: "Cancel", style: "cancel" },
+      {
+        text: "Delete",
+        style: "destructive",
+        onPress: async () => {
+          const ok = await deleteMedia();
+          if (ok) router.back();
+          else Alert.alert("Error", "Failed to delete media");
+        },
+      },
+    ]);
+  };
+
+  const onPressPostMenu = () => {
+    if (isMyPost) {
+      confirmDeletePost();
+    } else {
+      setReportTarget({ type: "MEDIA", id: mediaId });
+    }
+  };
 
   const submit = async () => {
     if (addingComment) return;
@@ -276,8 +389,12 @@ export default function PostDetails() {
 
             <Text style={styles.headerTitle}>POST</Text>
 
-            <Pressable hitSlop={10}>
-              <Ionicons name="ellipsis-horizontal" size={18} color="#111" />
+            <Pressable hitSlop={10} onPress={onPressPostMenu}>
+              <Ionicons
+                name={isMyPost ? "trash-outline" : "flag-outline"}
+                size={18}
+                color="#111"
+              />
             </Pressable>
           </View>
 
@@ -370,7 +487,7 @@ export default function PostDetails() {
 
                     <Text style={styles.caption}>
                       <Text style={styles.captionUser}>{media?.uploader?.name ?? "user"} </Text>
-                      {media?.description ?? media?.title ?? ""}
+                      <HashtagText text={media?.description ?? media?.title ?? ""} />
                     </Text>
 
                     <Text style={styles.time}>{createdLabel}</Text>
@@ -382,10 +499,15 @@ export default function PostDetails() {
               renderItem={({ item }) => (
                 <CommentItem
                   item={item}
+                  meId={meId}
                   onPressReply={(commentId, username) => {
                     setReplyTarget({ commentId, username });
                     setTimeout(() => inputRef.current?.focus(), 50);
                   }}
+                  onEditComment={editComment}
+                  onReportComment={(commentId) =>
+                    setReportTarget({ type: "COMMENT", id: commentId })
+                  }
                   injectedReplies={injectedReplies[item.id]}
                   onConsumeInjected={(commentId) => {
                     setInjectedReplies((prev) => {
@@ -448,6 +570,13 @@ export default function PostDetails() {
           </View>
         </View>
       </KeyboardAvoidingView>
+
+      <ReportModal
+        visible={!!reportTarget}
+        targetType={reportTarget?.type ?? "MEDIA"}
+        targetId={reportTarget?.id ?? mediaId}
+        onClose={() => setReportTarget(null)}
+      />
     </SafeAreaView>
   );
 }
@@ -523,6 +652,18 @@ const styles = StyleSheet.create({
   commentMetaRow: { flexDirection: "row", gap: 14, marginTop: 6, alignItems: "center" },
   commentMetaTime: { fontSize: 11, color: "#8A8F99" },
   replyBtnText: { fontSize: 11, color: "#6B7280", fontWeight: "800" },
+  editedMark: { fontSize: 11, color: "#8A8F99", fontWeight: "400" },
+  editSaveText: { fontSize: 11, color: "#2F80ED", fontWeight: "900" },
+  editInput: {
+    borderWidth: 1,
+    borderColor: "#E5E7EB",
+    borderRadius: 10,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    fontSize: 12,
+    color: "#111",
+    backgroundColor: "#F9FAFB",
+  },
 
   viewRepliesText: { fontSize: 11, color: "#6B7280", fontWeight: "800" },
 

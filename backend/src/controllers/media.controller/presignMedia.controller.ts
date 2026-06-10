@@ -12,7 +12,7 @@ export async function presignMediaUploadController(
     if (!user) return res.status(401).json({ message: "Unauthorized" });
 
     const { kind, contentType, type } = req.body as {
-      kind?: "media" | "avatar";
+      kind?: "media" | "avatar" | "thumbnail";
       contentType?: string;
       type?: "IMAGE" | "VIDEO";
     };

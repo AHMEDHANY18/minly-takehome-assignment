@@ -28,26 +28,20 @@ export function useNotificationSound() {
 
       setUnlocked(true);
       localStorage.setItem("soundEnabled", "1");
-      console.log("[SOUND] unlocked");
       return true;
-    } catch (e) {
-      console.log("[SOUND] unlock failed", e);
+    } catch {
       return false;
     }
   }, []);
 
   const play = useCallback(async () => {
     const audio = audioRef.current;
-    if (!audio || !unlocked) {
-      console.log("[SOUND] blocked (not unlocked yet)");
-      return;
-    }
+    if (!audio || !unlocked) return;
 
     try {
       audio.currentTime = 0;
       await audio.play();
-    } catch (e) {
-      console.log("[SOUND] play failed", e);
+    } catch {
       setUnlocked(false);
       localStorage.removeItem("soundEnabled");
     }

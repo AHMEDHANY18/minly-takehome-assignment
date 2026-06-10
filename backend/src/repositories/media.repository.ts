@@ -295,7 +295,9 @@ export const MediaRepository = {
       select: {
         id: true,
         text: true,
+        isEdited: true,
         createdAt: true,
+        updatedAt: true,
         user: {
           select: {
             id: true,

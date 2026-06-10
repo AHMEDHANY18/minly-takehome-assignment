@@ -17,6 +17,8 @@ export async function getTrendingFeedController(
       168
     );
 
+    const cursor = (req.query.cursor as string) || null;
+
     const viewerId = req.user?.id;
     if (!viewerId) {
       return res.status(401).json({ status: "error", message: "Unauthorized" });
@@ -27,6 +29,7 @@ export async function getTrendingFeedController(
       limit,
       windowHours,
       viewerId,
+      cursor,
     });
 
     return res.status(200).json({

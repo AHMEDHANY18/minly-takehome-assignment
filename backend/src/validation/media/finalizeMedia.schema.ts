@@ -2,7 +2,7 @@ import { z } from "zod";
 
 export const finalizeMediaSchema = z.object({
   body: z.object({
-    kind: z.enum(["media", "avatar"]),
+    kind: z.enum(["media", "avatar"]).optional(),
     key: z.string().min(1),
     title: z.string().min(1).max(200).optional(),
     description: z.string().max(500).optional(),

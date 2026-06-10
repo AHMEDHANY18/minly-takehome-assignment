@@ -3,6 +3,28 @@ import {
   useNotificationStore,
   type NotificationItem,
 } from "@/features/notifications/store/notification.store";
+import { useMessagesStore } from "@/features/messages/store/messages.store";
+import type { MessageItem } from "@/features/messages/api/messages.api";
+
+type StreamPayload =
+  | (NotificationItem & { kind?: undefined })
+  | { kind: "MESSAGE"; conversationId: string; message: MessageItem };
+
+function dispatchPayload(
+  raw: string,
+  pushIncoming: (n: NotificationItem) => void
+) {
+  try {
+    const payload = JSON.parse(raw) as StreamPayload;
+    if (payload && (payload as { kind?: string }).kind === "MESSAGE") {
+      const ev = payload as Extract<StreamPayload, { kind: "MESSAGE" }>;
+      useMessagesStore.getState().pushIncoming(ev.conversationId, ev.message);
+      return;
+    }
+    pushIncoming(payload as NotificationItem);
+  } catch {
+  }
+}
 
 const API_BASE_URL =
   import.meta.env.VITE_API_BASE_URL ??
@@ -28,28 +50,18 @@ export function useNotificationStream(enabled: boolean) {
 
     es.onopen = () => {
       setConnected(true);
-      console.log("[SSE] open");
     };
 
     es.onmessage = (evt) => {
-      try {
-        const payload = JSON.parse(evt.data) as NotificationItem;
-        pushIncoming(payload);
-      } catch {
-      }
+      dispatchPayload(evt.data, pushIncoming);
     };
 
     es.addEventListener("notification", (evt) => {
-      try {
-        const payload = JSON.parse((evt as MessageEvent).data) as NotificationItem;
-        pushIncoming(payload);
-      } catch {
-      }
+      dispatchPayload((evt as MessageEvent).data, pushIncoming);
     });
 
-    es.onerror = (e) => {
+    es.onerror = () => {
       setConnected(false);
-      console.log("[SSE] error", e);
     };
 
     return () => {

@@ -7,6 +7,7 @@ import { useFeed } from "./hooks/useFeed";
 import { useEffect, useRef, useState } from "react";
 import { IconBookmark, IconComment, IconHeart, IconSend } from "./icons";
 import { PAGINATION } from "@/shared/constant";
+import HashtagText from "@/shared/components/HashtagText";
 
 export default function FeedPage({ mode = "home" }: { mode?: FeedMode }) {
   const {
@@ -284,12 +285,12 @@ function PostCard({
         <div className="mt-3">
           {item.title && (
             <div className="text-base font-semibold text-gray-900">
-              {item.title}
+              <HashtagText text={item.title} />
             </div>
           )}
           {item.description && (
             <p className="mt-1 text-sm text-gray-600 leading-relaxed">
-              {item.description}
+              <HashtagText text={item.description} />
             </p>
           )}
         </div>

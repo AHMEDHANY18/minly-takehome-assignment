@@ -7,16 +7,15 @@ export async function finalizeUploadController(req: AuthRequest, res: Response, 
     const user = req.user;
     if (!user) return res.status(401).json({ message: "Unauthorized" });
 
-    const { kind, key, title, description, type } = req.body as {
+    const { kind, key, title, description, type, thumbnailUrl } = req.body as {
       kind?: "media" | "avatar";
       key?: string;
       title?: string;
       description?: string;
       type?: "IMAGE" | "VIDEO";
+      thumbnailUrl?: string;
     };
-      console.log("🚀 ~ finalizeUploadController ~ kind:", kind)
 
-      console.log("🚀 ~ finalizeUploadController ~ key:", key)
     const result = await finalizePresignedUploadService({
       userId: user.id,
       kind: kind ?? "media",
@@ -24,6 +23,7 @@ export async function finalizeUploadController(req: AuthRequest, res: Response, 
       title,
       description,
       type,
+      thumbnailUrl,
     });
 
     return res.status(kind === "media" ? 201 : 200).json({

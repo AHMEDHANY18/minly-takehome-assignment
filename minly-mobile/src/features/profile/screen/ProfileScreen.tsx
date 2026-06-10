@@ -1,6 +1,7 @@
-import React, { useMemo } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import {
   ActivityIndicator,
+  Alert,
   FlatList,
   Image,
   Pressable,
@@ -21,6 +22,10 @@ import { ProfileMediaCard } from "../components/ProfileMediaCard";
 import { useSavedItems } from "@/features/saved/hooks/useSavedItems";
 import { SavedGridCard } from "@/features/saved/components/SavedGridCard";
 
+// DM + block
+import { MessagesAPI } from "@/features/messages/api/messages.api";
+import { BlockAPI } from "@/features/social/api/block.api";
+
 type Props = {
   userId?: string;
   readonly?: boolean;
@@ -38,6 +43,91 @@ export default function ProfileScreen({ userId, readonly }: Props) {
 
   // ✅ effective readonly: لو اتبعت readonly استخدمه، وإلا اعتمد على meta.isMe
   const effectiveReadonly = readonly ?? !profile.isMe;
+
+  // DM + block state (other users' profiles only)
+  const [dmBusy, setDmBusy] = useState(false);
+  const [blockBusy, setBlockBusy] = useState(false);
+  const [isBlocked, setIsBlocked] = useState(false);
+
+  useEffect(() => {
+    if (!userId || !effectiveReadonly) return;
+
+    let active = true;
+    BlockAPI.isBlocked(userId)
+      .then((v) => {
+        if (active) setIsBlocked(v);
+      })
+      .catch(() => {});
+
+    return () => {
+      active = false;
+    };
+  }, [userId, effectiveReadonly]);
+
+  const onMessage = async () => {
+    if (!userId || dmBusy) return;
+
+    setDmBusy(true);
+    try {
+      // POST /conversation { userId } — get-or-create the 1:1 conversation
+      const conv = await MessagesAPI.getOrCreate(userId);
+      router.push({
+        pathname: "/messages/[id]" as any,
+        params: {
+          id: conv.id,
+          name: conv.participant?.name ?? profile.user?.name ?? "Chat",
+          avatarUrl: conv.participant?.avatarUrl ?? profile.user?.avatarUrl ?? "",
+        },
+      });
+    } catch (e: any) {
+      Alert.alert(
+        "Error",
+        e?.response?.data?.message ?? e?.message ?? "Failed to open conversation"
+      );
+    } finally {
+      setDmBusy(false);
+    }
+  };
+
+  const doToggleBlock = async () => {
+    if (!userId || blockBusy) return;
+
+    setBlockBusy(true);
+    try {
+      // POST /block/:userId — toggle
+      const res = await BlockAPI.toggle(userId);
+      setIsBlocked(res.isBlocked);
+      // blocking removes follow relations server-side; refresh counts
+      profile.refresh();
+    } catch (e: any) {
+      Alert.alert(
+        "Error",
+        e?.response?.data?.message ?? e?.message ?? "Failed to update block"
+      );
+    } finally {
+      setBlockBusy(false);
+    }
+  };
+
+  const onPressBlock = () => {
+    if (!userId || blockBusy) return;
+    const name = profile.user?.name ?? "this user";
+
+    Alert.alert(
+      isBlocked ? "Unblock user" : "Block user",
+      isBlocked
+        ? `Unblock ${name}? They will be able to message and follow you again.`
+        : `Block ${name}? You will unfollow each other and they won't be able to message you.`,
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: isBlocked ? "Unblock" : "Block",
+          style: isBlocked ? "default" : "destructive",
+          onPress: doToggleBlock,
+        },
+      ]
+    );
+  };
 
   const saved = useSavedItems(24);
 
@@ -205,6 +295,38 @@ export default function ProfileScreen({ userId, readonly }: Props) {
               >
                 <Text style={styles.editText}>Edit Profile</Text>
               </Pressable>
+            ) : userId ? (
+              <View style={styles.actionsRow}>
+                <Pressable
+                  style={[styles.messageBtn, dmBusy && { opacity: 0.6 }]}
+                  disabled={dmBusy}
+                  onPress={onMessage}
+                >
+                  <Ionicons name="chatbubble-ellipses-outline" size={16} color="#fff" />
+                  <Text style={styles.messageText}>
+                    {dmBusy ? "Opening..." : "Message"}
+                  </Text>
+                </Pressable>
+
+                <Pressable
+                  style={[
+                    styles.blockBtn,
+                    isBlocked && styles.blockBtnActive,
+                    blockBusy && { opacity: 0.6 },
+                  ]}
+                  disabled={blockBusy}
+                  onPress={onPressBlock}
+                >
+                  <Ionicons
+                    name={isBlocked ? "lock-open-outline" : "ban-outline"}
+                    size={16}
+                    color={isBlocked ? "#111" : "#D92D20"}
+                  />
+                  <Text style={[styles.blockText, isBlocked && styles.blockTextActive]}>
+                    {blockBusy ? "..." : isBlocked ? "Unblock" : "Block"}
+                  </Text>
+                </Pressable>
+              </View>
             ) : null}
 
             <View style={styles.summaryCard}>
@@ -331,6 +453,34 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   editText: { color: "#fff", fontWeight: "700" },
+
+  actionsRow: { marginTop: 12, flexDirection: "row", gap: 10 },
+  messageBtn: {
+    flex: 1,
+    backgroundColor: "#2D7CFF",
+    borderRadius: 24,
+    paddingVertical: 11,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 6,
+  },
+  messageText: { color: "#fff", fontWeight: "700" },
+  blockBtn: {
+    flex: 1,
+    backgroundColor: "#fff",
+    borderWidth: 1,
+    borderColor: "#F2C5C2",
+    borderRadius: 24,
+    paddingVertical: 11,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 6,
+  },
+  blockBtnActive: { borderColor: "#D0D5DD" },
+  blockText: { color: "#D92D20", fontWeight: "700" },
+  blockTextActive: { color: "#111" },
 
   summaryCard: {
     marginTop: 14,

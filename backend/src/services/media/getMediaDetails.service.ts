@@ -1,4 +1,5 @@
 import { MediaRepository } from "../../repositories/media.repository";
+import { HashtagRepository } from "../../repositories/hashtag.repository";
 
 export async function getMediaDetailsService(params: {
   mediaId: string;
@@ -26,8 +27,16 @@ export async function getMediaDetailsService(params: {
     throw err;
   }
 
+  // hashtags — best effort
+  let hashtags: string[] = [];
+  try {
+    hashtags = await HashtagRepository.getTagsForMedia(mediaId);
+  } catch {
+    // ignore
+  }
+
   return {
-    media,
+    media: { ...media, hashtags },
     comments,
     pagination: {
       page,

@@ -1,50 +1,84 @@
-# Welcome to your Expo app 👋
+# Minly Mobile
 
-This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).
+React Native (Expo) client for Minly — a media-sharing social app. Talks to the Minly backend REST API (`/v1`) with the shared `{ status, data }` envelope.
 
-## Get started
+## Stack
 
-1. Install dependencies
+- **Expo SDK 54** / React Native 0.81 / React 19
+- **expo-router** — file-based routing (typed routes enabled)
+- **axios** — API client with Bearer-token interceptor (`src/api/client.ts`)
+- **zustand** — auth/session state (`src/store/auth.store.ts`)
+- **expo-secure-store** — token persistence
+- **expo-web-browser + expo-linking** — Cognito hosted-UI OAuth (login / signup)
+- TypeScript throughout, no UI kit — plain `StyleSheet` components
 
-   ```bash
-   npm install
-   ```
+## Project structure
 
-2. Start the app
-
-   ```bash
-   npx expo start
-   ```
-
-In the output, you'll find options to open the app in a
-
-- [development build](https://docs.expo.dev/develop/development-builds/introduction/)
-- [Android emulator](https://docs.expo.dev/workflow/android-studio-emulator/)
-- [iOS simulator](https://docs.expo.dev/workflow/ios-simulator/)
-- [Expo Go](https://expo.dev/go), a limited sandbox for trying out app development with Expo
-
-You can start developing by editing the files inside the **app** directory. This project uses [file-based routing](https://docs.expo.dev/router/introduction).
-
-## Get a fresh project
-
-When you're ready, run:
-
-```bash
-npm run reset-project
+```
+app/                      # expo-router routes (thin wrappers, default-export screens)
+  (tabs)/                 # bottom tabs: home, upload, saved, notification, profile
+  auth/                   # login / register / OAuth success
+  media/[id]/details.tsx  # post details + comments
+  messages/               # conversations list + chat ([id])
+  hashtag/[tag].tsx       # posts for a hashtag
+  search.tsx              # user & media search
+  user/profile/[id].tsx   # other users' profiles
+src/
+  api/client.ts           # axios instance + base URL + auth header
+  features/<feature>/     # api/ hooks/ components/ screen/ per feature
+    auth, feed, media, messages, search, hashtag,
+    notifications, profile, saved, social (block/report/follow/like)
+  shared/                 # reusable components, hooks, theme, utils
+  store/                  # zustand stores
+  types/                  # shared TS types
 ```
 
-This command will move the starter code to the **app-example** directory and create a blank **app** directory where you can start developing.
+## Configuration
 
-## Learn more
+| Env var | Purpose | Default |
+| --- | --- | --- |
+| `EXPO_PUBLIC_API_BASE_URL` | Backend base URL **including** `/v1` | `https://minly-takehome-assignment.onrender.com/v1` |
 
-To learn more about developing your project with Expo, look at the following resources:
+Example `.env`:
 
-- [Expo documentation](https://docs.expo.dev/): Learn fundamentals, or go into advanced topics with our [guides](https://docs.expo.dev/guides).
-- [Learn Expo tutorial](https://docs.expo.dev/tutorial/introduction/): Follow a step-by-step tutorial where you'll create a project that runs on Android, iOS, and the web.
+```bash
+EXPO_PUBLIC_API_BASE_URL=http://192.168.1.10:3000/v1
+```
 
-## Join the community
+(Use your machine's LAN IP, not `localhost`, when testing on a device.)
 
-Join our community of developers creating universal apps.
+## Run
 
-- [Expo on GitHub](https://github.com/expo/expo): View our open source platform and contribute.
-- [Discord community](https://chat.expo.dev): Chat with Expo users and ask questions.
+```bash
+npm install
+npx expo start
+```
+
+Then open in Expo Go (scan QR), or press `a` / `i` for the Android emulator / iOS simulator.
+
+## Build (EAS)
+
+`eas.json` defines `development`, `preview` (internal APK), and `production` profiles:
+
+```bash
+npx eas build --profile preview --platform android
+npx eas build --profile production --platform android
+```
+
+OTA updates are configured via `expo-updates` (`runtimeVersion: appVersion`).
+
+## Features
+
+- **Auth** — Google sign-in via the backend's Cognito hosted UI; separate Register screen (signup hint), reachable from Login via "Create account"
+- **Feeds** — Home (following) / Explore / Trending with pull-to-refresh and infinite scroll
+- **Upload** — image/video upload through S3 presigned URLs (presign → PUT → finalize)
+- **Post details** — likes, bookmarks, threaded comments with replies
+  - edit your own comments (PATCH `/comment/:id`, shows "(edited)" marker)
+  - delete your own posts (here and from the profile grid) with confirmation
+  - report posts/comments (SPAM / ABUSE / INAPPROPRIATE / OTHER)
+- **Search** — users and media (`/user/search`, `/media/search`), debounced, paginated
+- **Hashtags** — tappable `#tags` in captions open `/hashtag/[tag]` feeds
+- **Direct messages** — conversation list with unread badges, 1:1 chat with optimistic send, cursor pagination for history, 5s polling while focused, mark-as-read; unread-count badge on the Home header
+- **Profiles** — own profile (edit, saved tab) and other users (follow, **Message**, **Block/Unblock** with confirmation)
+- **Notifications** — likes, comments, follows, mentions
+- **Saved** — bookmarked media grid

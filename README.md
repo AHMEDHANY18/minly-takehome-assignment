@@ -17,10 +17,15 @@ Built end‑to‑end as a realistic product with production‑style architecture
 ## ✨ Features
 
 - **Authentication:** Register / Login with JWT, protected write operations.
-- **Media Upload:** Image & video uploads stored on AWS S3, metadata in PostgreSQL.
-- **Global Feed:** Public feed ordered by newest with pagination.
-- **Likes:** Toggle like/unlike with accurate likes counter per media item.
-- **Profiles:** View user info, user media, and basic stats.
+- **Media Upload:** Image & video uploads stored on AWS S3 (presigned URLs), metadata in PostgreSQL, client-side video thumbnails.
+- **Feeds:** Home (following), Explore, and Trending feeds with offset + cursor pagination (Trending page-1 cached in Redis).
+- **Likes, Comments & Bookmarks:** Toggle likes, threaded comments (create / edit / delete, with `@mention` notifications), saved media.
+- **Follow system:** Follow/unfollow, suggested users, follower stats.
+- **Search & Hashtags:** User + media search, `#hashtag` extraction and hashtag feeds.
+- **Direct Messages:** 1:1 conversations with real-time delivery (SSE) on web and polling on mobile, unread badges.
+- **Notifications:** Real-time SSE stream (LIKE / COMMENT / FOLLOW / SYSTEM) with unread counters.
+- **Safety:** Block users (auto-unfollows both sides) and report media / comments / users.
+- **Profiles:** View user info, user media, basic stats; edit name & avatar.
 - **Shared API:** One backend consumed by both web and mobile.
 
 ---
@@ -106,8 +111,10 @@ MINLY-TAKEHOME-ASSIGNMENT/
 ```bash
 cd backend
 npm install
+cp .env.example .env        # then fill in the values
+docker compose up -d postgres
+npx prisma db push          # apply the schema (no migration files)
 npx prisma generate
-npx prisma migrate dev
 npm run dev
 ```
 API runs on: `http://localhost:4000/v1`
@@ -145,11 +152,11 @@ AWS_S3_BUCKET=...
 AWS_S3_BASE_URL=https://<bucket>.s3.<region>.amazonaws.com
 ```
 
-Web & Mobile:
+Web & Mobile (see the `.env.example` in each package):
 
 ```env
-VITE_API_URL=https://minly-takehome-assignment.onrender.com/v1
-EXPO_PUBLIC_API_URL=https://minly-takehome-assignment.onrender.com/v1
+VITE_API_BASE_URL=https://minly-takehome-assignment.onrender.com/v1
+EXPO_PUBLIC_API_BASE_URL=https://minly-takehome-assignment.onrender.com/v1
 ```
 
 ---
@@ -158,12 +165,13 @@ EXPO_PUBLIC_API_URL=https://minly-takehome-assignment.onrender.com/v1
 
 - **API overview + endpoint purposes:** [`docs/api-docs.md`](./docs/api-docs.md)
 - **Functional/Non‑Functional requirements, decisions, tradeoffs:** [`docs/system-design.md`](./docs/system-design.md)
+- **API contract for the 2026-06 feature batch (search, DMs, block, report, hashtags…):** [`docs/new-features-contract.md`](./docs/new-features-contract.md)
 
 ---
 
 ## 🛣️ Future Improvements
 
-Comments & follow system, notifications, stories/reels, real‑time updates, cursor pagination.
+Stories/reels, WebSocket transport for DMs, admin/moderation dashboard for reports, group conversations, push notifications (mobile), CDN (CloudFront) in front of S3, e2e tests.
 
 ---
 

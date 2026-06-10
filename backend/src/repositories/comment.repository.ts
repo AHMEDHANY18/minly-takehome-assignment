@@ -79,7 +79,9 @@ export const CommentRepository = {
       select: {
         id: true,
         text: true,
+        isEdited: true,
         createdAt: true,
+        updatedAt: true,
         user: {
           select: { id: true, name: true, avatarUrl: true },
         },

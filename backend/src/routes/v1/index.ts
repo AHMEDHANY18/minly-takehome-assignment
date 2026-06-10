@@ -8,6 +8,9 @@ import followRoutes from "./follow.router";
 import bookmarkRoutes from "./bookmark.router";
 import notificationRoutes from "./notification.router";
 import feedRoutes from "./feed.router";
+import blockRoutes from "./block.router";
+import reportRoutes from "./report.router";
+import conversationRoutes from "./conversation.router";
 
 const router = Router({ mergeParams: true });
 
@@ -21,5 +24,8 @@ router.use("/follow", followRoutes);
 router.use("/bookmark", bookmarkRoutes);
 router.use("/notification", notificationRoutes);
 router.use("/feed", feedRoutes);
+router.use("/block", blockRoutes);
+router.use("/report", reportRoutes);
+router.use("/conversation", conversationRoutes);
 
 export default router;

@@ -1,21 +1,28 @@
 // src/services/feed/getHomeFeed.service.ts
-import { FeedRepository } from "../../repositories/feed.repository";
+import { FeedRepository, FeedCursor } from "../../repositories/feed.repository";
 import { FeedMediaItem } from "../../types/feed";
 
 interface GetHomeFeedParams {
   page: number;
   limit: number;
   viewerId: string;
+  cursor?: string | null;
 }
 
 export async function getHomeFeedService({
   page,
   limit,
   viewerId,
+  cursor,
 }: GetHomeFeedParams) {
   const skip = (page - 1) * limit;
 
   const followingIds = await FeedRepository.getFollowingIds(viewerId);
+
+  let feedCursor: FeedCursor | null = null;
+  if (cursor) {
+    feedCursor = await FeedRepository.findCursorAnchor(cursor);
+  }
 
   // ✅ Case 1: user is not following anyone => fallback
   if (followingIds.length === 0) {
@@ -25,6 +32,7 @@ export async function getHomeFeedService({
       viewerId,
       excludeUploaderIds: [viewerId],
       reason: "NO_FOLLOWING",
+      feedCursor,
     });
   }
 
@@ -34,12 +42,13 @@ export async function getHomeFeedService({
       take: limit,
       viewerId,
       followingIds,
+      cursor: feedCursor,
     }),
     FeedRepository.countHomeFeed({ followingIds }),
   ]);
 
   // ✅ Case 2: following exists but no posts => fallback
-  if (total === 0 || rawItems.length === 0) {
+  if (total === 0 || (rawItems.length === 0 && !feedCursor)) {
     return getFallbackFeed({
       page,
       limit,
@@ -47,6 +56,7 @@ export async function getHomeFeedService({
       // اختياري: استبعد نفسك + اللي بتتابعهم (عشان مايبقاش fallback نفسهم)
       excludeUploaderIds: [viewerId, ...followingIds],
       reason: "NO_POSTS_FROM_FOLLOWING",
+      feedCursor,
     });
   }
 
@@ -59,6 +69,7 @@ export async function getHomeFeedService({
       limit,
       total,
       totalPages: Math.ceil(total / limit),
+      nextCursor: items.length === limit ? items[items.length - 1].id : null,
     },
     meta: {
       mode: "home" as const,
@@ -73,8 +84,10 @@ async function getFallbackFeed(params: {
   viewerId: string;
   excludeUploaderIds: string[];
   reason: "NO_FOLLOWING" | "NO_POSTS_FROM_FOLLOWING";
+  feedCursor?: FeedCursor | null;
 }) {
-  const { page, limit, viewerId, excludeUploaderIds, reason } = params;
+  const { page, limit, viewerId, excludeUploaderIds, reason, feedCursor } =
+    params;
   const skip = (page - 1) * limit;
 
   const [rawItems, total] = await Promise.all([
@@ -83,6 +96,7 @@ async function getFallbackFeed(params: {
       take: limit,
       viewerId,
       excludeUploaderIds,
+      cursor: feedCursor,
     }),
     FeedRepository.countFallbackFeed({ excludeUploaderIds }),
   ]);
@@ -96,6 +110,7 @@ async function getFallbackFeed(params: {
       limit,
       total,
       totalPages: Math.ceil(total / limit),
+      nextCursor: items.length === limit ? items[items.length - 1].id : null,
     },
     meta: {
       mode: "fallback" as const,
