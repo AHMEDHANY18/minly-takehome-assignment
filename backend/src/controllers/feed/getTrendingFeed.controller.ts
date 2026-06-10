@@ -12,8 +12,9 @@ export async function getTrendingFeedController(
     const limitRaw = parseInt(req.query.limit as string, 10) || 20;
     const limit = Math.min(Math.max(limitRaw, 1), 50);
 
+    // trending v2 scores over a fixed 7-day window
     const windowHours = Math.min(
-      Math.max(parseInt(req.query.window as string, 10) || 48, 1),
+      Math.max(parseInt(req.query.window as string, 10) || 168, 1),
       168
     );
 

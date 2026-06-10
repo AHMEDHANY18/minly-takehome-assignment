@@ -11,6 +11,10 @@ export default function RootLayout() {
         name="modal"
         options={{ presentation: "modal" }}
       />
+      <Stack.Screen
+        name="story/[userId]"
+        options={{ presentation: "fullScreenModal", animation: "fade" }}
+      />
     </Stack>
   );
 }

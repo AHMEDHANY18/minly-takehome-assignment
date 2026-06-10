@@ -2,7 +2,11 @@ import { MediaRepository } from "../../repositories/media.repository";
 import { extractS3Key } from "../../utilities/storage/extractS3Key";
 import { deleteFromS3 } from "../../utilities/storage/deleteFromS3";
 
-export async function deleteMediaService(mediaId: string, userId: string) {
+export async function deleteMediaService(
+  mediaId: string,
+  userId: string,
+  options?: { asAdmin?: boolean }
+) {
   // 1. Get basic info
   const media = await MediaRepository.findByIdDetailedForDelete(mediaId);
 
@@ -12,7 +16,8 @@ export async function deleteMediaService(mediaId: string, userId: string) {
     throw error;
   }
 
-  if (media.uploaderId !== userId) {
+  // admin force-delete bypasses the owner check
+  if (!options?.asAdmin && media.uploaderId !== userId) {
     const error: any = new Error("Forbidden");
     error.status = 403;
     throw error;
@@ -30,9 +35,10 @@ export async function deleteMediaService(mediaId: string, userId: string) {
   }
 
   // 4. Delete Likes + Media + update counters in one transaction
+  // counters always belong to the uploader (not the admin who deletes)
   await MediaRepository.deleteMediaWithCounters({
     mediaId,
-    userId,
+    userId: media.uploaderId,
     likesToDeduct: likesCount,
   });
 

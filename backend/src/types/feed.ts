@@ -8,6 +8,7 @@ export type FeedMediaItem = {
     uploaderId: string;
     likesCount: number;
     commentCount: number;
+    viewsCount: number;
     createdAt: Date;
 
     uploader: {

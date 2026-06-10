@@ -9,6 +9,8 @@ export type ProfileMediaItem = {
   description: string;
   likesCount: number;
   commentCount: number;
+  /** Present on new payloads; absent on older ones. */
+  viewsCount?: number;
   createdAt: string;
   updatedAt: string;
 };

@@ -7,6 +7,7 @@ import { useNavigate } from "react-router-dom";
 import { MediaAPI, type MediaType } from "@/features/media/api/media.api";
 import { presignKind } from "@/shared/constant";
 import { captureVideoThumbnail } from "@/features/upload/captureVideoThumbnail";
+import { createImageThumbnail } from "@/features/upload/createImageThumbnail";
 
 const MAX_SIZE_MB = 50;
 const MAX_SIZE_BYTES = MAX_SIZE_MB * 1024 * 1024;
@@ -127,25 +128,27 @@ export default function UploadPage() {
       // 2) PUT to S3
       await uploadToPresignedUrl(uploadUrl, file);
 
-      // 2.5) video → capture a frame and upload it as thumbnail (best effort)
+      // 2.5) generate + upload a thumbnail (best effort, never fails the upload)
+      //      VIDEO → capture a frame, IMAGE → canvas downscale (max edge 480, jpeg 0.8)
       let thumbnailUrl: string | undefined;
-      if (type === "VIDEO") {
-        try {
-          const blob = await captureVideoThumbnail(file);
-          if (blob) {
-            const thumbPresign = await MediaAPI.presign({
-              kind: presignKind.THUMBNAIL,
-              contentType: "image/jpeg",
-            });
-            await http.put(thumbPresign.data.data.uploadUrl, blob, {
-              headers: { "Content-Type": "image/jpeg" },
-            });
-            thumbnailUrl = thumbPresign.data.data.publicUrl;
-          }
-        } catch {
-          // graceful skip — the upload itself must not fail
-          thumbnailUrl = undefined;
+      try {
+        const blob =
+          type === "VIDEO"
+            ? await captureVideoThumbnail(file)
+            : await createImageThumbnail(file);
+        if (blob) {
+          const thumbPresign = await MediaAPI.presign({
+            kind: presignKind.THUMBNAIL,
+            contentType: "image/jpeg",
+          });
+          await http.put(thumbPresign.data.data.uploadUrl, blob, {
+            headers: { "Content-Type": "image/jpeg" },
+          });
+          thumbnailUrl = thumbPresign.data.data.publicUrl;
         }
+      } catch {
+        // graceful skip — the upload itself must not fail
+        thumbnailUrl = undefined;
       }
 
       // 3) finalize (create DB record)

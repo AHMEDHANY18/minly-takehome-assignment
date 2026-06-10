@@ -9,9 +9,10 @@ import {
 } from "@/features/media/api/media-details.api";
 import { SocialAPI } from "@/shared/api/social.api";
 import { useUserStore } from "@/shared/store/user.store";
-import { IconBookmark, IconComment, IconHeart, IconSend } from "../feed/icons";
+import { IconBookmark, IconComment, IconEye, IconHeart, IconSend } from "../feed/icons";
 import ReportModal from "@/shared/components/ReportModal";
 import HashtagText from "@/shared/components/HashtagText";
+import { formatCompact } from "@/shared/utils/format";
 
 /* ---------------- Types ---------------- */
 
@@ -633,7 +634,18 @@ export default function MediaDetailsPage() {
             </div>
 
             <div className="px-4 pb-2">
-              <div className="text-sm font-semibold">{likeCountLabel}</div>
+              <div className="flex items-center gap-3">
+                <div className="text-sm font-semibold">{likeCountLabel}</div>
+                {media?.viewsCount != null && (
+                  <div
+                    className="inline-flex items-center gap-1 text-xs text-gray-500"
+                    aria-label="Views"
+                  >
+                    <IconEye size={14} />
+                    {formatCompact(media.viewsCount)} views
+                  </div>
+                )}
+              </div>
               <div className="text-[11px] text-gray-400">
                 {formatDate(media?.createdAt)}
               </div>

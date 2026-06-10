@@ -12,6 +12,7 @@ import { UploadPage } from "@/features/upload";
 import { SearchPage } from "@/features/search";
 import { HashtagPage } from "@/features/hashtag";
 import { ConversationsPage, ChatPage } from "@/features/messages";
+import { AdminPage } from "@/features/admin";
 
 export default function App() {
   const user = useUserStore((s) => s.user);
@@ -39,6 +40,7 @@ export default function App() {
               <Route path="/hashtag/:tag" element={<HashtagPage />} />
               <Route path="/messages" element={<ConversationsPage />} />
               <Route path="/messages/:conversationId" element={<ChatPage />} />
+              <Route path="/admin" element={<AdminPage />} />
             </Route>
           </Route>
 

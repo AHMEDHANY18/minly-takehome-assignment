@@ -28,6 +28,8 @@ export type MediaDetailsResponse = {
     description?: string | null;
     createdAt: string;
     likesCount: number;
+    /** Present on new payloads; absent on older ones. */
+    viewsCount?: number;
     isLiked: boolean;
     isBookmarked: boolean;
     uploader: {

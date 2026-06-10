@@ -27,6 +27,13 @@ export async function getMediaDetailsService(params: {
     throw err;
   }
 
+  // view counter — fire-and-forget, never for the uploader
+  if (media.uploaderId !== viewerId) {
+    MediaRepository.incrementViewsCount(mediaId).catch(() => {
+      // best effort — a failed increment must never fail the request
+    });
+  }
+
   // hashtags — best effort
   let hashtags: string[] = [];
   try {

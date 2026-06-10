@@ -6,6 +6,7 @@ import rateLimit from "express-rate-limit";
 import cookieParser from "cookie-parser";
 
 import { preventHPP } from "./middleware/preventHPP";
+import { requestLogger } from "./middleware/requestLogger";
 import { errorHandler } from "./middleware/errorHandler";
 import { stream } from "./config/logger";
 import { config } from "./config";
@@ -53,6 +54,9 @@ app.use(express.urlencoded({ extended: true }));
 
 /* ---------------- Logger ---------------- */
 app.use(morgan("combined", { stream }));
+
+/* ---------------- Request id + metrics ---------------- */
+app.use(requestLogger);
 
 /* ---------------- Routes ---------------- */
 app.use("/", router);

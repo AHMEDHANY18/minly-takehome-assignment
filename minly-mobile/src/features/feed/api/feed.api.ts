@@ -15,6 +15,7 @@ export type FeedItem = {
 
   likesCount: number;
   commentCount: number;
+  viewsCount?: number;
 
   uploader: {
     id: string;

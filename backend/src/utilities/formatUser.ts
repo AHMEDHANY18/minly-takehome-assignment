@@ -5,4 +5,5 @@ export const formatUser = (user: User) => ({
   name: user.name,
   email: user.email,
   avatarUrl: user.avatarUrl,
+  isAdmin: user.isAdmin,
 });

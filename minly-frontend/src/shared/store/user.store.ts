@@ -13,6 +13,9 @@ export interface User {
   totalLikesReceived: number;
   totalLikesGiven: number;
 
+  /** Present on new /auth/me payloads; absent on older ones. */
+  isAdmin?: boolean;
+
   createdAt: string;
   updatedAt: string;
 }

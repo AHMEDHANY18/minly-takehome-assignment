@@ -12,6 +12,7 @@ function feedSelect(viewerId: string) {
     uploaderId: true,
     likesCount: true,
     commentCount: true,
+    viewsCount: true,
     createdAt: true,
     uploader: {
       select: { id: true, name: true, avatarUrl: true },
@@ -211,6 +212,45 @@ export const FeedRepository = {
         createdAt: { gte: windowStart },
       },
     });
+  },
+
+  // candidates for in-memory trending scoring (capped)
+  async findTrendingCandidates(params: {
+    viewerId: string;
+    windowHours: number;
+    cap: number;
+  }) {
+    const { viewerId, windowHours, cap } = params;
+    const windowStart = new Date(Date.now() - windowHours * 60 * 60 * 1000);
+
+    return prisma.media.findMany({
+      take: cap,
+      where: {
+        createdAt: { gte: windowStart },
+      },
+      orderBy: { createdAt: "desc" },
+      select: feedSelect(viewerId),
+    });
+  },
+
+  // recent-first fallback when the trending window is empty
+  async findRecentFeedWithViewer(params: {
+    skip: number;
+    take: number;
+    viewerId: string;
+  }) {
+    const { skip, take, viewerId } = params;
+
+    return prisma.media.findMany({
+      skip,
+      take,
+      orderBy: { createdAt: "desc" },
+      select: feedSelect(viewerId),
+    });
+  },
+
+  async countAllMedia() {
+    return prisma.media.count();
   },
 
   // -------------------------

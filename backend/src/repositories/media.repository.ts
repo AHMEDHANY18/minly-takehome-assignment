@@ -67,6 +67,14 @@ export const MediaRepository = {
     return media;
   },
 
+  // fire-and-forget view counter (callers must .catch(() => {}))
+  async incrementViewsCount(mediaId: string) {
+    return prisma.media.update({
+      where: { id: mediaId },
+      data: { viewsCount: { increment: 1 } },
+    });
+  },
+
   async getMediaById(mediaId: string) {
     return prisma.media.findUnique({
       where: { id: mediaId },
@@ -147,6 +155,7 @@ export const MediaRepository = {
         description: true,
         uploaderId: true,
         likesCount: true,
+        viewsCount: true,
         createdAt: true,
         commentCount: true,
         comments: {

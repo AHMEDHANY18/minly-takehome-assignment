@@ -18,6 +18,7 @@ model User {
   followingCount        Int                       @default(0)
   totalLikesReceived    Int                       @default(0)
   totalLikesGiven       Int                       @default(0)
+  isAdmin               Boolean                   @default(false)
   createdAt             DateTime                  @default(now())
   updatedAt             DateTime                  @updatedAt
   blocksReceived        Block[]                   @relation("UserBlocked")
@@ -34,6 +35,8 @@ model User {
   comments              ThreadedComment[]
   stats                 UserStats?
   reports               Report[]
+  stories               Story[]
+  storyViews            StoryView[]
 }
 
 model OAuthAccount {
@@ -60,6 +63,7 @@ model Media {
   uploaderId    String
   likesCount    Int               @default(0)
   commentCount  Int               @default(0)
+  viewsCount    Int               @default(0)
   createdAt     DateTime          @default(now())
   updatedAt     DateTime          @updatedAt
   bookmarks     Bookmark[]
@@ -211,6 +215,30 @@ model Report {
   reporter   User             @relation(fields: [reporterId], references: [id])
 
   @@index([reporterId])
+}
+
+model Story {
+  id        String      @id @default(uuid())
+  userId    String
+  url       String
+  type      MediaType
+  createdAt DateTime    @default(now())
+  expiresAt DateTime
+  user      User        @relation(fields: [userId], references: [id])
+  views     StoryView[]
+
+  @@index([userId, expiresAt])
+}
+
+model StoryView {
+  id        String   @id @default(uuid())
+  storyId   String
+  viewerId  String
+  createdAt DateTime @default(now())
+  story     Story    @relation(fields: [storyId], references: [id])
+  viewer    User     @relation(fields: [viewerId], references: [id])
+
+  @@unique([storyId, viewerId])
 }
 
 model Hashtag {

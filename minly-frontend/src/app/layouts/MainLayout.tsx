@@ -60,6 +60,7 @@ export default function MainLayout() {
             <TopLink to="/messages" label="Messages" />
             <TopLink to="/notifications" label="Notifications" />
             <TopLink to="/profile" label="Profile" />
+            {user?.isAdmin && <TopLink to="/admin" label="Admin" />}
           </nav>
 
           <div className="flex items-center gap-2 shrink-0">
@@ -138,6 +139,9 @@ export default function MainLayout() {
                     <SideLink to="/trending" label="Trending" icon={<IconTrending />} />
                     <SideLink to="/messages" label="Messages" icon={<IconChat />} />
                     <SideLink to="/saved" label="Saved" icon={<IconBookmark />} />
+                    {user?.isAdmin && (
+                      <SideLink to="/admin" label="Admin" icon={<IconShield />} />
+                    )}
                   </nav>
 
                   <div className="mt-4 pt-4 border-t border-gray-200/70 text-[11px] text-gray-400 leading-relaxed">
@@ -438,6 +442,28 @@ function IconUser() {
         fill="none"
         stroke="currentColor"
         strokeWidth="2"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+
+function IconShield() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true">
+      <path
+        d="M12 3l8 3v6c0 4.5-3.2 7.7-8 9-4.8-1.3-8-4.5-8-9V6l8-3z"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinejoin="round"
+      />
+      <path
+        d="M9 12l2 2 4-4"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
         strokeLinejoin="round"
       />
     </svg>

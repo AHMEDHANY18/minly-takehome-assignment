@@ -22,6 +22,7 @@ import type { MediaComment, ReplyItem } from "@/features/media/api/mediaDetails.
 import { HashtagText } from "@/shared/components/hashtag-text";
 import { ReportModal } from "@/features/social/components/ReportModal";
 import type { ReportTargetType } from "@/features/social/api/report.api";
+import { formatCompact } from "@/shared/utils/format";
 
 /* ---------- Helpers ---------- */
 
@@ -483,7 +484,16 @@ export default function PostDetails() {
 
                   {/* Meta */}
                   <View style={styles.meta}>
-                    <Text style={styles.likes}>{formatNumber(media?.likesCount ?? 0)} likes</Text>
+                    <View style={styles.statsRow}>
+                      <Text style={styles.likes}>{formatNumber(media?.likesCount ?? 0)} likes</Text>
+
+                      <View style={styles.viewsChip}>
+                        <Ionicons name="eye-outline" size={14} color="#6B7280" />
+                        <Text style={styles.viewsText}>
+                          {formatCompact(media?.viewsCount ?? 0)} views
+                        </Text>
+                      </View>
+                    </View>
 
                     <Text style={styles.caption}>
                       <Text style={styles.captionUser}>{media?.uploader?.name ?? "user"} </Text>
@@ -630,7 +640,10 @@ const styles = StyleSheet.create({
   actionsLeft: { flexDirection: "row", alignItems: "center", gap: 14 },
 
   meta: { paddingHorizontal: 12, paddingTop: 10, gap: 6 },
+  statsRow: { flexDirection: "row", alignItems: "center", gap: 12 },
   likes: { fontSize: 12, fontWeight: "900", color: "#111" },
+  viewsChip: { flexDirection: "row", alignItems: "center", gap: 4 },
+  viewsText: { fontSize: 12, color: "#6B7280", fontWeight: "700" },
   caption: { fontSize: 12, color: "#111", lineHeight: 16 },
   captionUser: { fontWeight: "900" },
   time: { fontSize: 11, color: "#6B7280", marginTop: 2, letterSpacing: 0.4 },

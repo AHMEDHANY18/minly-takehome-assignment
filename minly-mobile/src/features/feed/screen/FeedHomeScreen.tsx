@@ -17,6 +17,7 @@ import { FeedCard } from "@/features/feed/components/FeedCard";
 import { SegmentedTabs } from "@/features/feed/components/SegmentedTabs";
 import { SuggestedUsers } from "@/features/feed/components/SuggestedUsers";
 import { MessagesAPI } from "@/features/messages/api/messages.api";
+import { StoriesBar } from "@/features/stories/components/StoriesBar";
 
 export default function HomeScreen() {
   const router = useRouter();
@@ -97,6 +98,9 @@ export default function HomeScreen() {
           </Pressable>
         </View>
       </View>
+
+      {/* Stories */}
+      <StoriesBar />
 
       {/* Segmented tabs */}
       <View style={styles.tabsWrap}>

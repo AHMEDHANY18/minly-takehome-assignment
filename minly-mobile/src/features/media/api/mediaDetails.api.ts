@@ -26,6 +26,7 @@ export type MediaDetailsResponse = {
     description?: string | null;
     createdAt: string;
     likesCount: number;
+    viewsCount?: number;
     isLiked: boolean;
     isBookmarked: boolean;
     uploader: {

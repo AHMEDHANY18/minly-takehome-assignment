@@ -5,6 +5,8 @@ import {
   Platform,
   StyleSheet,
   View,
+  type StyleProp,
+  type ViewStyle,
 } from "react-native";
 import type { BottomTabBarButtonProps } from "@react-navigation/bottom-tabs";
 import { PlatformPressable } from "@react-navigation/elements";
@@ -22,16 +24,7 @@ function PlusTabBarButton(props: TabButtonProps) {
     <PlatformPressable
       {...rest}
       android_ripple={{ color: "rgba(0,0,0,0.08)", borderless: true }}
-      style={(state) => {
-        const baseStyles = [
-          styles.plusBtnWrap,
-          state.pressed ? { transform: [{ scale: 0.96 }] } : undefined,
-        ];
-        if (typeof style === "function") {
-          return [...baseStyles, style(state)];
-        }
-        return [...baseStyles, style];
-      }}
+      style={[styles.plusBtnWrap, style as StyleProp<ViewStyle>]}
     >
       <View style={styles.plusBtn}>
         <Ionicons name="add" size={28} color="#FFF" />

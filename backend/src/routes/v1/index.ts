@@ -11,6 +11,8 @@ import feedRoutes from "./feed.router";
 import blockRoutes from "./block.router";
 import reportRoutes from "./report.router";
 import conversationRoutes from "./conversation.router";
+import storyRoutes from "./story.router";
+import adminRoutes from "./admin.router";
 
 const router = Router({ mergeParams: true });
 
@@ -27,5 +29,7 @@ router.use("/feed", feedRoutes);
 router.use("/block", blockRoutes);
 router.use("/report", reportRoutes);
 router.use("/conversation", conversationRoutes);
+router.use("/story", storyRoutes);
+router.use("/admin", adminRoutes);
 
 export default router;

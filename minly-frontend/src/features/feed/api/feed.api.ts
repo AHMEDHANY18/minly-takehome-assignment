@@ -13,6 +13,8 @@ export type FeedItem = {
   uploaderId: string;
   likesCount: number;
   commentCount: number;
+  /** Present on new payloads; absent on older ones. */
+  viewsCount?: number;
   createdAt: string;
   uploader: {
     id: string;

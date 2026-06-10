@@ -3,7 +3,8 @@ import { CommentRepository } from "../../repositories/comment.repository";
 
 export async function deleteCommentService(
   commentId: string,
-  userId: string
+  userId: string,
+  options?: { asAdmin?: boolean }
 ) {
   const comment = await CommentRepository.findCommentById(commentId);
 
@@ -12,7 +13,8 @@ export async function deleteCommentService(
     err.status = 404;
     throw err;
   }
-  if (comment.userId !== userId) {
+  // admin force-delete bypasses the owner check
+  if (!options?.asAdmin && comment.userId !== userId) {
     const err: any = new Error("You cannot delete this comment");
     err.status = 403;
     throw err;

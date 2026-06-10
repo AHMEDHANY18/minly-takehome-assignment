@@ -4,6 +4,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { Video, ResizeMode } from "expo-av";
 
 import { timeAgo } from "@/shared/utils/time";
+import { formatCompact } from "@/shared/utils/format";
 import type { FeedItem } from "@/features/feed/api/feed.api";
 import { InteractionsAPI } from "@/features/social/api/interactions.api";
 import { HashtagText } from "@/shared/components/hashtag-text";
@@ -156,10 +157,17 @@ export function FeedCard({
 
       {/* Meta */}
       <View style={styles.meta}>
-        <Text style={styles.likesText}>
-          {item.likesCount.toLocaleString()} likes
-          {busyLike ? <Text style={styles.dim}>  • saving...</Text> : null}
-        </Text>
+        <View style={styles.countsRow}>
+          <Text style={styles.likesText}>
+            {item.likesCount.toLocaleString()} likes
+            {busyLike ? <Text style={styles.dim}>  • saving...</Text> : null}
+          </Text>
+
+          <View style={styles.viewsChip}>
+            <Ionicons name="eye-outline" size={13} color="#777" />
+            <Text style={styles.viewsText}>{formatCompact(item.viewsCount ?? 0)}</Text>
+          </View>
+        </View>
 
         {item.title || item.description ? (
           <Text style={styles.caption} numberOfLines={3}>
@@ -228,7 +236,10 @@ const styles = StyleSheet.create({
   iconBtn: { padding: 4 },
 
   meta: { paddingHorizontal: 12, paddingBottom: 12 },
+  countsRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
   likesText: { fontWeight: "700", color: "#111", fontSize: 12 },
+  viewsChip: { flexDirection: "row", alignItems: "center", gap: 4 },
+  viewsText: { color: "#777", fontSize: 12, fontWeight: "600" },
   caption: { marginTop: 6, color: "#111", fontSize: 12, lineHeight: 18 },
   captionUser: { fontWeight: "700" },
   viewComments: { marginTop: 6, color: "#777", fontSize: 12 },

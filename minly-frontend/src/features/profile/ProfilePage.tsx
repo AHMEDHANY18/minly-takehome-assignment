@@ -6,6 +6,7 @@ import { BlockAPI } from "./api/block.api";
 import { SocialAPI } from "@/shared/api/social.api";
 import { MessagesAPI } from "@/features/messages/api/messages.api";
 import { useUserStore } from "@/shared/store/user.store";
+import { formatCompact } from "@/shared/utils/format";
 
 type Tab = "ALL" | "VIDEOS" | "PHOTOS";
 
@@ -688,6 +689,9 @@ function MediaTile({
           >
             <StatPill icon="❤" value={likes} />
             <StatPill icon="💬" value={comments} />
+            {media.viewsCount != null && (
+              <StatPill icon="👁" value={formatCompact(media.viewsCount)} />
+            )}
           </div>
         </div>
       </div>
@@ -719,7 +723,7 @@ function MenuItem({
   );
 }
 
-function StatPill({ icon, value }: { icon: string; value: number }) {
+function StatPill({ icon, value }: { icon: string; value: number | string }) {
   return (
     <div className="inline-flex items-center gap-1 rounded-full bg-black/35 border border-white/10 backdrop-blur px-2 py-1">
       <span className="text-[12px]">{icon}</span>

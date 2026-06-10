@@ -5,9 +5,11 @@ import { useSuggestedUsers } from "./hooks/useSuggestedUsers";
 import type { FeedItem, FeedMode } from "@/features/feed/api/feed.api";
 import { useFeed } from "./hooks/useFeed";
 import { useEffect, useRef, useState } from "react";
-import { IconBookmark, IconComment, IconHeart, IconSend } from "./icons";
+import { IconBookmark, IconComment, IconEye, IconHeart, IconSend } from "./icons";
 import { PAGINATION } from "@/shared/constant";
 import HashtagText from "@/shared/components/HashtagText";
+import { formatCompact } from "@/shared/utils/format";
+import { StoriesBar } from "@/features/stories";
 
 export default function FeedPage({ mode = "home" }: { mode?: FeedMode }) {
   const {
@@ -98,6 +100,8 @@ export default function FeedPage({ mode = "home" }: { mode?: FeedMode }) {
   return (
     <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,680px)_320px] gap-6">
       <div className="min-w-0 space-y-4">
+        {mode === "home" && <StoriesBar />}
+
         {error && (
           <div className="rounded-2xl bg-white border border-red-100 p-4 shadow-sm">
             <div className="text-sm text-red-600 font-semibold">
@@ -231,7 +235,7 @@ function PostCard({
           )
         ) : (
           <img
-            src={item.url}
+            src={item.thumbnailUrl ?? item.url}
             alt={item.title ?? "media"}
             className="w-full max-h-[520px] object-cover"
             loading="lazy"
@@ -262,6 +266,18 @@ function PostCard({
             <IconComment />
             <span className="text-sm font-medium">{item.commentCount}</span>
           </button>
+
+          {item.viewsCount != null && (
+            <span
+              className="inline-flex items-center gap-2 text-gray-500"
+              aria-label="Views"
+            >
+              <IconEye />
+              <span className="text-sm font-medium">
+                {formatCompact(item.viewsCount)}
+              </span>
+            </span>
+          )}
 
           <button
             className="inline-flex items-center gap-2 hover:opacity-80 transition"
