@@ -16,5 +16,14 @@ export default function AuthSuccessPage() {
     })();
   }, [nav]);
 
-  return <div style={{ padding: 24 }}>Signing you in...</div>;
+  return (
+    <div className="min-h-screen bg-gray-50 dark:bg-zinc-950 grid place-items-center p-6">
+      <div className="flex flex-col items-center gap-3">
+        <span className="h-8 w-8 rounded-full border-2 border-gray-200 dark:border-zinc-700 border-t-blue-600 dark:border-t-blue-500 animate-spin" />
+        <div className="text-sm font-semibold text-gray-600 dark:text-zinc-400">
+          Signing you in…
+        </div>
+      </div>
+    </div>
+  );
 }

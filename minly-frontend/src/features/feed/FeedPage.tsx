@@ -1,4 +1,4 @@
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { useUserStore } from "@/shared/store/user.store";
 import { SocialAPI, type SuggestedUser } from "@/shared/api/social.api";
 import { useSuggestedUsers } from "./hooks/useSuggestedUsers";
@@ -10,6 +10,12 @@ import { PAGINATION } from "@/shared/constant";
 import HashtagText from "@/shared/components/HashtagText";
 import { formatCompact } from "@/shared/utils/format";
 import { StoriesBar } from "@/features/stories";
+
+const MODE_TABS: { mode: FeedMode; label: string; to: string }[] = [
+  { mode: "home", label: "Home", to: "/" },
+  { mode: "explore", label: "Explore", to: "/explore" },
+  { mode: "trending", label: "Trending", to: "/trending" },
+];
 
 export default function FeedPage({ mode = "home" }: { mode?: FeedMode }) {
   const {
@@ -100,17 +106,41 @@ export default function FeedPage({ mode = "home" }: { mode?: FeedMode }) {
   return (
     <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,680px)_320px] gap-6">
       <div className="min-w-0 space-y-4">
+        {/* Feed mode segmented pills */}
+        <div
+          className="inline-flex items-center gap-1 rounded-full bg-gray-100 dark:bg-zinc-900 border border-gray-200/70 dark:border-zinc-800 p-1"
+          role="tablist"
+          aria-label="Feed mode"
+        >
+          {MODE_TABS.map((t) => (
+            <Link
+              key={t.mode}
+              to={t.to}
+              role="tab"
+              aria-selected={mode === t.mode}
+              className={[
+                "h-8 px-4 rounded-full inline-flex items-center text-sm font-semibold transition",
+                mode === t.mode
+                  ? "bg-white dark:bg-zinc-800 text-gray-900 dark:text-zinc-100 shadow-sm"
+                  : "text-gray-500 dark:text-zinc-400 hover:text-gray-900 dark:hover:text-zinc-100",
+              ].join(" ")}
+            >
+              {t.label}
+            </Link>
+          ))}
+        </div>
+
         {mode === "home" && <StoriesBar />}
 
         {error && (
-          <div className="rounded-2xl bg-white border border-red-100 p-4 shadow-sm">
-            <div className="text-sm text-red-600 font-semibold">
+          <div className="rounded-2xl bg-white dark:bg-zinc-900 border border-red-200/70 dark:border-red-900/60 p-4 shadow-sm">
+            <div className="text-sm text-red-600 dark:text-red-400 font-semibold">
               Failed to load feed
             </div>
-            <div className="text-xs text-gray-500 mt-1">{error}</div>
+            <div className="text-xs text-gray-500 dark:text-zinc-400 mt-1">{error}</div>
             <button
               onClick={reload}
-              className="mt-3 text-sm font-semibold text-purple-700 hover:underline"
+              className="mt-3 text-sm font-semibold text-blue-600 dark:text-blue-400 hover:underline"
             >
               Retry
             </button>
@@ -139,11 +169,11 @@ export default function FeedPage({ mode = "home" }: { mode?: FeedMode }) {
               aria-hidden="true"
             >
               {hasMore ? (
-                <div className="text-sm text-gray-400">
+                <div className="text-sm text-gray-400 dark:text-zinc-500">
                   {loadingMore ? "Loading…" : "Scroll to load more"}
                 </div>
               ) : (
-                <div className="text-xs text-gray-400">
+                <div className="text-xs text-gray-400 dark:text-zinc-500">
                   {pagination
                     ? `End of feed · page ${pagination.page}/${pagination.totalPages}`
                     : "End of feed"}
@@ -180,22 +210,22 @@ function PostCard({
   const openDetails = () => nav(`/media/${item.id}`, { state: { media: item } });
 
   return (
-    <div className="rounded-2xl bg-white border border-gray-100 shadow-sm overflow-hidden">
+    <div className="rounded-2xl bg-white dark:bg-zinc-900 border border-gray-200/70 dark:border-zinc-800 shadow-sm hover:shadow-md transition-shadow overflow-hidden">
       {/* Header */}
       <div className="flex items-center justify-between px-4 py-3">
         <div className="flex items-center gap-3">
           <Avatar name={item.uploader.name} src={item.uploader.avatarUrl} />
           <div className="leading-tight">
-            <div className="text-sm font-semibold text-gray-900">
+            <div className="text-sm font-semibold text-gray-900 dark:text-zinc-100">
               {item.uploader.name}
             </div>
-            <div className="text-xs text-gray-500">
+            <div className="text-xs text-gray-500 dark:text-zinc-400">
               {formatTime(item.createdAt)}
             </div>
           </div>
         </div>
         <button
-          className="h-9 w-9 rounded-full hover:bg-gray-50 transition"
+          className="h-9 w-9 rounded-full grid place-items-center text-gray-600 dark:text-zinc-400 hover:bg-gray-100 dark:hover:bg-zinc-800 transition"
           aria-label="More"
         >
           ⋯
@@ -203,84 +233,88 @@ function PostCard({
       </div>
 
       {/* ✅ Media */}
-      <button
-        type="button"
-        onClick={openDetails}
-        className="block w-full text-left bg-gray-50"
-        aria-label="Open media"
-      >
-        {item.type === "VIDEO" ? (
-          item.thumbnailUrl ? (
-            <div className="relative">
-              <img
-                src={item.thumbnailUrl}
-                alt={item.title ?? "video"}
-                className="w-full max-h-[520px] object-cover"
-                loading="lazy"
-              />
-              <div className="absolute inset-0 grid place-items-center">
-                <div className="h-12 w-12 rounded-full bg-black/40 grid place-items-center text-white">
-                  ▶
+      <div className="px-3">
+        <button
+          type="button"
+          onClick={openDetails}
+          className="block w-full text-left rounded-xl overflow-hidden bg-gray-100 dark:bg-zinc-800"
+          aria-label="Open media"
+        >
+          {item.type === "VIDEO" ? (
+            item.thumbnailUrl ? (
+              <div className="relative">
+                <img
+                  src={item.thumbnailUrl}
+                  alt={item.title ?? "video"}
+                  className="w-full max-h-[520px] object-cover"
+                  loading="lazy"
+                />
+                <div className="absolute inset-0 grid place-items-center">
+                  <div className="h-12 w-12 rounded-full bg-black/40 backdrop-blur-sm grid place-items-center text-white">
+                    ▶
+                  </div>
                 </div>
               </div>
-            </div>
+            ) : (
+              <video
+                className="w-full max-h-[520px] object-cover"
+                controls
+                preload="metadata"
+              >
+                <source src={item.url} />
+              </video>
+            )
           ) : (
-            <video
+            <img
+              src={item.thumbnailUrl ?? item.url}
+              alt={item.title ?? "media"}
               className="w-full max-h-[520px] object-cover"
-              controls
-              preload="metadata"
-            >
-              <source src={item.url} />
-            </video>
-          )
-        ) : (
-          <img
-            src={item.thumbnailUrl ?? item.url}
-            alt={item.title ?? "media"}
-            className="w-full max-h-[520px] object-cover"
-            loading="lazy"
-          />
-        )}
-      </button>
+              loading="lazy"
+            />
+          )}
+        </button>
+      </div>
 
       {/* Actions + Text */}
       <div className="px-4 py-4">
-        <div className="flex items-center gap-6 text-gray-900">
+        <div className="flex items-center gap-1 text-gray-600 dark:text-zinc-400">
           <button
             onClick={() => onToggleLike(item.id)}
-            className={
-              "inline-flex items-center gap-2 hover:opacity-80 transition " +
-              (item.isLiked ? "text-blue-600" : "")
-            }
+            className={[
+              "inline-flex items-center gap-1.5 h-9 px-2.5 rounded-full transition active:scale-[0.98]",
+              item.isLiked
+                ? "text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-950/40"
+                : "hover:bg-gray-100 dark:hover:bg-zinc-800 hover:text-gray-900 dark:hover:text-zinc-100",
+            ].join(" ")}
             aria-label="Like"
           >
             <IconHeart filled={item.isLiked} />
-            <span className="text-sm font-medium">{item.likesCount}</span>
+            <span className="text-sm font-medium tabular-nums">{item.likesCount}</span>
           </button>
 
           <button
             onClick={openDetails}
-            className="inline-flex items-center gap-2 hover:opacity-80 transition"
+            className="inline-flex items-center gap-1.5 h-9 px-2.5 rounded-full hover:bg-gray-100 dark:hover:bg-zinc-800 hover:text-gray-900 dark:hover:text-zinc-100 transition active:scale-[0.98]"
             aria-label="Comments"
           >
             <IconComment />
-            <span className="text-sm font-medium">{item.commentCount}</span>
+            <span className="text-sm font-medium tabular-nums">{item.commentCount}</span>
           </button>
 
           {item.viewsCount != null && (
             <span
-              className="inline-flex items-center gap-2 text-gray-500"
+              className="inline-flex items-center gap-1.5 h-9 px-2.5 text-gray-400 dark:text-zinc-500"
               aria-label="Views"
             >
               <IconEye />
-              <span className="text-sm font-medium">
+              <span className="text-sm font-medium tabular-nums">
                 {formatCompact(item.viewsCount)}
               </span>
             </span>
           )}
 
           <button
-            className="inline-flex items-center gap-2 hover:opacity-80 transition"
+            className="inline-flex items-center justify-center h-9 w-9 rounded-full hover:bg-gray-100 dark:hover:bg-zinc-800 hover:text-gray-900 dark:hover:text-zinc-100 transition active:scale-[0.98]"
             aria-label="Share"
           >
             <IconSend />
@@ -288,10 +322,12 @@ function PostCard({
 
           <button
             onClick={() => onToggleBookmark(item.id)}
-            className={
-              "ml-auto hover:opacity-80 transition " +
-              (item.isBookmarked ? "text-blue-600" : "")
-            }
+            className={[
+              "ml-auto inline-flex items-center justify-center h-9 w-9 rounded-full transition active:scale-[0.98]",
+              item.isBookmarked
+                ? "text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-950/40"
+                : "hover:bg-gray-100 dark:hover:bg-zinc-800 hover:text-gray-900 dark:hover:text-zinc-100",
+            ].join(" ")}
             aria-label="Bookmark"
           >
             <IconBookmark filled={item.isBookmarked} />
@@ -300,12 +336,12 @@ function PostCard({
 
         <div className="mt-3">
           {item.title && (
-            <div className="text-base font-semibold text-gray-900">
+            <div className="text-[15px] font-semibold text-gray-900 dark:text-zinc-100">
               <HashtagText text={item.title} />
             </div>
           )}
           {item.description && (
-            <p className="mt-1 text-sm text-gray-600 leading-relaxed">
+            <p className="mt-1 text-sm text-gray-600 dark:text-zinc-400 leading-relaxed">
               <HashtagText text={item.description} />
             </p>
           )}
@@ -361,17 +397,21 @@ function RightRail({
 
   return (
     <div className="sticky top-16 space-y-4">
-      <div className="rounded-2xl bg-white border border-gray-100 shadow-sm p-4">
+      <div className="rounded-2xl bg-white dark:bg-zinc-900 border border-gray-200/70 dark:border-zinc-800 shadow-sm p-4">
         <div className="flex flex-col items-center text-center">
-          <div className="h-16 w-16 rounded-full bg-gray-100 grid place-items-center">
+          <div className="h-16 w-16 rounded-full bg-gray-100 dark:bg-zinc-800 grid place-items-center">
             <Avatar
               name={user?.name ?? "User"}
               src={user?.avatarUrl ?? null}
               size="lg"
             />
           </div>
-          <div className="mt-3 font-semibold">{user?.name ?? "—"}</div>
-          <div className="text-xs text-gray-500">{user?.email ?? ""}</div>
+          <div className="mt-3 font-semibold text-gray-900 dark:text-zinc-100">
+            {user?.name ?? "—"}
+          </div>
+          <div className="text-xs text-gray-500 dark:text-zinc-400">
+            {user?.email ?? ""}
+          </div>
 
           <div className="mt-4 grid grid-cols-2 gap-3 w-full">
             <Stat label="Followers" value={String(followers)} />
@@ -380,40 +420,46 @@ function RightRail({
         </div>
       </div>
 
-      <div className="rounded-2xl bg-gradient-to-br from-blue-600 to-indigo-700 text-white shadow-sm p-4">
+      <div className="rounded-2xl bg-gradient-to-br from-blue-600 to-indigo-600 text-white shadow-sm p-4">
         <div className="font-semibold">Share your moment</div>
         <div className="mt-1 text-sm text-white/85">
           Upload photos or videos to connect with your community.
         </div>
         <button
           onClick={() => nav("/upload")}
-          className="mt-4 w-full h-10 rounded-xl bg-white text-gray-900 font-semibold text-sm hover:bg-gray-100 transition"
+          className="mt-4 inline-flex items-center justify-center w-full h-10 rounded-xl bg-white text-gray-900 font-semibold text-sm hover:bg-gray-100 active:scale-[0.98] transition"
         >
           Upload Media
         </button>
       </div>
 
-      <div className="rounded-2xl bg-white border border-gray-100 shadow-sm p-4">
+      <div className="rounded-2xl bg-white dark:bg-zinc-900 border border-gray-200/70 dark:border-zinc-800 shadow-sm p-4">
         <div className="flex items-center justify-between">
-          <div className="font-semibold text-sm">Suggested for you</div>
-          <button className="text-xs text-purple-700 hover:underline">
+          <div className="text-sm font-semibold text-gray-900 dark:text-zinc-100">
+            Suggested for you
+          </div>
+          <button className="text-xs font-semibold text-blue-600 dark:text-blue-400 hover:underline">
             See all
           </button>
         </div>
 
         <div className="mt-3 space-y-3">
           {loading ? (
-            <div className="text-sm text-gray-500">Loading…</div>
+            <SuggestedSkeleton />
           ) : users.length === 0 ? (
-            <div className="text-sm text-gray-500">No suggestions right now.</div>
+            <div className="text-sm text-gray-500 dark:text-zinc-400">
+              No suggestions right now.
+            </div>
           ) : (
             users.map((u, idx) => (
-              <div key={u.id} className="flex items-center justify-between">
+              <div key={u.id} className="flex items-center justify-between gap-2">
                 <div className="flex items-center gap-3 min-w-0">
                   <Avatar name={u.name} src={u.avatarUrl} />
                   <div className="min-w-0">
-                    <div className="text-sm font-semibold truncate">{u.name}</div>
-                    <div className="text-xs text-gray-500 truncate">
+                    <div className="text-sm font-semibold text-gray-900 dark:text-zinc-100 truncate">
+                      {u.name}
+                    </div>
+                    <div className="text-xs text-gray-500 dark:text-zinc-400 truncate">
                       {u.mediaCount} posts · {u.followerCount} followers
                     </div>
                   </div>
@@ -422,7 +468,7 @@ function RightRail({
                 <button
                   onClick={() => handleFollow(u, idx)}
                   disabled={!!pending[u.id]}
-                  className="text-sm font-semibold text-blue-700 hover:underline disabled:opacity-60"
+                  className="shrink-0 inline-flex items-center justify-center h-8 px-3 rounded-xl border border-gray-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 text-xs font-semibold text-gray-700 dark:text-zinc-200 hover:bg-gray-50 dark:hover:bg-zinc-800 active:scale-[0.98] transition disabled:opacity-50 disabled:pointer-events-none"
                 >
                   {pending[u.id] ? "Following…" : "Follow"}
                 </button>
@@ -435,11 +481,27 @@ function RightRail({
   );
 }
 
+function SuggestedSkeleton() {
+  return (
+    <div className="space-y-3">
+      {[0, 1, 2].map((i) => (
+        <div key={i} className="flex items-center gap-3 animate-pulse">
+          <div className="h-9 w-9 rounded-full bg-gray-200/70 dark:bg-zinc-800" />
+          <div className="flex-1">
+            <div className="h-3 w-24 rounded-xl bg-gray-200/70 dark:bg-zinc-800" />
+            <div className="mt-2 h-3 w-32 rounded-xl bg-gray-200/70 dark:bg-zinc-800" />
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
 function Stat({ label, value }: { label: string; value: string }) {
   return (
-    <div className="rounded-xl bg-gray-50 border border-gray-100 p-3 text-center">
-      <div className="font-semibold text-gray-900">{value}</div>
-      <div className="text-xs text-gray-500">{label}</div>
+    <div className="rounded-xl bg-gray-50 dark:bg-zinc-800/60 border border-gray-200/70 dark:border-zinc-800 p-3 text-center">
+      <div className="font-semibold text-gray-900 dark:text-zinc-100">{value}</div>
+      <div className="text-xs text-gray-500 dark:text-zinc-400">{label}</div>
     </div>
   );
 }
@@ -464,7 +526,8 @@ function Avatar({
         src={src}
         alt={name}
         style={{ width: dim, height: dim }}
-        className="rounded-full object-cover"
+        className="rounded-full object-cover bg-gray-100 dark:bg-zinc-800"
+        loading="lazy"
       />
     );
   }
@@ -472,7 +535,7 @@ function Avatar({
   return (
     <div
       style={{ width: dim, height: dim }}
-      className="rounded-full bg-gray-100 border border-gray-200 grid place-items-center text-gray-700 font-semibold"
+      className="rounded-full bg-gray-100 dark:bg-zinc-800 border border-gray-200 dark:border-zinc-700 grid place-items-center text-gray-600 dark:text-zinc-300 font-semibold"
     >
       {initial}
     </div>
@@ -500,19 +563,19 @@ function FeedSkeleton() {
       {[0, 1].map((i) => (
         <div
           key={i}
-          className="rounded-2xl bg-white border border-gray-100 shadow-sm overflow-hidden"
+          className="rounded-2xl bg-white dark:bg-zinc-900 border border-gray-200/70 dark:border-zinc-800 shadow-sm overflow-hidden animate-pulse"
         >
           <div className="p-4 flex gap-3 items-center">
-            <div className="h-9 w-9 rounded-full bg-gray-100" />
+            <div className="h-9 w-9 rounded-full bg-gray-200/70 dark:bg-zinc-800" />
             <div className="flex-1">
-              <div className="h-3 w-32 bg-gray-100 rounded" />
-              <div className="mt-2 h-3 w-20 bg-gray-100 rounded" />
+              <div className="h-3 w-32 bg-gray-200/70 dark:bg-zinc-800 rounded-xl" />
+              <div className="mt-2 h-3 w-20 bg-gray-200/70 dark:bg-zinc-800 rounded-xl" />
             </div>
           </div>
-          <div className="h-[360px] bg-gray-50" />
+          <div className="mx-3 h-[360px] rounded-xl bg-gray-200/70 dark:bg-zinc-800" />
           <div className="p-4">
-            <div className="h-3 w-40 bg-gray-100 rounded" />
-            <div className="mt-2 h-3 w-64 bg-gray-100 rounded" />
+            <div className="h-3 w-40 bg-gray-200/70 dark:bg-zinc-800 rounded-xl" />
+            <div className="mt-2 h-3 w-64 bg-gray-200/70 dark:bg-zinc-800 rounded-xl" />
           </div>
         </div>
       ))}
@@ -522,9 +585,14 @@ function FeedSkeleton() {
 
 function EmptyFeed() {
   return (
-    <div className="rounded-2xl bg-white border border-gray-100 shadow-sm p-10 text-center">
-      <div className="text-lg font-semibold text-gray-900">No posts yet</div>
-      <div className="mt-2 text-sm text-gray-500">
+    <div className="rounded-2xl bg-white dark:bg-zinc-900 border border-gray-200/70 dark:border-zinc-800 shadow-sm p-10 flex flex-col items-center text-center">
+      <div className="h-12 w-12 rounded-2xl bg-gray-100 dark:bg-zinc-800 grid place-items-center text-gray-400 dark:text-zinc-500">
+        <IconComment />
+      </div>
+      <div className="mt-3 text-sm font-semibold text-gray-900 dark:text-zinc-100">
+        No posts yet
+      </div>
+      <div className="mt-1 text-xs text-gray-400 dark:text-zinc-500">
         Follow people or upload your first moment to see content here.
       </div>
     </div>

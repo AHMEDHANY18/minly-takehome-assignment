@@ -24,8 +24,8 @@ export default function StoriesBar() {
   };
 
   return (
-    <div className="rounded-2xl bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 shadow-sm px-3 py-3">
-      <div className="flex gap-3 overflow-x-auto scrollbar-none [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+    <div className="rounded-2xl bg-white dark:bg-zinc-900 border border-gray-200/70 dark:border-zinc-800 shadow-sm px-3 py-3">
+      <div className="flex gap-3 overflow-x-auto no-scrollbar">
         {/* Your story tile */}
         <div className="flex flex-col items-center gap-1 shrink-0 w-[68px]">
           <div className="relative">
@@ -39,21 +39,22 @@ export default function StoriesBar() {
                 "h-16 w-16 rounded-full p-[2.5px] transition disabled:opacity-60",
                 ownGroup
                   ? ownGroup.allViewed
-                    ? "bg-gray-300 dark:bg-gray-600"
-                    : "bg-gradient-to-tr from-amber-400 via-pink-500 to-purple-600"
-                  : "bg-gray-200 dark:bg-gray-700",
+                    ? "bg-gray-300 dark:bg-zinc-700"
+                    : "bg-gradient-to-br from-blue-600 to-indigo-600"
+                  : "bg-gray-200 dark:bg-zinc-700",
               ].join(" ")}
               aria-label={ownGroup ? "View your story" : "Add a story"}
             >
-              <span className="block h-full w-full rounded-full bg-white dark:bg-gray-900 p-[2px]">
+              <span className="block h-full w-full rounded-full bg-white dark:bg-zinc-900 p-[2px]">
                 {me?.avatarUrl ? (
                   <img
                     src={me.avatarUrl}
                     alt={me.name}
-                    className="h-full w-full rounded-full object-cover"
+                    className="h-full w-full rounded-full object-cover bg-gray-100 dark:bg-zinc-800"
+                    loading="lazy"
                   />
                 ) : (
-                  <span className="h-full w-full rounded-full bg-gray-100 dark:bg-gray-800 grid place-items-center text-gray-700 dark:text-gray-200 font-semibold">
+                  <span className="h-full w-full rounded-full bg-gray-100 dark:bg-zinc-800 grid place-items-center text-gray-600 dark:text-zinc-300 font-semibold">
                     {(me?.name?.[0] ?? "U").toUpperCase()}
                   </span>
                 )}
@@ -66,7 +67,7 @@ export default function StoriesBar() {
                 inputRef.current?.click();
               }}
               disabled={posting}
-              className="absolute -bottom-0.5 -right-0.5 h-6 w-6 rounded-full bg-blue-600 text-white grid place-items-center border-2 border-white dark:border-gray-900 hover:bg-blue-700 transition disabled:opacity-60"
+              className="absolute -bottom-0.5 -right-0.5 h-6 w-6 rounded-full bg-blue-600 text-white grid place-items-center border-2 border-white dark:border-zinc-900 hover:bg-blue-700 transition disabled:opacity-60"
               aria-label="Add a story"
             >
               {posting ? (
@@ -84,7 +85,7 @@ export default function StoriesBar() {
               )}
             </button>
           </div>
-          <span className="text-[11px] text-gray-600 dark:text-gray-300 font-medium truncate w-full text-center">
+          <span className="text-[11px] text-gray-600 dark:text-zinc-400 font-medium truncate w-full text-center">
             Your story
           </span>
 
@@ -108,8 +109,8 @@ export default function StoriesBar() {
                 key={i}
                 className="flex flex-col items-center gap-1 shrink-0 w-[68px] animate-pulse"
               >
-                <div className="h-16 w-16 rounded-full bg-gray-100 dark:bg-gray-800" />
-                <div className="h-2.5 w-12 rounded bg-gray-100 dark:bg-gray-800" />
+                <div className="h-16 w-16 rounded-full bg-gray-200/70 dark:bg-zinc-800" />
+                <div className="h-2.5 w-12 rounded-full bg-gray-200/70 dark:bg-zinc-800" />
               </div>
             ))
           : groups.map((g, i) =>
@@ -155,26 +156,27 @@ function StoryCircle({
         className={[
           "h-16 w-16 rounded-full p-[2.5px] transition hover:scale-[1.03]",
           group.allViewed
-            ? "bg-gray-300 dark:bg-gray-600"
-            : "bg-gradient-to-tr from-amber-400 via-pink-500 to-purple-600",
+            ? "bg-gray-300 dark:bg-zinc-700"
+            : "bg-gradient-to-br from-blue-600 to-indigo-600",
         ].join(" ")}
         aria-label={`View ${group.user.name}'s story`}
       >
-        <span className="block h-full w-full rounded-full bg-white dark:bg-gray-900 p-[2px]">
+        <span className="block h-full w-full rounded-full bg-white dark:bg-zinc-900 p-[2px]">
           {group.user.avatarUrl ? (
             <img
               src={group.user.avatarUrl}
               alt={group.user.name}
-              className="h-full w-full rounded-full object-cover"
+              className="h-full w-full rounded-full object-cover bg-gray-100 dark:bg-zinc-800"
+              loading="lazy"
             />
           ) : (
-            <span className="h-full w-full rounded-full bg-gray-100 dark:bg-gray-800 grid place-items-center text-gray-700 dark:text-gray-200 font-semibold">
+            <span className="h-full w-full rounded-full bg-gray-100 dark:bg-zinc-800 grid place-items-center text-gray-600 dark:text-zinc-300 font-semibold">
               {(group.user.name?.[0] ?? "U").toUpperCase()}
             </span>
           )}
         </span>
       </button>
-      <span className="text-[11px] text-gray-600 dark:text-gray-300 font-medium truncate w-full text-center">
+      <span className="text-[11px] text-gray-600 dark:text-zinc-400 font-medium truncate w-full text-center">
         {group.user.name}
       </span>
     </div>

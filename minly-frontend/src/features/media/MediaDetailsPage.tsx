@@ -341,30 +341,36 @@ export default function MediaDetailsPage() {
       {/* Header */}
       <div className="flex items-center justify-between mb-3">
         <div className="flex items-center gap-2">
-          <div className="h-8 w-8 rounded-lg bg-blue-600 grid place-items-center text-white font-bold">
+          <div className="h-8 w-8 rounded-xl bg-gradient-to-br from-blue-600 to-indigo-600 grid place-items-center text-white font-bold">
             M
           </div>
-          <div className="font-semibold text-gray-900">Minly</div>
+          <div className="font-semibold text-gray-900 dark:text-zinc-100">Minly</div>
         </div>
 
         <button
           onClick={() => nav(-1)}
-          className="h-10 w-10 rounded-full hover:bg-gray-100 transition grid place-items-center text-gray-700"
+          className="h-10 w-10 rounded-full grid place-items-center text-gray-600 dark:text-zinc-400 hover:bg-gray-100 dark:hover:bg-zinc-800 hover:text-gray-900 dark:hover:text-zinc-100 transition"
+          aria-label="Close"
         >
           ✕
         </button>
       </div>
 
-      <div className="rounded-2xl bg-white border border-gray-100 shadow-sm overflow-hidden grid grid-cols-1 md:grid-cols-[minmax(0,1fr)_380px]">
+      <div className="rounded-2xl bg-white dark:bg-zinc-900 border border-gray-200/70 dark:border-zinc-800 shadow-sm overflow-hidden grid grid-cols-1 md:grid-cols-[minmax(0,1fr)_380px]">
         {/* Media */}
-        <div className="bg-gray-50">
+        <div className="bg-gray-100 dark:bg-zinc-950">
           {loading && !media ? (
-            <div className="h-[78vh] grid place-items-center text-sm text-gray-500">
-              Loading media…
-            </div>
+            <div className="h-[78vh] animate-pulse bg-gray-200/70 dark:bg-zinc-800" />
           ) : !media ? (
-            <div className="h-[78vh] grid place-items-center text-sm text-gray-500">
-              {err ? "Failed to load media." : "No media found."}
+            <div className="h-[78vh] grid place-items-center">
+              <div className="flex flex-col items-center text-center px-6">
+                <div className="h-12 w-12 rounded-2xl bg-gray-100 dark:bg-zinc-800 grid place-items-center text-gray-400 dark:text-zinc-500">
+                  <IconEye />
+                </div>
+                <div className="mt-3 text-sm font-semibold text-gray-900 dark:text-zinc-100">
+                  {err ? "Failed to load media." : "No media found."}
+                </div>
+              </div>
             </div>
           ) : media.type === "VIDEO" ? (
             <video
@@ -384,15 +390,15 @@ export default function MediaDetailsPage() {
         </div>
 
         {/* Right panel */}
-        <div className="flex flex-col h-[78vh]">
+        <div className="flex flex-col h-[78vh] md:border-l md:border-gray-200/70 md:dark:border-zinc-800">
           {/* Uploader */}
-          <div className="px-4 py-3 flex items-center justify-between border-b border-gray-100">
+          <div className="px-4 py-3 flex items-center justify-between border-b border-gray-200/70 dark:border-zinc-800">
             <div className="flex items-center gap-3">
               <Avatar
                 name={uploader?.name ?? "User"}
                 src={uploader?.avatarUrl ?? null}
               />
-              <div className="text-sm font-semibold">
+              <div className="text-sm font-semibold text-gray-900 dark:text-zinc-100">
                 {uploader?.name ?? "User"}
               </div>
 
@@ -401,9 +407,9 @@ export default function MediaDetailsPage() {
                   onClick={toggleUploaderFollow}
                   disabled={followBusy || isFollowing === null}
                   className={[
-                    "h-8 px-4 rounded-full text-sm font-semibold transition disabled:opacity-60",
+                    "h-8 px-4 rounded-xl text-sm font-semibold transition active:scale-[0.98] disabled:opacity-50 disabled:pointer-events-none",
                     isFollowing
-                      ? "bg-white border border-gray-300 text-gray-900 hover:bg-gray-50"
+                      ? "bg-white dark:bg-zinc-900 border border-gray-200 dark:border-zinc-700 text-gray-700 dark:text-zinc-200 hover:bg-gray-50 dark:hover:bg-zinc-800"
                       : "bg-blue-600 text-white hover:bg-blue-700",
                   ].join(" ")}
                 >
@@ -416,12 +422,17 @@ export default function MediaDetailsPage() {
               )}
             </div>
 
-            <button className="h-9 w-9 rounded-full hover:bg-gray-50">⋯</button>
+            <button
+              className="h-9 w-9 rounded-full grid place-items-center text-gray-600 dark:text-zinc-400 hover:bg-gray-100 dark:hover:bg-zinc-800 transition"
+              aria-label="More"
+            >
+              ⋯
+            </button>
           </div>
 
           {/* Caption */}
           {!!media?.title || !!media?.description ? (
-            <div className="px-4 py-3 border-b border-gray-100">
+            <div className="px-4 py-3 border-b border-gray-200/70 dark:border-zinc-800">
               <div className="flex gap-3">
                 <Avatar
                   name={uploader?.name ?? "User"}
@@ -429,12 +440,12 @@ export default function MediaDetailsPage() {
                   size="sm"
                 />
                 <div className="text-sm">
-                  <span className="font-semibold">
+                  <span className="font-semibold text-gray-900 dark:text-zinc-100">
                     {uploader?.name ?? "User"}
                   </span>{" "}
                   <HashtagText
                     text={(media?.description || media?.title) ?? ""}
-                    className="text-gray-700"
+                    className="text-gray-600 dark:text-zinc-400"
                   />
                 </div>
               </div>
@@ -444,9 +455,23 @@ export default function MediaDetailsPage() {
           {/* Comments */}
           <div className="flex-1 overflow-y-auto px-4 py-3">
             {loading ? (
-              <div className="text-sm text-gray-500">Loading…</div>
+              <CommentsSkeleton />
             ) : err ? (
-              <div className="text-sm text-red-600">{err}</div>
+              <div className="text-sm text-red-600 dark:text-red-400">{err}</div>
+            ) : comments.length === 0 ? (
+              <div className="h-full grid place-items-center">
+                <div className="flex flex-col items-center text-center">
+                  <div className="h-12 w-12 rounded-2xl bg-gray-100 dark:bg-zinc-800 grid place-items-center text-gray-400 dark:text-zinc-500">
+                    <IconComment />
+                  </div>
+                  <div className="mt-3 text-sm font-semibold text-gray-900 dark:text-zinc-100">
+                    No comments yet
+                  </div>
+                  <div className="mt-1 text-xs text-gray-400 dark:text-zinc-500">
+                    Be the first to share your thoughts.
+                  </div>
+                </div>
+              </div>
             ) : (
               <>
                 <div className="space-y-4">
@@ -469,21 +494,21 @@ export default function MediaDetailsPage() {
                                 })
                               }
                               rows={2}
-                              className="w-full rounded-xl border border-gray-200 bg-gray-50 p-2 text-sm outline-none focus:ring-2 focus:ring-blue-200 resize-none"
+                              className="w-full rounded-xl bg-gray-50 dark:bg-zinc-800/60 border border-gray-200 dark:border-zinc-700 p-2.5 text-sm text-gray-900 dark:text-zinc-100 placeholder:text-gray-400 dark:placeholder:text-zinc-500 focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-400 dark:focus:border-blue-500 transition resize-none"
                               autoFocus
                             />
                             <div className="mt-1 flex gap-3 text-xs">
                               <button
                                 onClick={saveCommentEdit}
                                 disabled={editSaving || !editingComment.text.trim()}
-                                className="font-semibold text-blue-700 hover:underline disabled:opacity-50"
+                                className="font-semibold text-blue-600 dark:text-blue-400 hover:underline disabled:opacity-50"
                               >
                                 {editSaving ? "Saving…" : "Save"}
                               </button>
                               <button
                                 onClick={() => setEditingComment(null)}
                                 disabled={editSaving}
-                                className="text-gray-500 hover:underline disabled:opacity-50"
+                                className="text-gray-500 dark:text-zinc-400 hover:underline disabled:opacity-50"
                               >
                                 Cancel
                               </button>
@@ -491,24 +516,28 @@ export default function MediaDetailsPage() {
                           </div>
                         ) : (
                           <div className="text-sm">
-                            <span className="font-semibold">{c.user.name}</span>{" "}
-                            <span className="text-gray-700">{c.text}</span>
+                            <span className="font-semibold text-gray-900 dark:text-zinc-100">
+                              {c.user.name}
+                            </span>{" "}
+                            <span className="text-gray-600 dark:text-zinc-400">
+                              {c.text}
+                            </span>
                             {c.isEdited ? (
-                              <span className="ml-1 text-[11px] text-gray-400">
+                              <span className="ml-1 text-[11px] text-gray-400 dark:text-zinc-500">
                                 (edited)
                               </span>
                             ) : null}
                           </div>
                         )}
 
-                        <div className="mt-1 flex gap-3 text-xs text-gray-400">
+                        <div className="mt-1 flex gap-3 text-xs text-gray-400 dark:text-zinc-500">
                           <span>{formatTime(c.createdAt)}</span>
                           <button
                             onClick={() => {
                               setReplyTo({ id: c.id, name: c.user.name });
                               commentInputRef.current?.focus();
                             }}
-                            className="hover:underline"
+                            className="font-medium hover:text-gray-600 dark:hover:text-zinc-300 hover:underline transition"
                           >
                             Reply
                           </button>
@@ -517,7 +546,7 @@ export default function MediaDetailsPage() {
                               onClick={() =>
                                 setEditingComment({ id: c.id, text: c.text })
                               }
-                              className="hover:underline"
+                              className="font-medium hover:text-gray-600 dark:hover:text-zinc-300 hover:underline transition"
                             >
                               Edit
                             </button>
@@ -530,7 +559,7 @@ export default function MediaDetailsPage() {
                                   label: `${c.user.name}'s comment`,
                                 })
                               }
-                              className="hover:underline inline-flex items-center gap-1"
+                              className="font-medium hover:text-gray-600 dark:hover:text-zinc-300 hover:underline transition inline-flex items-center gap-1"
                               aria-label="Report comment"
                             >
                               <IconFlag size={11} />
@@ -540,7 +569,7 @@ export default function MediaDetailsPage() {
                           {c._count?.replies ? (
                             <button
                               onClick={() => toggleReplies(c)}
-                              className="hover:underline"
+                              className="font-medium hover:text-gray-600 dark:hover:text-zinc-300 hover:underline transition"
                             >
                               {expanded[c.id]
                                 ? "Hide replies"
@@ -550,7 +579,7 @@ export default function MediaDetailsPage() {
                         </div>
 
                         {expanded[c.id] && (replies[c.id]?.length ?? 0) > 0 ? (
-                          <div className="mt-3 pl-3 border-l border-gray-100 space-y-3">
+                          <div className="mt-3 pl-3 border-l-2 border-gray-100 dark:border-zinc-800 space-y-3">
                             {replies[c.id].map((r) => (
                               <div key={r.id} className="flex gap-3">
                                 <Avatar
@@ -559,10 +588,12 @@ export default function MediaDetailsPage() {
                                   size="xs"
                                 />
                                 <div className="text-sm">
-                                  <span className="font-semibold">
+                                  <span className="font-semibold text-gray-900 dark:text-zinc-100">
                                     {r.user.name}
                                   </span>{" "}
-                                  <span className="text-gray-700">{r.text}</span>
+                                  <span className="text-gray-600 dark:text-zinc-400">
+                                    {r.text}
+                                  </span>
                                 </div>
                               </div>
                             ))}
@@ -578,7 +609,7 @@ export default function MediaDetailsPage() {
                   <div className="mt-4 flex justify-center">
                     <button
                       onClick={loadMoreComments}
-                      className="h-10 px-5 rounded-xl bg-white border border-gray-200 shadow-sm hover:bg-gray-50 transition text-sm font-semibold"
+                      className="inline-flex items-center justify-center h-10 px-5 rounded-xl border border-gray-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 text-sm font-semibold text-gray-700 dark:text-zinc-200 hover:bg-gray-50 dark:hover:bg-zinc-800 active:scale-[0.98] transition"
                     >
                       Load more
                     </button>
@@ -589,23 +620,28 @@ export default function MediaDetailsPage() {
           </div>
 
           {/* Actions */}
-          <div className="border-t border-gray-100">
+          <div className="border-t border-gray-200/70 dark:border-zinc-800">
             <div className="px-4 py-3 flex items-center">
               <button
                 onClick={onToggleLike}
-                className="h-10 w-10 rounded-full hover:bg-gray-50 grid place-items-center"
+                className={[
+                  "h-10 w-10 rounded-full grid place-items-center transition active:scale-[0.98]",
+                  media?.isLiked
+                    ? "text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-950/40"
+                    : "text-gray-600 dark:text-zinc-400 hover:bg-gray-100 dark:hover:bg-zinc-800",
+                ].join(" ")}
               >
                 <IconHeart filled={!!media?.isLiked} />
               </button>
 
               <button
                 onClick={() => commentInputRef.current?.focus()}
-                className="h-10 w-10 rounded-full hover:bg-gray-50 grid place-items-center"
+                className="h-10 w-10 rounded-full grid place-items-center text-gray-600 dark:text-zinc-400 hover:bg-gray-100 dark:hover:bg-zinc-800 transition active:scale-[0.98]"
               >
                 <IconComment />
               </button>
 
-              <button className="h-10 w-10 rounded-full hover:bg-gray-50 grid place-items-center">
+              <button className="h-10 w-10 rounded-full grid place-items-center text-gray-600 dark:text-zinc-400 hover:bg-gray-100 dark:hover:bg-zinc-800 transition active:scale-[0.98]">
                 <IconSend />
               </button>
 
@@ -618,7 +654,7 @@ export default function MediaDetailsPage() {
                       label: media.title?.trim() || "this post",
                     })
                   }
-                  className="h-10 w-10 rounded-full hover:bg-gray-50 grid place-items-center text-gray-700"
+                  className="h-10 w-10 rounded-full grid place-items-center text-gray-600 dark:text-zinc-400 hover:bg-gray-100 dark:hover:bg-zinc-800 transition active:scale-[0.98]"
                   aria-label="Report media"
                 >
                   <IconFlag />
@@ -627,7 +663,12 @@ export default function MediaDetailsPage() {
 
               <button
                 onClick={onToggleBookmark}
-                className="ml-auto h-10 w-10 rounded-full hover:bg-gray-50 grid place-items-center"
+                className={[
+                  "ml-auto h-10 w-10 rounded-full grid place-items-center transition active:scale-[0.98]",
+                  media?.isBookmarked
+                    ? "text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-950/40"
+                    : "text-gray-600 dark:text-zinc-400 hover:bg-gray-100 dark:hover:bg-zinc-800",
+                ].join(" ")}
               >
                 <IconBookmark filled={!!media?.isBookmarked} />
               </button>
@@ -635,10 +676,12 @@ export default function MediaDetailsPage() {
 
             <div className="px-4 pb-2">
               <div className="flex items-center gap-3">
-                <div className="text-sm font-semibold">{likeCountLabel}</div>
+                <div className="text-sm font-semibold text-gray-900 dark:text-zinc-100">
+                  {likeCountLabel}
+                </div>
                 {media?.viewsCount != null && (
                   <div
-                    className="inline-flex items-center gap-1 text-xs text-gray-500"
+                    className="inline-flex items-center gap-1 text-xs text-gray-500 dark:text-zinc-400"
                     aria-label="Views"
                   >
                     <IconEye size={14} />
@@ -646,19 +689,19 @@ export default function MediaDetailsPage() {
                   </div>
                 )}
               </div>
-              <div className="text-[11px] text-gray-400">
+              <div className="text-[11px] text-gray-400 dark:text-zinc-500">
                 {formatDate(media?.createdAt)}
               </div>
             </div>
 
             {replyTo && (
-              <div className="px-4 pt-2 text-xs text-gray-500 flex justify-between">
+              <div className="px-4 pt-2 text-xs text-gray-500 dark:text-zinc-400 flex justify-between">
                 <span>
                   Replying to <b>{replyTo.name}</b>
                 </span>
                 <button
                   onClick={() => setReplyTo(null)}
-                  className="text-blue-700 hover:underline"
+                  className="text-blue-600 dark:text-blue-400 hover:underline"
                 >
                   Cancel
                 </button>
@@ -676,7 +719,7 @@ export default function MediaDetailsPage() {
                 value={commentText}
                 onChange={(e) => setCommentText(e.target.value)}
                 onKeyDown={(e) => e.key === "Enter" && submitComment()}
-                className="flex-1 h-11 rounded-full bg-gray-50 border border-gray-200 px-4 text-sm"
+                className="flex-1 h-11 rounded-full bg-gray-50 dark:bg-zinc-800/60 border border-gray-200 dark:border-zinc-700 px-4 text-sm text-gray-900 dark:text-zinc-100 placeholder:text-gray-400 dark:placeholder:text-zinc-500 focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-400 dark:focus:border-blue-500 transition"
                 placeholder={
                   replyTo ? `Reply to ${replyTo.name}…` : "Add a comment…"
                 }
@@ -684,7 +727,7 @@ export default function MediaDetailsPage() {
               <button
                 disabled={posting || !commentText.trim()}
                 onClick={submitComment}
-                className="text-sm font-semibold text-blue-700 disabled:opacity-40"
+                className="text-sm font-semibold text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 transition disabled:opacity-40 disabled:pointer-events-none"
               >
                 {posting ? "Posting…" : "Post"}
               </button>
@@ -705,6 +748,22 @@ export default function MediaDetailsPage() {
 }
 
 /* ---------------- Helpers ---------------- */
+
+function CommentsSkeleton() {
+  return (
+    <div className="space-y-4">
+      {[0, 1, 2, 3].map((i) => (
+        <div key={i} className="flex gap-3 animate-pulse">
+          <div className="h-8 w-8 rounded-full bg-gray-200/70 dark:bg-zinc-800" />
+          <div className="flex-1">
+            <div className="h-3 w-40 rounded-xl bg-gray-200/70 dark:bg-zinc-800" />
+            <div className="mt-2 h-3 w-24 rounded-xl bg-gray-200/70 dark:bg-zinc-800" />
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
 
 function IconFlag({ size = 18 }: { size?: number }) {
   return (
@@ -737,12 +796,13 @@ function Avatar({
     <img
       src={src}
       style={{ width: dim, height: dim }}
-      className="rounded-full object-cover"
+      className="rounded-full object-cover bg-gray-100 dark:bg-zinc-800"
+      loading="lazy"
     />
   ) : (
     <div
       style={{ width: dim, height: dim }}
-      className="rounded-full bg-gray-100 border grid place-items-center text-gray-700 font-semibold"
+      className="rounded-full bg-gray-100 dark:bg-zinc-800 border border-gray-200 dark:border-zinc-700 grid place-items-center text-gray-600 dark:text-zinc-300 font-semibold"
     >
       <span style={{ fontSize: size === "xs" ? 11 : 13 }}>{initial}</span>
     </div>

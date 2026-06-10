@@ -1,10 +1,10 @@
-import { useMemo, useRef, useState } from "react";
-import { useNavigate } from "react-router-dom";
-import type { SavedMedia, SavedSort } from "@/features/saved/api/bookmarks.api";
+import { useMemo, useState } from "react";
+import { motion } from "framer-motion";
+import type { SavedSort } from "@/features/saved/api/bookmarks.api";
+import MediaGrid from "@/shared/components/MediaGrid";
 import { useSaved } from "./hooks/useSaved";
 
 export default function SavedPage() {
-  const nav = useNavigate();
   const { items, total, tab, sort, setTab, setSort, initialLoading, loadingMore, error, hasMore, loadMore, reload } =
     useSaved(24);
 
@@ -22,12 +22,24 @@ export default function SavedPage() {
   }, [items, q]);
 
   return (
-    <div className="mx-auto max-w-[1200px]">
+    <motion.div
+      initial={{ opacity: 0, y: 8 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.25 }}
+      className="mx-auto max-w-[1200px]"
+    >
       {/* Header */}
-      <div className="flex items-start justify-between gap-4 mb-4">
+      <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4 mb-4">
         <div>
-          <div className="text-2xl font-semibold text-gray-900">Saved</div>
-          <div className="text-sm text-gray-500 mt-1">Manage your saved posts.</div>
+          <div className="flex items-center gap-2">
+            <h1 className="text-xl font-bold tracking-tight text-gray-900 dark:text-zinc-100">Saved</h1>
+            {total ? (
+              <span className="inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-semibold bg-gray-100 text-gray-600 dark:bg-zinc-800 dark:text-zinc-300">
+                {total}
+              </span>
+            ) : null}
+          </div>
+          <div className="text-sm text-gray-600 dark:text-zinc-400 mt-1">Manage your saved posts.</div>
         </div>
 
         <div className="w-full max-w-[360px]">
@@ -36,15 +48,17 @@ export default function SavedPage() {
               value={q}
               onChange={(e) => setQ(e.target.value)}
               placeholder="Search saved items…"
-              className="w-full h-10 pl-10 pr-3 rounded-full bg-white border border-gray-200 shadow-sm outline-none focus:ring-2 focus:ring-blue-200"
+              className="w-full h-10 pl-10 pr-3 rounded-xl bg-gray-50 dark:bg-zinc-800/60 border border-gray-200 dark:border-zinc-700 text-sm text-gray-900 dark:text-zinc-100 placeholder:text-gray-400 dark:placeholder:text-zinc-500 focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-400 dark:focus:border-blue-500 transition"
             />
-            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">⌕</span>
+            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 dark:text-zinc-500">
+              <SearchIcon />
+            </span>
           </div>
         </div>
       </div>
 
       {/* Tabs (type) */}
-      <div className="flex items-center justify-between gap-3 mb-4">
+      <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
         <div className="flex items-center gap-2">
           <Tab active={tab === "ALL"} onClick={() => setTab("ALL")}>All</Tab>
           <Tab active={tab === "IMAGE"} onClick={() => setTab("IMAGE")}>Images</Tab>
@@ -53,16 +67,19 @@ export default function SavedPage() {
 
         <div className="flex items-center gap-2">
           <SortSelect value={sort} onChange={setSort} />
-          <div className="text-xs text-gray-400">{total ? `${total} items` : ""}</div>
+          <div className="text-xs text-gray-400 dark:text-zinc-500">{total ? `${total} items` : ""}</div>
         </div>
       </div>
 
       {/* Error */}
       {error && (
-        <div className="rounded-2xl bg-white border border-red-100 shadow-sm p-4 mb-4">
-          <div className="text-sm font-semibold text-red-600">Failed to load saved</div>
-          <div className="text-xs text-gray-500 mt-1">{error}</div>
-          <button onClick={reload} className="mt-3 text-sm font-semibold text-blue-700 hover:underline">
+        <div className="rounded-2xl bg-white dark:bg-zinc-900 border border-red-100 dark:border-red-900/50 shadow-sm p-4 mb-4">
+          <div className="text-sm font-semibold text-red-600 dark:text-red-400">Failed to load saved</div>
+          <div className="text-xs text-gray-500 dark:text-zinc-400 mt-1">{error}</div>
+          <button
+            onClick={reload}
+            className="mt-3 text-sm font-semibold text-blue-600 dark:text-blue-400 hover:underline"
+          >
             Retry
           </button>
         </div>
@@ -71,30 +88,35 @@ export default function SavedPage() {
       {/* Content */}
       {initialLoading ? (
         <GridSkeleton />
+      ) : filtered.length === 0 ? (
+        <EmptyState
+          title={q.trim() ? "No results" : "Nothing saved yet"}
+          text={
+            q.trim()
+              ? `No saved items match "${q.trim()}".`
+              : "Posts you bookmark will show up here."
+          }
+        />
       ) : (
         <>
-<div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-{filtered.map((m) => (
-              <MediaCard key={m.id} m={m} onClick={() => nav(`/media/${m.id}`)} />
-            ))}
-          </div>
+          <MediaGrid items={filtered} />
 
           <div className="py-6 flex justify-center">
             {hasMore ? (
               <button
                 onClick={loadMore}
                 disabled={loadingMore}
-                className="h-10 px-5 rounded-xl bg-white border border-gray-200 shadow-sm hover:bg-gray-50 transition text-sm font-semibold disabled:opacity-60"
+                className="inline-flex items-center justify-center gap-2 h-10 px-5 rounded-xl border border-gray-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 text-sm font-semibold text-gray-700 dark:text-zinc-200 hover:bg-gray-50 dark:hover:bg-zinc-800 active:scale-[0.98] transition disabled:opacity-50 disabled:pointer-events-none"
               >
                 {loadingMore ? "Loading…" : "Load more"}
               </button>
             ) : (
-              <div className="text-xs text-gray-400">End of saved items</div>
+              <div className="text-xs text-gray-400 dark:text-zinc-500">End of saved items</div>
             )}
           </div>
         </>
       )}
-    </div>
+    </motion.div>
   );
 }
 
@@ -105,8 +127,10 @@ function Tab({ active, onClick, children }: { active?: boolean; onClick?: () => 
     <button
       onClick={onClick}
       className={[
-        "h-9 px-4 rounded-full text-sm font-semibold border transition",
-        active ? "bg-blue-600 text-white border-blue-600" : "bg-white text-gray-700 border-gray-200 hover:bg-gray-50",
+        "inline-flex items-center justify-center h-9 px-4 rounded-full text-sm font-semibold border active:scale-[0.98] transition",
+        active
+          ? "bg-blue-600 text-white border-blue-600"
+          : "bg-white dark:bg-zinc-900 text-gray-600 dark:text-zinc-400 border-gray-200 dark:border-zinc-700 hover:bg-gray-50 dark:hover:bg-zinc-800 hover:text-gray-900 dark:hover:text-zinc-100",
       ].join(" ")}
     >
       {children}
@@ -117,11 +141,11 @@ function Tab({ active, onClick, children }: { active?: boolean; onClick?: () => 
 function SortSelect({ value, onChange }: { value: SavedSort; onChange: (v: SavedSort) => void }) {
   return (
     <div className="flex items-center gap-2">
-      <span className="text-xs text-gray-400">Sort</span>
+      <span className="text-xs text-gray-400 dark:text-zinc-500">Sort</span>
       <select
         value={value}
         onChange={(e) => onChange(e.target.value as SavedSort)}
-        className="h-9 px-3 rounded-full bg-white border border-gray-200 shadow-sm text-sm font-semibold text-gray-700 outline-none hover:bg-gray-50"
+        className="h-9 px-3 rounded-xl bg-white dark:bg-zinc-900 border border-gray-200 dark:border-zinc-700 text-sm font-semibold text-gray-700 dark:text-zinc-200 outline-none hover:bg-gray-50 dark:hover:bg-zinc-800 focus:ring-2 focus:ring-blue-500/30 transition"
       >
         <option value="recent">Recently saved</option>
         <option value="oldest">Oldest</option>
@@ -131,110 +155,46 @@ function SortSelect({ value, onChange }: { value: SavedSort; onChange: (v: Saved
   );
 }
 
-
-function MediaCard({ m, onClick }: { m: SavedMedia; onClick: () => void }) {
-  const videoRef = useRef<HTMLVideoElement | null>(null);
-  const [videoReady, setVideoReady] = useState(false);
-
-  const hasThumb = !!m.thumbnailUrl;
-  const isVideo = m.type === "VIDEO";
-
-  // IMAGE
-  if (!isVideo) {
-    return (
-      <button
-        onClick={onClick}
-        className="w-full rounded-2xl overflow-hidden bg-gray-100 border border-gray-200 shadow-sm hover:shadow transition relative"
-        aria-label="Open saved media"
-      >
-        <div className="relative w-full aspect-[4/5] bg-gray-100">
-          <img
-            src={m.thumbnailUrl ?? m.url}
-            alt=""
-            className="absolute inset-0 w-full h-full object-cover"
-            loading="lazy"
-          />
-        </div>
-      </button>
-    );
-  }
-
-  // VIDEO + thumbnail موجودة
-  if (hasThumb) {
-    return (
-      <button
-        onClick={onClick}
-        className="w-full rounded-2xl overflow-hidden bg-gray-100 border border-gray-200 shadow-sm hover:shadow transition relative"
-        aria-label="Open saved media"
-      >
-        <div className="relative w-full aspect-[4/5] bg-gray-100">
-          <img
-            src={m.thumbnailUrl!}
-            alt=""
-            className="absolute inset-0 w-full h-full object-cover"
-            loading="lazy"
-          />
-
-          <div className="absolute top-3 left-3 h-8 w-8 rounded-full bg-black/60 grid place-items-center text-white text-xs">
-            ▶
-          </div>
-        </div>
-      </button>
-    );
-  }
-
-  // VIDEO + thumbnail مش موجودة => اعرض فيديو كـ preview (أول فريم)
+function EmptyState({ title, text }: { title: string; text: string }) {
   return (
-    <button
-      onClick={onClick}
-      className="w-full rounded-2xl overflow-hidden bg-gray-100 border border-gray-200 shadow-sm hover:shadow transition relative"
-      aria-label="Open saved media"
-    >
-      <div className="relative w-full aspect-[4/5] bg-gray-100">
-        {!videoReady && <div className="absolute inset-0 bg-gray-200" />}
-
-        <video
-          ref={videoRef}
-          src={m.url}
-          preload="metadata"
-          muted
-          playsInline
-          className="absolute inset-0 w-full h-full object-cover pointer-events-none"
-          onLoadedMetadata={() => {
-            const v = videoRef.current;
-            if (!v) return;
-            try {
-              v.currentTime = 0.01;
-            } catch {
-            }
-          }}
-          onSeeked={() => {
-            const v = videoRef.current;
-            if (!v) return;
-            v.pause();
-            setVideoReady(true);
-          }}
-          onLoadedData={() => setVideoReady(true)}
-        />
-
-        <div className="absolute top-3 left-3 h-8 w-8 rounded-full bg-black/60 grid place-items-center text-white text-xs">
-          ▶
-        </div>
+    <div className="rounded-2xl bg-white dark:bg-zinc-900 border border-gray-200/70 dark:border-zinc-800 shadow-sm p-10 flex flex-col items-center text-center">
+      <div className="h-12 w-12 rounded-2xl bg-gray-100 dark:bg-zinc-800 grid place-items-center text-gray-400 dark:text-zinc-500">
+        <BookmarkIcon />
       </div>
-    </button>
+      <div className="mt-3 text-sm font-semibold text-gray-900 dark:text-zinc-100">{title}</div>
+      <div className="mt-1 text-xs text-gray-400 dark:text-zinc-500">{text}</div>
+    </div>
   );
 }
 
-
-
 function GridSkeleton() {
   return (
-    <div className="columns-1 sm:columns-2 lg:columns-3 gap-4">
+    <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
       {Array.from({ length: 9 }).map((_, i) => (
-        <div key={i} className="mb-4 break-inside-avoid rounded-2xl bg-gray-100 border border-gray-200 overflow-hidden">
-          <div className="h-64 w-full" />
-        </div>
+        <div key={i} className="aspect-square rounded-xl animate-pulse bg-gray-200/70 dark:bg-zinc-800" />
       ))}
     </div>
+  );
+}
+
+function SearchIcon() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      <circle cx="11" cy="11" r="7" stroke="currentColor" strokeWidth="2" />
+      <path d="m20 20-3.5-3.5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+function BookmarkIcon() {
+  return (
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      <path
+        d="M6 4.5A1.5 1.5 0 0 1 7.5 3h9A1.5 1.5 0 0 1 18 4.5V21l-6-3.5L6 21V4.5Z"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinejoin="round"
+      />
+    </svg>
   );
 }

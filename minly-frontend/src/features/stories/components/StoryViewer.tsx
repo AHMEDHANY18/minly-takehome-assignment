@@ -190,21 +190,21 @@ export default function StoryViewer({
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       transition={{ duration: 0.15 }}
-      className="fixed inset-0 z-[100] bg-black/95 flex items-center justify-center"
+      className="fixed inset-0 z-[100] bg-black/95 backdrop-blur-sm flex items-center justify-center"
       role="dialog"
       aria-modal="true"
       aria-label={`${group.user.name}'s story`}
     >
-      <div className="relative w-full h-full md:w-[420px] md:h-[88vh] md:rounded-2xl overflow-hidden bg-gray-950">
+      <div className="relative w-full h-full md:w-[420px] md:h-[88vh] md:rounded-2xl overflow-hidden bg-zinc-950">
         {/* Progress bars */}
         <div className="absolute top-0 left-0 right-0 z-30 flex gap-1 px-3 pt-3">
           {group.stories.map((s, i) => (
             <div
               key={s.id}
-              className="h-[3px] flex-1 rounded-full bg-white/30 overflow-hidden"
+              className="h-[3px] flex-1 rounded-full bg-white/40 overflow-hidden"
             >
               <div
-                className="h-full bg-white"
+                className="h-full rounded-full bg-white"
                 style={{
                   width:
                     i < sIdx ? "100%" : i === sIdx ? `${progress * 100}%` : "0%",

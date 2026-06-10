@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { motion } from "framer-motion";
 import { useNavigate } from "react-router-dom";
 import type { ReportStatus } from "@/shared/api/report.api";
 import {
@@ -94,23 +95,23 @@ export default function ReportsTab() {
             key={f.value}
             onClick={() => setFilter(f.value)}
             className={[
-              "h-9 px-4 rounded-full text-sm font-semibold transition",
+              "inline-flex items-center gap-1 rounded-full px-4 h-9 text-sm font-semibold transition active:scale-[0.98]",
               filter === f.value
                 ? "bg-blue-600 text-white shadow-sm"
-                : "bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700",
+                : "bg-white dark:bg-zinc-900 border border-gray-200 dark:border-zinc-700 text-gray-600 dark:text-zinc-300 hover:bg-gray-50 dark:hover:bg-zinc-800",
             ].join(" ")}
           >
             {f.label}
           </button>
         ))}
 
-        <div className="ml-auto text-xs text-gray-400">
+        <div className="ml-auto text-xs text-gray-400 dark:text-zinc-500">
           {total} report{total === 1 ? "" : "s"}
         </div>
       </div>
 
       {actionError && (
-        <div className="mt-4 rounded-xl border border-red-100 dark:border-red-900 bg-red-50 dark:bg-red-950 px-4 py-3 text-sm text-red-700 dark:text-red-300">
+        <div className="mt-4 rounded-xl border border-red-200 dark:border-red-900 bg-red-50 dark:bg-red-950/50 px-4 py-3 text-sm text-red-700 dark:text-red-300">
           {actionError}
         </div>
       )}
@@ -118,14 +119,14 @@ export default function ReportsTab() {
       {/* List */}
       <div className="mt-4 space-y-3">
         {error ? (
-          <div className="rounded-2xl bg-white dark:bg-gray-900 border border-red-100 dark:border-red-900 p-4 shadow-sm">
+          <div className="rounded-2xl bg-white dark:bg-zinc-900 border border-red-200 dark:border-red-900 p-4 shadow-sm">
             <div className="text-sm text-red-600 dark:text-red-400 font-semibold">
               Failed to load reports
             </div>
-            <div className="text-xs text-gray-500 mt-1">{error}</div>
+            <div className="text-xs text-gray-500 dark:text-zinc-400 mt-1">{error}</div>
             <button
               onClick={reload}
-              className="mt-3 text-sm font-semibold text-blue-700 dark:text-blue-400 hover:underline"
+              className="mt-3 text-sm font-semibold text-blue-600 dark:text-blue-400 hover:underline"
             >
               Retry
             </button>
@@ -133,11 +134,26 @@ export default function ReportsTab() {
         ) : initialLoading ? (
           <ReportsSkeleton />
         ) : reports.length === 0 ? (
-          <div className="rounded-2xl bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 shadow-sm p-10 text-center">
-            <div className="text-base font-semibold text-gray-900 dark:text-gray-100">
+          <div className="rounded-2xl bg-white dark:bg-zinc-900 border border-gray-200/70 dark:border-zinc-800 shadow-sm p-10 flex flex-col items-center text-center">
+            <div className="h-12 w-12 rounded-2xl bg-gray-100 dark:bg-zinc-800 grid place-items-center text-gray-400 dark:text-zinc-500">
+              <svg
+                className="h-6 w-6"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                aria-hidden="true"
+              >
+                <path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z" />
+                <line x1="4" y1="22" x2="4" y2="15" />
+              </svg>
+            </div>
+            <div className="mt-4 text-sm font-semibold text-gray-900 dark:text-zinc-100">
               No reports here
             </div>
-            <div className="mt-1 text-sm text-gray-500 dark:text-gray-400">
+            <div className="mt-1 text-xs text-gray-500 dark:text-zinc-400">
               Nothing matches this filter right now.
             </div>
           </div>
@@ -159,7 +175,7 @@ export default function ReportsTab() {
                 <button
                   onClick={loadMore}
                   disabled={loadingMore}
-                  className="h-10 px-5 rounded-xl bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 shadow-sm hover:bg-gray-50 dark:hover:bg-gray-700 transition text-sm font-semibold text-gray-700 dark:text-gray-200 disabled:opacity-60"
+                  className="inline-flex items-center justify-center gap-2 h-10 px-4 rounded-xl border border-gray-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 text-sm font-semibold text-gray-700 dark:text-zinc-200 hover:bg-gray-50 dark:hover:bg-zinc-800 active:scale-[0.98] transition disabled:opacity-50 disabled:pointer-events-none"
                 >
                   {loadingMore ? "Loading…" : "Load more"}
                 </button>
@@ -172,17 +188,20 @@ export default function ReportsTab() {
       {/* Delete confirmation */}
       {confirm && (
         <div
-          className="fixed inset-0 z-50 bg-black/35 backdrop-blur-sm grid place-items-center p-4"
+          className="fixed inset-0 z-50 bg-black/50 dark:bg-black/70 backdrop-blur-sm grid place-items-center p-4"
           onMouseDown={() => !confirmBusy && setConfirm(null)}
         >
-          <div
-            className="w-full max-w-[420px] rounded-2xl bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 shadow-[0_18px_60px_rgba(16,24,40,0.25)] p-5"
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ duration: 0.2 }}
+            className="w-full max-w-md rounded-2xl bg-white dark:bg-zinc-900 border border-gray-200/70 dark:border-zinc-800 shadow-xl dark:shadow-black/40 p-6"
             onMouseDown={(e) => e.stopPropagation()}
           >
-            <div className="text-[16px] font-semibold text-gray-900 dark:text-gray-100">
+            <div className="text-[16px] font-semibold text-gray-900 dark:text-zinc-100">
               Delete {confirm.kind === "media" ? "media" : "comment"}?
             </div>
-            <div className="mt-2 text-sm text-gray-500 dark:text-gray-400">
+            <div className="mt-2 text-sm text-gray-600 dark:text-zinc-400">
               This permanently removes the reported{" "}
               {confirm.kind === "media" ? "media" : "comment"} for all users.
               This action cannot be undone.
@@ -192,19 +211,19 @@ export default function ReportsTab() {
               <button
                 onClick={() => setConfirm(null)}
                 disabled={confirmBusy}
-                className="h-10 px-4 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-sm font-semibold text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700 transition disabled:opacity-60"
+                className="inline-flex items-center justify-center gap-2 h-10 px-4 rounded-xl border border-gray-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 text-sm font-semibold text-gray-700 dark:text-zinc-200 hover:bg-gray-50 dark:hover:bg-zinc-800 active:scale-[0.98] transition disabled:opacity-50 disabled:pointer-events-none"
               >
                 Cancel
               </button>
               <button
                 onClick={deleteContent}
                 disabled={confirmBusy}
-                className="h-10 px-4 rounded-xl bg-red-600 text-white text-sm font-semibold hover:bg-red-700 transition disabled:opacity-60"
+                className="inline-flex items-center justify-center gap-2 h-10 px-4 rounded-xl bg-red-600 text-white text-sm font-semibold hover:bg-red-700 active:scale-[0.98] transition disabled:opacity-50 disabled:pointer-events-none"
               >
                 {confirmBusy ? "Deleting…" : "Delete content"}
               </button>
             </div>
-          </div>
+          </motion.div>
         </div>
       )}
     </div>
@@ -231,15 +250,15 @@ function ReportCard({
     (report.targetType === "MEDIA" || report.targetType === "COMMENT");
 
   return (
-    <div className="rounded-2xl bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 shadow-sm p-4">
+    <div className="rounded-2xl bg-white dark:bg-zinc-900 border border-gray-200/70 dark:border-zinc-800 shadow-sm p-4">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="flex items-center gap-3 min-w-0">
           <SmallAvatar name={report.reporter.name} src={report.reporter.avatarUrl} />
           <div className="min-w-0 leading-tight">
-            <div className="text-sm font-semibold text-gray-900 dark:text-gray-100 truncate">
+            <div className="text-sm font-semibold text-gray-900 dark:text-zinc-100 truncate">
               {report.reporter.name}
             </div>
-            <div className="text-xs text-gray-500 dark:text-gray-400">
+            <div className="text-xs text-gray-500 dark:text-zinc-400">
               reported a {report.targetType.toLowerCase()} ·{" "}
               {formatDateTime(report.createdAt)}
             </div>
@@ -253,7 +272,7 @@ function ReportCard({
       </div>
 
       {report.details && (
-        <p className="mt-3 text-sm text-gray-600 dark:text-gray-300 leading-relaxed">
+        <p className="mt-3 text-sm text-gray-600 dark:text-zinc-400 leading-relaxed">
           “{report.details}”
         </p>
       )}
@@ -269,7 +288,7 @@ function ReportCard({
           <button
             onClick={onReview}
             disabled={busy}
-            className="h-9 px-4 rounded-xl bg-blue-600 text-white text-sm font-semibold hover:bg-blue-700 transition disabled:opacity-60"
+            className="inline-flex items-center justify-center gap-2 h-9 px-4 rounded-xl border border-gray-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 text-sm font-semibold text-gray-700 dark:text-zinc-200 hover:bg-gray-50 dark:hover:bg-zinc-800 active:scale-[0.98] transition disabled:opacity-50 disabled:pointer-events-none"
           >
             Mark reviewed
           </button>
@@ -278,7 +297,7 @@ function ReportCard({
           <button
             onClick={onDismiss}
             disabled={busy}
-            className="h-9 px-4 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-sm font-semibold text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700 transition disabled:opacity-60"
+            className="inline-flex items-center justify-center gap-2 h-9 px-4 rounded-xl text-sm font-semibold text-gray-600 dark:text-zinc-400 hover:bg-gray-100 dark:hover:bg-zinc-800 hover:text-gray-900 dark:hover:text-zinc-100 active:scale-[0.98] transition disabled:opacity-50 disabled:pointer-events-none"
           >
             Dismiss
           </button>
@@ -289,7 +308,7 @@ function ReportCard({
               onDeleteContent(report.targetType === "MEDIA" ? "media" : "comment")
             }
             disabled={busy}
-            className="h-9 px-4 rounded-xl border border-red-200 dark:border-red-900 bg-white dark:bg-gray-800 text-sm font-semibold text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950 transition disabled:opacity-60"
+            className="inline-flex items-center justify-center gap-2 h-9 px-4 rounded-xl text-sm font-semibold text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/40 active:scale-[0.98] transition disabled:opacity-50 disabled:pointer-events-none"
           >
             Delete content
           </button>
@@ -306,7 +325,7 @@ function TargetPreview({ report }: { report: AdminReport }) {
 
   if (!report.target) {
     return (
-      <div className="rounded-xl border border-dashed border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/60 px-4 py-3 text-sm text-gray-400 dark:text-gray-500">
+      <div className="rounded-xl border border-dashed border-gray-200 dark:border-zinc-700 bg-gray-50 dark:bg-zinc-800/60 px-4 py-3 text-sm text-gray-400 dark:text-zinc-500">
         The reported {report.targetType.toLowerCase()} has been deleted.
       </div>
     );
@@ -317,9 +336,9 @@ function TargetPreview({ report }: { report: AdminReport }) {
     return (
       <button
         onClick={() => nav(`/media/${t.id}`)}
-        className="w-full flex items-center gap-3 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/60 p-2 text-left hover:bg-gray-100 dark:hover:bg-gray-800 transition"
+        className="w-full flex items-center gap-3 rounded-xl border border-gray-200 dark:border-zinc-700 bg-gray-50 dark:bg-zinc-800/60 p-2 text-left hover:bg-gray-100 dark:hover:bg-zinc-800 transition"
       >
-        <div className="relative h-14 w-14 shrink-0 rounded-lg overflow-hidden bg-gray-100 dark:bg-gray-800">
+        <div className="relative h-14 w-14 shrink-0 rounded-xl overflow-hidden bg-gray-100 dark:bg-zinc-800">
           {t.thumbnailUrl || t.type === "IMAGE" ? (
             <img
               src={t.thumbnailUrl ?? t.url}
@@ -343,10 +362,10 @@ function TargetPreview({ report }: { report: AdminReport }) {
           )}
         </div>
         <div className="min-w-0">
-          <div className="text-sm font-semibold text-gray-900 dark:text-gray-100 truncate">
+          <div className="text-sm font-semibold text-gray-900 dark:text-zinc-100 truncate">
             {(t.title ?? "").trim() || "Untitled"}
           </div>
-          <div className="text-xs text-gray-500 dark:text-gray-400 truncate">
+          <div className="text-xs text-gray-500 dark:text-zinc-400 truncate">
             by {t.uploader?.name ?? "Unknown"}
           </div>
         </div>
@@ -357,9 +376,9 @@ function TargetPreview({ report }: { report: AdminReport }) {
   if (report.targetType === "COMMENT") {
     const t = report.target as AdminCommentPreview;
     return (
-      <div className="rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/60 px-4 py-3">
-        <div className="text-sm text-gray-700 dark:text-gray-200">“{t.text}”</div>
-        <div className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+      <div className="rounded-xl border border-gray-200 dark:border-zinc-700 bg-gray-50 dark:bg-zinc-800/60 px-4 py-3">
+        <div className="text-sm text-gray-700 dark:text-zinc-200">“{t.text}”</div>
+        <div className="mt-1 text-xs text-gray-500 dark:text-zinc-400">
           comment by {t.user?.name ?? "Unknown"}
         </div>
       </div>
@@ -370,14 +389,14 @@ function TargetPreview({ report }: { report: AdminReport }) {
   return (
     <button
       onClick={() => nav(`/profile/${t.id}`)}
-      className="w-full flex items-center gap-3 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/60 p-2 text-left hover:bg-gray-100 dark:hover:bg-gray-800 transition"
+      className="w-full flex items-center gap-3 rounded-xl border border-gray-200 dark:border-zinc-700 bg-gray-50 dark:bg-zinc-800/60 p-2 text-left hover:bg-gray-100 dark:hover:bg-zinc-800 transition"
     >
       <SmallAvatar name={t.name} src={t.avatarUrl} />
       <div className="min-w-0">
-        <div className="text-sm font-semibold text-gray-900 dark:text-gray-100 truncate">
+        <div className="text-sm font-semibold text-gray-900 dark:text-zinc-100 truncate">
           {t.name}
         </div>
-        <div className="text-xs text-gray-500 dark:text-gray-400 truncate">{t.email}</div>
+        <div className="text-xs text-gray-500 dark:text-zinc-400 truncate">{t.email}</div>
       </div>
     </button>
   );
@@ -385,38 +404,42 @@ function TargetPreview({ report }: { report: AdminReport }) {
 
 /* ---------------- Bits ---------------- */
 
+const BADGE_BASE =
+  "inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-semibold";
+
 function StatusBadge({ status }: { status: ReportStatus }) {
   const styles: Record<ReportStatus, string> = {
-    PENDING:
-      "bg-amber-50 dark:bg-amber-950 text-amber-700 dark:text-amber-300 border-amber-200 dark:border-amber-900",
+    PENDING: "bg-amber-50 text-amber-700 dark:bg-amber-950/50 dark:text-amber-300",
     REVIEWED:
-      "bg-emerald-50 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300 border-emerald-200 dark:border-emerald-900",
-    DISMISSED:
-      "bg-gray-50 dark:bg-gray-800 text-gray-600 dark:text-gray-300 border-gray-200 dark:border-gray-700",
+      "bg-emerald-50 text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-300",
+    DISMISSED: "bg-gray-100 text-gray-600 dark:bg-zinc-800 dark:text-zinc-300",
   };
-  return (
-    <span
-      className={`inline-flex items-center h-6 px-2.5 rounded-full border text-[11px] font-semibold ${styles[status]}`}
-    >
-      {status}
-    </span>
-  );
+  return <span className={`${BADGE_BASE} ${styles[status]}`}>{status}</span>;
 }
 
 function ReasonBadge({ reason }: { reason: string }) {
-  return (
-    <span className="inline-flex items-center h-6 px-2.5 rounded-full border border-blue-100 dark:border-blue-900 bg-blue-50 dark:bg-blue-950 text-blue-700 dark:text-blue-300 text-[11px] font-semibold">
-      {reason}
-    </span>
-  );
+  const styles: Record<string, string> = {
+    SPAM: "bg-amber-50 text-amber-700 dark:bg-amber-950/50 dark:text-amber-300",
+    ABUSE: "bg-red-50 text-red-700 dark:bg-red-950/50 dark:text-red-300",
+    INAPPROPRIATE: "bg-red-50 text-red-700 dark:bg-red-950/50 dark:text-red-300",
+    OTHER: "bg-gray-100 text-gray-600 dark:bg-zinc-800 dark:text-zinc-300",
+  };
+  const style =
+    styles[reason] ?? "bg-gray-100 text-gray-600 dark:bg-zinc-800 dark:text-zinc-300";
+  return <span className={`${BADGE_BASE} ${style}`}>{reason}</span>;
 }
 
 function SmallAvatar({ name, src }: { name: string; src?: string | null }) {
   const initial = (name?.[0] ?? "U").toUpperCase();
   return src ? (
-    <img src={src} alt={name} className="h-9 w-9 rounded-full object-cover" />
+    <img
+      src={src}
+      alt={name}
+      className="h-9 w-9 rounded-full object-cover bg-gray-100 dark:bg-zinc-800"
+      loading="lazy"
+    />
   ) : (
-    <div className="h-9 w-9 rounded-full bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 grid place-items-center text-gray-700 dark:text-gray-200 font-semibold text-sm">
+    <div className="h-9 w-9 rounded-full bg-gray-100 dark:bg-zinc-800 grid place-items-center font-semibold text-gray-600 dark:text-zinc-300 text-sm">
       {initial}
     </div>
   );
@@ -428,16 +451,16 @@ function ReportsSkeleton() {
       {[0, 1, 2].map((i) => (
         <div
           key={i}
-          className="rounded-2xl bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 shadow-sm p-4 animate-pulse"
+          className="rounded-2xl bg-white dark:bg-zinc-900 border border-gray-200/70 dark:border-zinc-800 shadow-sm p-4 animate-pulse"
         >
           <div className="flex items-center gap-3">
-            <div className="h-9 w-9 rounded-full bg-gray-100 dark:bg-gray-800" />
+            <div className="h-9 w-9 rounded-full bg-gray-200/70 dark:bg-zinc-800" />
             <div className="flex-1">
-              <div className="h-3 w-32 bg-gray-100 dark:bg-gray-800 rounded" />
-              <div className="mt-2 h-3 w-24 bg-gray-100 dark:bg-gray-800 rounded" />
+              <div className="h-3 w-32 bg-gray-200/70 dark:bg-zinc-800 rounded-xl" />
+              <div className="mt-2 h-3 w-24 bg-gray-200/70 dark:bg-zinc-800 rounded-xl" />
             </div>
           </div>
-          <div className="mt-4 h-14 rounded-xl bg-gray-50 dark:bg-gray-800" />
+          <div className="mt-4 h-14 rounded-xl bg-gray-200/70 dark:bg-zinc-800" />
         </div>
       ))}
     </div>

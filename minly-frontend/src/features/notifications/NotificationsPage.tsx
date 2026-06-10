@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
+import { motion } from "framer-motion";
 import { SocialAPI } from "@/shared/api/social.api";
 import type { NotificationItem } from "@/features/notifications/api/notifications.api";
 import {
@@ -108,28 +109,33 @@ export default function NotificationsPage() {
   );
 
   return (
-    <div className="mx-auto max-w-[720px]">
+    <motion.div
+      initial={{ opacity: 0, y: 8 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.25 }}
+      className="mx-auto max-w-[720px]"
+    >
       {/* Header */}
       <div className="flex items-center justify-between mb-4">
         <div>
-          <div className="text-2xl font-semibold text-gray-900">
+          <h1 className="text-xl font-bold tracking-tight text-gray-900 dark:text-zinc-100">
             Notifications
-          </div>
-          <div className="text-sm text-gray-500 mt-1">
+          </h1>
+          <div className="text-sm text-gray-600 dark:text-zinc-400 mt-1">
             {unreadCount > 0 ? `${unreadCount} unread` : "You're all caught up."}
           </div>
         </div>
 
         <button
           onClick={markAllRead}
-          className="text-sm font-semibold text-gray-600 hover:text-gray-900 transition inline-flex items-center gap-2"
+          className="inline-flex items-center justify-center gap-2 h-9 px-3 rounded-xl border border-gray-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 text-sm font-semibold text-gray-700 dark:text-zinc-200 hover:bg-gray-50 dark:hover:bg-zinc-800 active:scale-[0.98] transition shrink-0"
         >
-          ✓ Mark all as read
+          <CheckIcon /> Mark all as read
         </button>
       </div>
 
       {/* Tabs */}
-      <div className="flex items-center gap-2 mb-4">
+      <div className="flex flex-wrap items-center gap-2 mb-4">
         <Pill active={tab === "ALL"} onClick={() => setTab("ALL")}>
           All
         </Pill>
@@ -149,14 +155,14 @@ export default function NotificationsPage() {
 
       {/* Content */}
       {error && (
-        <div className="rounded-2xl bg-white border border-red-100 shadow-sm p-4 mb-4">
-          <div className="text-sm font-semibold text-red-600">
+        <div className="rounded-2xl bg-white dark:bg-zinc-900 border border-red-100 dark:border-red-900/50 shadow-sm p-4 mb-4">
+          <div className="text-sm font-semibold text-red-600 dark:text-red-400">
             Failed to load notifications
           </div>
-          <div className="text-xs text-gray-500 mt-1">{error}</div>
+          <div className="text-xs text-gray-500 dark:text-zinc-400 mt-1">{error}</div>
           <button
             onClick={reload}
-            className="mt-3 text-sm font-semibold text-blue-700 hover:underline"
+            className="mt-3 text-sm font-semibold text-blue-600 dark:text-blue-400 hover:underline"
           >
             Retry
           </button>
@@ -165,6 +171,8 @@ export default function NotificationsPage() {
 
       {initialLoading ? (
         <Skeleton />
+      ) : filtered.length === 0 && !hasMore && !error ? (
+        <EmptyState />
       ) : (
         <div className="space-y-6">
           {renderSection(
@@ -208,17 +216,17 @@ export default function NotificationsPage() {
               <button
                 onClick={loadMore}
                 disabled={loadingMore}
-                className="h-10 px-5 rounded-xl bg-white border border-gray-200 shadow-sm hover:bg-gray-50 transition text-sm font-semibold disabled:opacity-60"
+                className="inline-flex items-center justify-center gap-2 h-10 px-5 rounded-xl border border-gray-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 text-sm font-semibold text-gray-700 dark:text-zinc-200 hover:bg-gray-50 dark:hover:bg-zinc-800 active:scale-[0.98] transition disabled:opacity-50 disabled:pointer-events-none"
               >
                 {loadingMore ? "Loading…" : "Load more"}
               </button>
             ) : (
-              <div className="text-xs text-gray-400">End of notifications</div>
+              <div className="text-xs text-gray-400 dark:text-zinc-500">End of notifications</div>
             )}
           </div>
         </div>
       )}
-    </div>
+    </motion.div>
   );
 }
 
@@ -239,11 +247,14 @@ function renderSection(
 
   return (
     <div>
-      <div className="text-xs font-semibold text-gray-400 mb-2">{title}</div>
+      <div className="text-xs font-semibold tracking-wide text-gray-400 dark:text-zinc-500 mb-2">
+        {title}
+      </div>
 
-      <div className="rounded-2xl bg-white border border-gray-100 shadow-sm overflow-hidden">
+      <div className="rounded-2xl bg-white dark:bg-zinc-900 border border-gray-200/70 dark:border-zinc-800 shadow-sm overflow-hidden">
         {rows.map((n, idx) => {
           const mediaId = n.mediaId ?? n.media?.id;
+          const type = normalizeType(n.type);
 
           const openMedia = () => {
             if (!n.isRead) markRead(n.id);
@@ -264,20 +275,20 @@ function renderSection(
                 openMedia();
               }}
               className={[
-                "flex items-center gap-3 px-4 py-3 cursor-pointer",
-                idx !== 0 ? "border-t border-gray-100" : "",
-                "hover:bg-gray-50 transition",
+                "relative flex items-center gap-3 px-4 py-3 cursor-pointer transition",
+                idx !== 0 ? "border-t border-gray-100 dark:border-zinc-800" : "",
+                !n.isRead
+                  ? "bg-blue-50/60 dark:bg-blue-950/20 hover:bg-blue-50 dark:hover:bg-blue-950/30"
+                  : "hover:bg-gray-50 dark:hover:bg-zinc-800/60",
               ].join(" ")}
             >
-              {/* unread dot */}
-              <div className="w-2">
-                {!n.isRead ? (
-                  <span className="block h-2 w-2 rounded-full bg-blue-600" />
-                ) : null}
-              </div>
+              {/* unread left bar */}
+              {!n.isRead && (
+                <span className="absolute left-0 top-0 bottom-0 w-0.5 bg-blue-500 dark:bg-blue-400" />
+              )}
 
               <button
-                className="shrink-0"
+                className="relative shrink-0"
                 onClick={(e) => {
                   e.stopPropagation();
                   if (!n.isRead) markRead(n.id);
@@ -288,10 +299,11 @@ function renderSection(
                 aria-label="Open actor profile"
               >
                 <Avatar name={n.actor?.name ?? "User"} src={n.actor?.avatarUrl ?? null} />
+                <TypeBadge type={String(type)} />
               </button>
 
               <div className="min-w-0 flex-1">
-                <div className="text-sm text-gray-900">
+                <div className="text-sm text-gray-900 dark:text-zinc-100">
                   <span
                     className="font-semibold hover:underline cursor-pointer"
                     onClick={(e) => {
@@ -304,10 +316,10 @@ function renderSection(
                   >
                     {n.actor?.name ?? "Someone"}
                   </span>{" "}
-                  <span className="text-gray-700">{buildMessage(n)}</span>
+                  <span className="text-gray-600 dark:text-zinc-400">{buildMessage(n)}</span>
                 </div>
 
-                <div className="text-xs text-gray-400 mt-1">
+                <div className="text-xs text-gray-400 dark:text-zinc-500 mt-1">
                   {formatTime(n.createdAt)}
                 </div>
               </div>
@@ -326,7 +338,7 @@ function renderSection(
                 />
               ) : n.media ? (
                 <button
-                  className="h-12 w-12 rounded-xl overflow-hidden border border-gray-100 bg-gray-50 shrink-0"
+                  className="h-12 w-12 rounded-xl overflow-hidden border border-gray-200/70 dark:border-zinc-700 bg-gray-100 dark:bg-zinc-800 shrink-0"
                   aria-label="Open media"
                   onClick={(e) => {
                     e.stopPropagation();
@@ -336,13 +348,46 @@ function renderSection(
                   <MediaThumb media={n.media ?? {}} />
                 </button>
               ) : (
-                <div className="h-12 w-12 rounded-xl border border-gray-100 bg-gray-50 shrink-0" />
+                <div className="h-12 w-12 rounded-xl border border-gray-200/70 dark:border-zinc-700 bg-gray-100 dark:bg-zinc-800 shrink-0" />
               )}
             </div>
           );
         })}
       </div>
     </div>
+  );
+}
+
+/* ---------------- Type icon (tinted circle) ---------------- */
+
+function TypeBadge({ type }: { type: string }) {
+  const tone =
+    type === "LIKE"
+      ? "bg-red-50 text-red-600 dark:bg-red-950/80 dark:text-red-400"
+      : type === "COMMENT"
+      ? "bg-blue-50 text-blue-600 dark:bg-blue-950/80 dark:text-blue-400"
+      : type === "FOLLOW"
+      ? "bg-emerald-50 text-emerald-600 dark:bg-emerald-950/80 dark:text-emerald-400"
+      : "bg-gray-100 text-gray-500 dark:bg-zinc-800 dark:text-zinc-400";
+
+  return (
+    <span
+      className={[
+        "absolute -bottom-0.5 -right-0.5 h-5 w-5 rounded-full grid place-items-center ring-2 ring-white dark:ring-zinc-900",
+        tone,
+      ].join(" ")}
+      aria-hidden="true"
+    >
+      {type === "LIKE" ? (
+        <HeartIcon />
+      ) : type === "COMMENT" ? (
+        <CommentIcon />
+      ) : type === "FOLLOW" ? (
+        <UserPlusIcon />
+      ) : (
+        <BellIcon />
+      )}
+    </span>
   );
 }
 
@@ -375,7 +420,7 @@ function FollowButton({
     return (
       <button
         disabled
-        className="h-9 px-4 rounded-full bg-blue-600 text-white text-sm font-semibold hover:bg-blue-700 transition disabled:opacity-60"
+        className="inline-flex items-center justify-center h-9 px-4 rounded-xl bg-blue-600 text-white text-sm font-semibold hover:bg-blue-700 transition disabled:opacity-50 disabled:pointer-events-none shrink-0"
       >
         Follow Back
       </button>
@@ -397,9 +442,9 @@ function FollowButton({
       }}
       disabled={!ready || busy}
       className={[
-        "h-9 px-4 rounded-full text-sm font-semibold transition disabled:opacity-60",
+        "inline-flex items-center justify-center h-9 px-4 rounded-xl text-sm font-semibold active:scale-[0.98] transition disabled:opacity-50 disabled:pointer-events-none shrink-0",
         following
-          ? "bg-white border border-gray-300 text-gray-900 hover:bg-gray-50"
+          ? "border border-gray-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 text-gray-700 dark:text-zinc-200 hover:bg-gray-50 dark:hover:bg-zinc-800"
           : "bg-blue-600 text-white hover:bg-blue-700",
       ].join(" ")}
     >
@@ -444,7 +489,7 @@ function MediaThumb({
     if (isVideo && media.url) return <VideoFirstFrame url={media.url} />;
 
     return (
-      <div className="h-full w-full bg-gray-100 grid place-items-center text-[10px] text-gray-400">
+      <div className="h-full w-full bg-gray-100 dark:bg-zinc-800 grid place-items-center text-[10px] text-gray-400 dark:text-zinc-500">
         No preview
       </div>
     );
@@ -468,7 +513,7 @@ function VideoFirstFrame({ url }: { url: string }) {
 
   return (
     <div className="relative h-full w-full">
-      {!ready && <div className="absolute inset-0 bg-gray-200" />}
+      {!ready && <div className="absolute inset-0 bg-gray-200/70 dark:bg-zinc-800" />}
 
       <video
         ref={ref}
@@ -493,8 +538,8 @@ function VideoFirstFrame({ url }: { url: string }) {
       />
 
       <div className="absolute inset-0 grid place-items-center">
-        <div className="h-6 w-6 rounded-full bg-black/55 grid place-items-center text-white text-[10px]">
-          ▶
+        <div className="h-6 w-6 rounded-full bg-black/55 grid place-items-center text-white">
+          <PlayIcon />
         </div>
       </div>
     </div>
@@ -514,10 +559,10 @@ function Pill({
     <button
       onClick={onClick}
       className={[
-        "h-9 px-4 rounded-full text-sm font-semibold border transition",
+        "inline-flex items-center justify-center h-9 px-4 rounded-full text-sm font-semibold border active:scale-[0.98] transition",
         active
           ? "bg-blue-600 text-white border-blue-600"
-          : "bg-white text-gray-700 border-gray-200 hover:bg-gray-50",
+          : "bg-white dark:bg-zinc-900 text-gray-600 dark:text-zinc-400 border-gray-200 dark:border-zinc-700 hover:bg-gray-50 dark:hover:bg-zinc-800 hover:text-gray-900 dark:hover:text-zinc-100",
       ].join(" ")}
     >
       {children}
@@ -533,13 +578,14 @@ function Avatar({ name, src }: { name: string; src: string | null }) {
       <img
         src={src}
         alt={name}
-        className="h-10 w-10 rounded-full object-cover"
+        loading="lazy"
+        className="h-10 w-10 rounded-full object-cover bg-gray-100 dark:bg-zinc-800"
       />
     );
   }
 
   return (
-    <div className="h-10 w-10 rounded-full bg-gray-100 border border-gray-200 grid place-items-center text-gray-700 font-semibold">
+    <div className="h-10 w-10 rounded-full bg-gray-100 dark:bg-zinc-800 grid place-items-center font-semibold text-gray-600 dark:text-zinc-300">
       {initial}
     </div>
   );
@@ -601,21 +647,101 @@ function groupByTime(items: NotificationItem[]) {
   return { today, thisWeek, earlier };
 }
 
+function EmptyState() {
+  return (
+    <div className="rounded-2xl bg-white dark:bg-zinc-900 border border-gray-200/70 dark:border-zinc-800 shadow-sm p-10 flex flex-col items-center text-center">
+      <div className="h-12 w-12 rounded-2xl bg-gray-100 dark:bg-zinc-800 grid place-items-center text-gray-400 dark:text-zinc-500">
+        <BellIconLarge />
+      </div>
+      <div className="mt-3 text-sm font-semibold text-gray-900 dark:text-zinc-100">
+        No notifications
+      </div>
+      <div className="mt-1 text-xs text-gray-400 dark:text-zinc-500">
+        Likes, comments and follows will show up here.
+      </div>
+    </div>
+  );
+}
+
 function Skeleton() {
   return (
-    <div className="rounded-2xl bg-white border border-gray-100 shadow-sm p-4">
-      <div className="space-y-4">
+    <div className="rounded-2xl bg-white dark:bg-zinc-900 border border-gray-200/70 dark:border-zinc-800 shadow-sm p-4">
+      <div className="space-y-4 animate-pulse">
         {[0, 1, 2, 3, 4].map((i) => (
           <div key={i} className="flex items-center gap-3">
-            <div className="h-10 w-10 rounded-full bg-gray-100" />
+            <div className="h-10 w-10 rounded-full bg-gray-200/70 dark:bg-zinc-800" />
             <div className="flex-1">
-              <div className="h-3 w-2/3 bg-gray-100 rounded" />
-              <div className="mt-2 h-3 w-24 bg-gray-100 rounded" />
+              <div className="h-3 w-2/3 bg-gray-200/70 dark:bg-zinc-800 rounded-full" />
+              <div className="mt-2 h-3 w-24 bg-gray-200/70 dark:bg-zinc-800 rounded-full" />
             </div>
-            <div className="h-12 w-12 rounded-xl bg-gray-100" />
+            <div className="h-12 w-12 rounded-xl bg-gray-200/70 dark:bg-zinc-800" />
           </div>
         ))}
       </div>
     </div>
+  );
+}
+
+/* ---------------- Icons ---------------- */
+
+function HeartIcon() {
+  return (
+    <svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+      <path d="M12 21s-7.5-4.8-10-9.3C.4 8.4 2.4 4.5 6 4.5c2 0 3.4 1.1 4.2 2.3.4.6 1.2.6 1.6 0 .8-1.2 2.2-2.3 4.2-2.3 3.6 0 5.6 3.9 4 7.2C19.5 16.2 12 21 12 21Z" />
+    </svg>
+  );
+}
+
+function CommentIcon() {
+  return (
+    <svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+      <path d="M12 3C6.5 3 2 6.9 2 11.7c0 2.6 1.3 4.9 3.4 6.5-.1 1-.6 2.3-1.8 3.4 1.9 0 3.6-.7 4.8-1.5 1.1.3 2.3.5 3.6.5 5.5 0 10-3.9 10-8.9S17.5 3 12 3Z" />
+    </svg>
+  );
+}
+
+function UserPlusIcon() {
+  return (
+    <svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+      <path d="M9 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8Zm0 2c-3.3 0-7 1.7-7 4v2h14v-2c0-2.3-3.7-4-7-4Zm11-5V6h-2v3h-3v2h3v3h2v-3h3V9h-3Z" />
+    </svg>
+  );
+}
+
+function BellIcon() {
+  return (
+    <svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+      <path d="M12 22a2.5 2.5 0 0 0 2.5-2.5h-5A2.5 2.5 0 0 0 12 22Zm8-5v-1l-2-2v-4.5C18 6 15.5 3.5 12 3.5S6 6 6 9.5V14l-2 2v1h16Z" />
+    </svg>
+  );
+}
+
+function BellIconLarge() {
+  return (
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      <path
+        d="M18 9.5C18 6 15.5 3.5 12 3.5S6 6 6 9.5V14l-2 2.5h16L18 14V9.5Z"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinejoin="round"
+      />
+      <path d="M10 19.5a2 2 0 0 0 4 0" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+function CheckIcon() {
+  return (
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      <path d="m4 12.5 5 5L20 6.5" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
+function PlayIcon() {
+  return (
+    <svg width="9" height="9" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+      <path d="M8 5.14v13.72c0 .8.87 1.3 1.56.88l11-6.86a1.04 1.04 0 0 0 0-1.76l-11-6.86A1.04 1.04 0 0 0 8 5.14Z" />
+    </svg>
   );
 }

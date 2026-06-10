@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { AxiosError } from "axios";
+import { motion } from "framer-motion";
 import { http } from "@/shared/api/http";
 import { useNavigate } from "react-router-dom";
 import { ProfileAPI } from "@/features/profile/api/profile.api";
@@ -184,204 +185,211 @@ export default function EditProfilePage() {
   const currentAvatar = previewUrl || initialAvatarUrl;
 
   return (
-    <div className="min-h-screen bg-[#F4F7FF]">
-      {/* Top bar */}
-      <div className="sticky top-0 z-40 border-b border-[#E7ECFF] bg-white/85 backdrop-blur">
-        <div className="mx-auto max-w-[1200px] px-4 h-14 flex items-center gap-4">
-          <button onClick={() => nav("/")} className="flex items-center gap-2 shrink-0" aria-label="Go to home">
-            <div className="h-8 w-8 rounded-lg bg-blue-600 grid place-items-center text-white font-bold">M</div>
-            <div className="font-semibold text-gray-900">Minly</div>
-          </button>
-
-          <div className="flex-1" />
-
-          <button
-            onClick={() => nav("/profile")}
-            className="h-9 px-3 rounded-xl bg-white border border-[#E7ECFF] shadow-sm text-sm font-semibold text-gray-700 hover:bg-[#F6F8FF] transition"
-          >
-            Back
-          </button>
+    <motion.div
+      initial={{ opacity: 0, y: 8 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.25 }}
+      className="mx-auto max-w-[720px]"
+    >
+      {/* Page header */}
+      <div className="mb-4 flex items-center justify-between gap-4">
+        <div>
+          <h1 className="text-xl font-bold tracking-tight text-gray-900 dark:text-zinc-100">
+            Edit profile
+          </h1>
+          <div className="text-sm text-gray-600 dark:text-zinc-400 mt-1">
+            Update your name and avatar.
+          </div>
         </div>
+
+        <button
+          onClick={() => nav("/profile")}
+          className="inline-flex items-center justify-center gap-2 h-9 px-3 rounded-xl border border-gray-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 text-sm font-semibold text-gray-700 dark:text-zinc-200 hover:bg-gray-50 dark:hover:bg-zinc-800 active:scale-[0.98] transition shrink-0"
+        >
+          Back
+        </button>
       </div>
 
-      <div className="mx-auto max-w-[1200px] px-4 py-8">
-        <div className="overflow-hidden rounded-2xl border border-[#E7ECFF] bg-white shadow-[0_10px_30px_rgba(16,24,40,0.06)]">
-          <div className="grid grid-cols-1 md:grid-cols-[420px_1fr]">
-            {/* Left - avatar */}
-            <div className="relative p-8 border-b md:border-b-0 md:border-r border-[#E7ECFF]">
-              {/* subtle dots */}
-              <div
-                className="absolute inset-0 opacity-[0.35]"
-                style={{
-                  backgroundImage: "radial-gradient(#cbd5e1 1px, transparent 1px)",
-                  backgroundSize: "16px 16px",
-                }}
+      {toast && (
+        <div className="mb-4 rounded-2xl border border-emerald-100 dark:border-emerald-900/50 bg-emerald-50 dark:bg-emerald-950/40 p-4 text-sm text-emerald-700 dark:text-emerald-300">
+          {toast}
+        </div>
+      )}
+
+      {error && (
+        <div className="mb-4 rounded-2xl border border-red-100 dark:border-red-900/50 bg-red-50 dark:bg-red-950/40 p-4 text-sm text-red-700 dark:text-red-300">
+          {error}
+        </div>
+      )}
+
+      {/* Form card */}
+      <div className="rounded-2xl bg-white dark:bg-zinc-900 border border-gray-200/70 dark:border-zinc-800 shadow-sm p-6">
+        {/* Avatar uploader */}
+        <div className="flex flex-col items-center text-center">
+          <button
+            type="button"
+            onClick={pickAvatar}
+            disabled={saving || uploadingAvatar || loading}
+            className="relative group rounded-full focus:outline-none focus:ring-2 focus:ring-blue-500/30 disabled:opacity-50 disabled:pointer-events-none"
+            aria-label="Change photo"
+          >
+            {currentAvatar ? (
+              <img
+                src={currentAvatar}
+                alt="Avatar"
+                className="h-28 w-28 rounded-full object-cover bg-gray-100 dark:bg-zinc-800 ring-2 ring-gray-200 dark:ring-zinc-700 ring-offset-2 ring-offset-white dark:ring-offset-zinc-900"
               />
-              <div className="relative">
-                <div className="text-lg font-semibold text-gray-900">Edit profile</div>
-                <div className="mt-1 text-sm text-gray-500">Update your name and avatar.</div>
+            ) : (
+              <div className="h-28 w-28 rounded-full bg-gray-100 dark:bg-zinc-800 grid place-items-center font-semibold text-gray-600 dark:text-zinc-300 text-4xl ring-2 ring-gray-200 dark:ring-zinc-700 ring-offset-2 ring-offset-white dark:ring-offset-zinc-900">
+                {(initialName?.[0] ?? "U").toUpperCase()}
+              </div>
+            )}
 
-                <div className="mt-8 flex flex-col items-center text-center">
-                  <div className="relative group">
-                    {currentAvatar ? (
-                      <img
-                        src={currentAvatar}
-                        alt="Avatar"
-                        className="h-[140px] w-[140px] rounded-full object-cover border border-[#E7ECFF] shadow-sm"
-                      />
-                    ) : (
-                      <div className="h-[140px] w-[140px] rounded-full bg-[#F7C9B5] grid place-items-center text-white text-4xl font-bold border border-[#E7ECFF] shadow-sm">
-                        {(initialName?.[0] ?? "U").toUpperCase()}
-                      </div>
-                    )}
+            {/* hover overlay */}
+            <div className="absolute inset-0 rounded-full bg-black/50 dark:bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity grid place-items-center text-white">
+              <div className="flex flex-col items-center gap-1">
+                <CameraIcon />
+                <span className="text-[11px] font-semibold">Change</span>
+              </div>
+            </div>
+          </button>
 
-                    {/* hover ring */}
-                    <div className="absolute inset-0 rounded-full ring-0 ring-blue-200 group-hover:ring-8 transition" />
+          <input
+            ref={fileRef}
+            type="file"
+            accept="image/*"
+            className="hidden"
+            onChange={(e) => {
+              const f = e.target.files?.[0];
+              if (f) onSelectAvatar(f);
+              e.currentTarget.value = "";
+            }}
+          />
+
+          <div className="mt-3 text-xs text-gray-400 dark:text-zinc-500">
+            PNG/JPG/WebP • Max {MAX_AVATAR_MB}MB
+          </div>
+
+          {avatarFile && (
+            <div className="mt-3 w-full max-w-[360px] rounded-xl border border-gray-200 dark:border-zinc-700 bg-gray-50 dark:bg-zinc-800/60 p-3 text-left">
+              <div className="text-xs font-semibold text-gray-700 dark:text-zinc-200 truncate">
+                {avatarFile.name}
+              </div>
+              <div className="mt-1 text-[11px] text-gray-500 dark:text-zinc-400">
+                {formatBytes(avatarFile.size)} • {avatarFile.type}
+              </div>
+
+              {uploadingAvatar && (
+                <div className="mt-2">
+                  <div className="flex items-center justify-between text-[11px] text-gray-500 dark:text-zinc-400">
+                    <span>Uploading…</span>
+                    <span>{uploadProgress}%</span>
                   </div>
-
-                  <div className="mt-5 w-full">
-                    <button
-                      onClick={pickAvatar}
-                      disabled={saving || uploadingAvatar || loading}
-                      className="h-11 w-full rounded-xl bg-blue-600 text-white text-sm font-semibold hover:bg-blue-700 transition disabled:opacity-60"
-                    >
-                      Change photo
-                    </button>
-
-                    <input
-                      ref={fileRef}
-                      type="file"
-                      accept="image/*"
-                      className="hidden"
-                      onChange={(e) => {
-                        const f = e.target.files?.[0];
-                        if (f) onSelectAvatar(f);
-                        e.currentTarget.value = "";
-                      }}
+                  <div className="mt-2 h-2 w-full overflow-hidden rounded-full bg-white dark:bg-zinc-900">
+                    <div
+                      className="h-full bg-blue-600 transition-all"
+                      style={{ width: `${uploadProgress}%` }}
                     />
-
-                    <div className="mt-3 text-xs text-gray-500">
-                      PNG/JPG/WebP • Max {MAX_AVATAR_MB}MB
-                    </div>
-
-                    {avatarFile && (
-                      <div className="mt-3 rounded-xl border border-[#E7ECFF] bg-[#F6F8FF] p-3 text-left">
-                        <div className="text-xs font-semibold text-gray-700 truncate">{avatarFile.name}</div>
-                        <div className="mt-1 text-[11px] text-gray-500">
-                          {formatBytes(avatarFile.size)} • {avatarFile.type}
-                        </div>
-
-                        {uploadingAvatar && (
-                          <div className="mt-2">
-                            <div className="flex items-center justify-between text-[11px] text-gray-500">
-                              <span>Uploading…</span>
-                              <span>{uploadProgress}%</span>
-                            </div>
-                            <div className="mt-2 h-2 w-full overflow-hidden rounded-full bg-white">
-                              <div className="h-full bg-blue-500 transition-all" style={{ width: `${uploadProgress}%` }} />
-                            </div>
-                          </div>
-                        )}
-
-                        {!uploadingAvatar && (
-                          <button
-                            type="button"
-                            onClick={() => setAvatarFile(null)}
-                            className="mt-3 h-9 w-full rounded-xl border border-[#E7ECFF] bg-white text-xs font-semibold text-gray-700 hover:bg-[#F6F8FF] transition"
-                            disabled={saving}
-                          >
-                            Remove selected photo
-                          </button>
-                        )}
-                      </div>
-                    )}
                   </div>
-                </div>
-              </div>
-            </div>
-
-            {/* Right - form */}
-            <div className="p-8">
-              {toast && (
-                <div className="mb-4 rounded-2xl border border-emerald-100 bg-emerald-50 p-4 text-sm text-emerald-700">
-                  {toast}
                 </div>
               )}
 
-              {error && (
-                <div className="mb-4 rounded-2xl border border-red-100 bg-red-50 p-4 text-sm text-red-700">
-                  {error}
-                </div>
+              {!uploadingAvatar && (
+                <button
+                  type="button"
+                  onClick={() => setAvatarFile(null)}
+                  className="mt-3 inline-flex items-center justify-center h-9 w-full rounded-xl border border-gray-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 text-xs font-semibold text-gray-700 dark:text-zinc-200 hover:bg-gray-50 dark:hover:bg-zinc-800 active:scale-[0.98] transition disabled:opacity-50 disabled:pointer-events-none"
+                  disabled={saving}
+                >
+                  Remove selected photo
+                </button>
               )}
-
-              <div className="grid grid-cols-1 gap-5">
-                <div>
-                  <label className="block text-xs font-semibold text-gray-700">Name</label>
-                  <input
-                    value={name}
-                    onChange={(e) => setName(e.target.value)}
-                    disabled={loading || saving}
-                    placeholder="Your name"
-                    className="mt-2 w-full h-11 rounded-xl border border-[#E7ECFF] bg-white px-3 text-sm outline-none focus:ring-4 focus:ring-blue-100 disabled:bg-gray-50"
-                  />
-                  <div className="mt-2 text-xs text-gray-500">
-                    This will be visible on your profile and posts.
-                  </div>
-                </div>
-
-                {/* Actions */}
-                <div className="mt-2 flex items-center justify-end gap-3">
-                  <button
-                    type="button"
-                    onClick={() => nav("/profile")}
-                    disabled={saving}
-                    className="h-11 px-4 rounded-xl border border-[#E7ECFF] bg-white text-sm font-semibold text-gray-700 hover:bg-[#F6F8FF] transition disabled:opacity-60"
-                  >
-                    Cancel
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={saveAll}
-                    disabled={saving || loading}
-                    className="h-11 px-5 rounded-xl bg-blue-600 text-white text-sm font-semibold hover:bg-blue-700 transition disabled:opacity-60"
-                  >
-                    {saving ? "Saving..." : "Save changes"}
-                  </button>
-                </div>
-
-                {/* Loading skeleton */}
-                {loading && (
-                  <div className="rounded-2xl border border-[#E7ECFF] bg-[#F6F8FF] p-4 text-sm text-gray-500">
-                    Loading profile…
-                  </div>
-                )}
-
-                {/* Privacy */}
-                <div className="rounded-2xl border border-[#E7ECFF] bg-[#F6F8FF] p-4 flex items-center justify-between gap-4">
-                  <div>
-                    <div className="text-sm font-semibold text-gray-900">Blocked users</div>
-                    <div className="mt-1 text-xs text-gray-500">
-                      Manage the people you've blocked.
-                    </div>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => nav("/profile/blocked")}
-                    className="h-10 px-4 rounded-xl border border-[#E7ECFF] bg-white text-sm font-semibold text-gray-700 hover:bg-white/70 transition shrink-0"
-                  >
-                    Manage
-                  </button>
-                </div>
-              </div>
             </div>
+          )}
+        </div>
+
+        {/* Fields */}
+        <div className="mt-8 grid grid-cols-1 gap-5">
+          <div>
+            <label className="block text-sm font-semibold text-gray-900 dark:text-zinc-100">
+              Name
+            </label>
+            <input
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              disabled={loading || saving}
+              placeholder="Your name"
+              className="mt-2 w-full h-11 rounded-xl bg-gray-50 dark:bg-zinc-800/60 border border-gray-200 dark:border-zinc-700 px-3.5 text-[15px] text-gray-900 dark:text-zinc-100 placeholder:text-gray-400 dark:placeholder:text-zinc-500 focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-400 dark:focus:border-blue-500 transition disabled:opacity-50"
+            />
+            <div className="mt-2 text-xs text-gray-500 dark:text-zinc-400">
+              This will be visible on your profile and posts.
+            </div>
+          </div>
+
+          {/* Loading skeleton */}
+          {loading && (
+            <div className="space-y-3 animate-pulse">
+              <div className="h-4 w-40 rounded-full bg-gray-200/70 dark:bg-zinc-800" />
+              <div className="h-11 w-full rounded-xl bg-gray-200/70 dark:bg-zinc-800" />
+            </div>
+          )}
+
+          {/* Actions */}
+          <div className="flex items-center justify-end gap-3">
+            <button
+              type="button"
+              onClick={() => nav("/profile")}
+              disabled={saving}
+              className="inline-flex items-center justify-center gap-2 h-10 px-4 rounded-xl border border-gray-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 text-sm font-semibold text-gray-700 dark:text-zinc-200 hover:bg-gray-50 dark:hover:bg-zinc-800 active:scale-[0.98] transition disabled:opacity-50 disabled:pointer-events-none"
+            >
+              Cancel
+            </button>
+
+            <button
+              type="button"
+              onClick={saveAll}
+              disabled={saving || loading}
+              className="inline-flex items-center justify-center gap-2 h-10 px-4 rounded-xl bg-blue-600 text-white text-sm font-semibold hover:bg-blue-700 active:scale-[0.98] transition disabled:opacity-50 disabled:pointer-events-none"
+            >
+              {saving ? "Saving..." : "Save changes"}
+            </button>
           </div>
         </div>
       </div>
-    </div>
+
+      {/* Privacy — quiet list row */}
+      <div className="mt-4 rounded-2xl bg-white dark:bg-zinc-900 border border-gray-200/70 dark:border-zinc-800 shadow-sm p-4 flex items-center justify-between gap-4">
+        <div>
+          <div className="text-sm font-semibold text-gray-900 dark:text-zinc-100">Blocked users</div>
+          <div className="mt-1 text-xs text-gray-500 dark:text-zinc-400">
+            Manage the people you've blocked.
+          </div>
+        </div>
+        <button
+          type="button"
+          onClick={() => nav("/profile/blocked")}
+          className="inline-flex items-center justify-center gap-2 h-9 px-4 rounded-xl text-gray-600 dark:text-zinc-400 hover:bg-gray-100 dark:hover:bg-zinc-800 hover:text-gray-900 dark:hover:text-zinc-100 text-sm font-semibold active:scale-[0.98] transition shrink-0"
+        >
+          Manage
+        </button>
+      </div>
+    </motion.div>
   );
 }
 
+function CameraIcon() {
+  return (
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      <path
+        d="M4 8a2 2 0 0 1 2-2h1.5l1-2h7l1 2H18a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V8Z"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinejoin="round"
+      />
+      <circle cx="12" cy="12.5" r="3.5" stroke="currentColor" strokeWidth="2" />
+    </svg>
+  );
+}
 
 function getErrorMessage(error: unknown, fallback: string) {
   const axiosError = error as AxiosError<{ message?: string }>;

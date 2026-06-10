@@ -175,42 +175,42 @@ export default function UploadPage() {
       {/* Back */}
       <button
         onClick={() => nav("/feed")}
-        className="mb-6 inline-flex items-center gap-2 text-sm text-gray-500 hover:text-gray-900"
+        className="mb-6 inline-flex items-center gap-2 text-sm text-gray-500 dark:text-zinc-400 hover:text-gray-900 dark:hover:text-zinc-100 transition"
       >
         <span className="text-base">←</span>
         Back to feed
       </button>
 
-      <div className="overflow-hidden rounded-2xl border border-gray-100 bg-white shadow-sm">
+      <div className="overflow-hidden rounded-2xl border border-gray-200/70 dark:border-zinc-800 bg-white dark:bg-zinc-900 shadow-sm">
         <div className="grid grid-cols-1 md:grid-cols-[1fr_520px]">
           {/* Left */}
           <div className="p-8">
-            <h1 className="text-xl font-semibold text-gray-900">
+            <h1 className="text-xl font-bold tracking-tight text-gray-900 dark:text-zinc-100">
               Create new post
             </h1>
-            <p className="mt-1 text-sm text-gray-500">
+            <p className="mt-1 text-sm text-gray-500 dark:text-zinc-400">
               Share your photos and videos with the community.
             </p>
 
             <div className="mt-8 space-y-6">
               <div>
-                <label className="text-xs font-semibold text-gray-700">
+                <label className="text-xs font-semibold text-gray-600 dark:text-zinc-300">
                   Title
                 </label>
                 <input
                   value={title}
                   onChange={(e) => setTitle(e.target.value)}
                   placeholder="Give your post a catchy title"
-                  className="mt-2 w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm outline-none focus:border-blue-300"
+                  className="mt-2 w-full rounded-xl bg-gray-50 dark:bg-zinc-800/60 border border-gray-200 dark:border-zinc-700 px-3.5 py-2.5 text-[15px] text-gray-900 dark:text-zinc-100 placeholder:text-gray-400 dark:placeholder:text-zinc-500 focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-400 dark:focus:border-blue-500 transition"
                 />
               </div>
 
               <div>
                 <div className="flex items-center justify-between">
-                  <label className="text-xs font-semibold text-gray-700">
+                  <label className="text-xs font-semibold text-gray-600 dark:text-zinc-300">
                     Description
                   </label>
-                  <div className="text-xs text-gray-400">
+                  <div className="text-xs text-gray-400 dark:text-zinc-500">
                     {description.length}/{MAX_DESC}
                   </div>
                 </div>
@@ -220,17 +220,17 @@ export default function UploadPage() {
                   onChange={(e) => setDescription(e.target.value.slice(0, MAX_DESC))}
                   placeholder="Write a caption..."
                   rows={5}
-                  className="mt-2 w-full resize-none rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm outline-none focus:border-blue-300"
+                  className="mt-2 w-full resize-none rounded-xl bg-gray-50 dark:bg-zinc-800/60 border border-gray-200 dark:border-zinc-700 px-3.5 py-2.5 text-[15px] text-gray-900 dark:text-zinc-100 placeholder:text-gray-400 dark:placeholder:text-zinc-500 focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-400 dark:focus:border-blue-500 transition"
                 />
               </div>
             </div>
           </div>
 
           {/* Right */}
-          <div className="relative border-l border-gray-100 p-8">
+          <div className="relative border-t md:border-t-0 md:border-l border-gray-200/70 dark:border-zinc-800 p-8">
             {/* dotted background */}
             <div
-              className="absolute inset-0 opacity-[0.45]"
+              className="absolute inset-0 opacity-[0.45] dark:opacity-[0.12]"
               style={{
                 backgroundImage:
                   "radial-gradient(#cbd5e1 1px, transparent 1px)",
@@ -253,27 +253,29 @@ export default function UploadPage() {
                   if (f) validateAndSetFile(f);
                 }}
                 className={[
-                  "rounded-2xl border-2 border-dashed bg-white/80 backdrop-blur",
-                  dragging ? "border-blue-400" : "border-blue-200",
+                  "rounded-2xl border-2 border-dashed bg-white/80 dark:bg-zinc-900/80 backdrop-blur transition-colors",
+                  dragging
+                    ? "border-blue-500 dark:border-blue-500"
+                    : "border-gray-200 dark:border-zinc-700",
                   "p-6",
                 ].join(" ")}
               >
                 {!file ? (
                   <div className="flex flex-col items-center justify-center py-10 text-center">
-                    <div className="grid h-12 w-12 place-items-center rounded-full bg-blue-50 text-blue-600">
+                    <div className="grid h-12 w-12 place-items-center rounded-2xl bg-blue-50 dark:bg-blue-950/50 text-blue-600 dark:text-blue-400">
                       <span className="text-lg">⬆</span>
                     </div>
 
-                    <div className="mt-4 text-sm font-semibold text-gray-900">
+                    <div className="mt-4 text-sm font-semibold text-gray-900 dark:text-zinc-100">
                       Drag &amp; drop media
                     </div>
-                    <div className="mt-1 text-xs text-gray-500">
+                    <div className="mt-1 text-xs text-gray-500 dark:text-zinc-400">
                       Supports images and videos up to {MAX_SIZE_MB}MB
                     </div>
 
                     <button
                       onClick={pickFile}
-                      className="mt-4 rounded-lg border border-gray-200 bg-white px-4 py-2 text-sm font-medium text-gray-900 hover:bg-gray-50"
+                      className="mt-4 inline-flex items-center justify-center h-10 px-4 rounded-xl border border-gray-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 text-sm font-semibold text-gray-700 dark:text-zinc-200 hover:bg-gray-50 dark:hover:bg-zinc-800 active:scale-[0.98] transition"
                     >
                       Browse files
                     </button>
@@ -293,13 +295,13 @@ export default function UploadPage() {
                 ) : (
                   <div>
                     <div className="flex items-start justify-between gap-4">
-                      <div>
-                        <div className="text-sm font-semibold text-gray-900">
+                      <div className="min-w-0">
+                        <div className="text-sm font-semibold text-gray-900 dark:text-zinc-100 truncate">
                           {file.name}
                         </div>
-                        <div className="mt-1 text-xs text-gray-500">
-                          {formatBytes(file.size)} •{" "}
-                          <span className="font-medium">
+                        <div className="mt-1 text-xs text-gray-500 dark:text-zinc-400 flex items-center gap-1.5">
+                          {formatBytes(file.size)} ·
+                          <span className="inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-semibold bg-blue-50 text-blue-700 dark:bg-blue-950/50 dark:text-blue-300">
                             {mediaType ?? "UNKNOWN"}
                           </span>
                         </div>
@@ -308,14 +310,14 @@ export default function UploadPage() {
                       <button
                         onClick={resetAll}
                         disabled={uploading}
-                        className="rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-xs font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50"
+                        className="shrink-0 inline-flex items-center justify-center h-8 px-3 rounded-xl border border-gray-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 text-xs font-semibold text-gray-700 dark:text-zinc-200 hover:bg-gray-50 dark:hover:bg-zinc-800 active:scale-[0.98] transition disabled:opacity-50 disabled:pointer-events-none"
                       >
                         Remove
                       </button>
                     </div>
 
                     {/* Preview */}
-                    <div className="mt-4 overflow-hidden rounded-xl border border-gray-100 bg-white">
+                    <div className="mt-4 overflow-hidden rounded-xl border border-gray-200/70 dark:border-zinc-800 bg-gray-100 dark:bg-zinc-800">
                       {mediaType === "IMAGE" && previewUrl ? (
                         <img
                           src={previewUrl}
@@ -329,7 +331,7 @@ export default function UploadPage() {
                           className="h-[260px] w-full object-cover"
                         />
                       ) : (
-                        <div className="grid h-[260px] place-items-center text-sm text-gray-500">
+                        <div className="grid h-[260px] place-items-center text-sm text-gray-500 dark:text-zinc-400">
                           Preview not available
                         </div>
                       )}
@@ -338,13 +340,13 @@ export default function UploadPage() {
                     {/* Progress */}
                     {uploading && (
                       <div className="mt-4">
-                        <div className="flex items-center justify-between text-xs text-gray-500">
+                        <div className="flex items-center justify-between text-xs text-gray-500 dark:text-zinc-400">
                           <span>Uploading...</span>
-                          <span>{progress}%</span>
+                          <span className="tabular-nums">{progress}%</span>
                         </div>
-                        <div className="mt-2 h-2 w-full overflow-hidden rounded-full bg-gray-100">
+                        <div className="mt-2 h-2 w-full overflow-hidden rounded-full bg-gray-100 dark:bg-zinc-800">
                           <div
-                            className="h-full bg-blue-500 transition-all"
+                            className="h-full rounded-full bg-gradient-to-r from-blue-600 to-indigo-600 transition-all"
                             style={{ width: `${progress}%` }}
                           />
                         </div>
@@ -356,7 +358,7 @@ export default function UploadPage() {
 
               {/* Error */}
               {error && (
-                <div className="mt-4 rounded-xl border border-red-100 bg-red-50 px-4 py-3 text-sm text-red-700">
+                <div className="mt-4 rounded-xl border border-red-200/70 dark:border-red-900/60 bg-red-50 dark:bg-red-950/40 px-4 py-3 text-sm text-red-700 dark:text-red-300">
                   {error}
                 </div>
               )}
@@ -369,7 +371,7 @@ export default function UploadPage() {
                     nav("/feed");
                   }}
                   disabled={uploading}
-                  className="rounded-lg px-4 py-2 text-sm font-medium text-gray-600 hover:text-gray-900 disabled:opacity-50"
+                  className="inline-flex items-center justify-center h-10 px-4 rounded-xl text-sm font-semibold text-gray-600 dark:text-zinc-400 hover:bg-gray-100 dark:hover:bg-zinc-800 hover:text-gray-900 dark:hover:text-zinc-100 active:scale-[0.98] transition disabled:opacity-50 disabled:pointer-events-none"
                 >
                   Cancel
                 </button>
@@ -377,13 +379,16 @@ export default function UploadPage() {
                 <button
                   onClick={handleUpload}
                   disabled={!file || uploading}
-                  className="rounded-lg bg-blue-600 px-5 py-2 text-sm font-semibold text-white hover:bg-blue-700 disabled:opacity-50"
+                  className="inline-flex items-center justify-center gap-2 h-10 px-5 rounded-xl bg-blue-600 text-white text-sm font-semibold hover:bg-blue-700 active:scale-[0.98] transition disabled:opacity-50 disabled:pointer-events-none"
                 >
+                  {uploading && (
+                    <span className="h-3.5 w-3.5 rounded-full border-2 border-white/40 border-t-white animate-spin" />
+                  )}
                   {uploading ? "Uploading..." : "Upload"}
                 </button>
               </div>
 
-              <p className="mt-3 text-xs text-gray-400">
+              <p className="mt-3 text-xs text-gray-400 dark:text-zinc-500">
                 We automatically detect <span className="font-medium">IMAGE</span> vs{" "}
                 <span className="font-medium">VIDEO</span> from the file type and
                 send it to the backend.

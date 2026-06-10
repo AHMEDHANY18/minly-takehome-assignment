@@ -7,6 +7,7 @@ import { useNotificationSound } from "@/features/notifications/hooks/useNotifica
 import FloatingNotification from "@/features/notifications/components/FloatingNotification";
 import { useMessagesStore } from "@/features/messages/store/messages.store";
 import { MessagesAPI } from "@/features/messages/api/messages.api";
+import { useTheme } from "@/app/providers/theme-context";
 
 export default function MainLayout() {
   const user = useUserStore((s) => s.user);
@@ -17,6 +18,7 @@ export default function MainLayout() {
 
   const { pathname } = useLocation();
   const nav = useNavigate();
+  const { theme, toggleTheme } = useTheme();
 
   useNotificationStream(!!user);
   const { play, unlock, unlocked } = useNotificationSound();
@@ -38,18 +40,18 @@ export default function MainLayout() {
   const hideSidebar = pathname.startsWith("/notifications");
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <header className="sticky top-0 z-50 border-b border-gray-200/70 bg-white/80 backdrop-blur">
+    <div className="min-h-screen bg-gray-50 dark:bg-zinc-950">
+      <header className="sticky top-0 z-50 border-b border-gray-200/70 bg-white/80 backdrop-blur dark:border-zinc-800 dark:bg-zinc-900/80">
         <div className="mx-auto max-w-[1240px] px-4 h-14 flex items-center justify-between">
           <button
             onClick={() => nav("/")}
             className="flex items-center gap-2 shrink-0 group"
             aria-label="Go to Home"
           >
-            <div className="h-9 w-9 rounded-xl bg-blue-600 grid place-items-center text-white font-extrabold shadow-sm group-hover:shadow transition">
+            <div className="h-9 w-9 rounded-xl bg-gradient-to-br from-blue-600 to-indigo-600 grid place-items-center text-white font-extrabold shadow-sm group-hover:shadow transition">
               M
             </div>
-            <div className="font-semibold text-gray-900 tracking-tight">Minly</div>
+            <div className="font-bold text-gray-900 dark:text-zinc-100 tracking-tight">Minly</div>
           </button>
 
           <nav className="hidden md:flex items-center gap-1.5">
@@ -65,8 +67,17 @@ export default function MainLayout() {
 
           <div className="flex items-center gap-2 shrink-0">
             <button
+              onClick={toggleTheme}
+              className="h-10 w-10 rounded-full border border-transparent hover:border-gray-200 hover:bg-gray-100 dark:hover:border-zinc-700 dark:hover:bg-zinc-800 transition grid place-items-center text-gray-700 dark:text-zinc-300"
+              aria-label="Toggle theme"
+              title={theme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
+            >
+              {theme === "dark" ? <IconSun /> : <IconMoon />}
+            </button>
+
+            <button
               onClick={() => nav("/search")}
-              className="h-10 w-10 rounded-full border border-transparent hover:border-gray-200 hover:bg-gray-100 transition grid place-items-center text-gray-700 md:hidden"
+              className="h-10 w-10 rounded-full border border-transparent hover:border-gray-200 hover:bg-gray-100 dark:hover:border-zinc-700 dark:hover:bg-zinc-800 transition grid place-items-center text-gray-700 dark:text-zinc-300 md:hidden"
               aria-label="Search"
             >
               <IconSearch />
@@ -74,7 +85,7 @@ export default function MainLayout() {
 
             <button
               onClick={() => nav("/messages")}
-              className="relative h-10 w-10 rounded-full border border-transparent hover:border-gray-200 hover:bg-gray-100 transition grid place-items-center text-gray-700"
+              className="relative h-10 w-10 rounded-full border border-transparent hover:border-gray-200 hover:bg-gray-100 dark:hover:border-zinc-700 dark:hover:bg-zinc-800 transition grid place-items-center text-gray-700 dark:text-zinc-300"
               aria-label="Messages"
             >
               <IconChat />
@@ -87,7 +98,7 @@ export default function MainLayout() {
 
             <button
               onClick={() => nav("/notifications")}
-              className="relative h-10 w-10 rounded-full border border-transparent hover:border-gray-200 hover:bg-gray-100 transition grid place-items-center text-gray-700"
+              className="relative h-10 w-10 rounded-full border border-transparent hover:border-gray-200 hover:bg-gray-100 dark:hover:border-zinc-700 dark:hover:bg-zinc-800 transition grid place-items-center text-gray-700 dark:text-zinc-300"
               aria-label="Notifications"
             >
               <IconBell />
@@ -100,7 +111,7 @@ export default function MainLayout() {
 
             <button
               onClick={() => nav("/profile")}
-              className="ml-1 h-10 w-10 rounded-full bg-gray-100 border border-gray-200 grid place-items-center overflow-hidden hover:bg-gray-200/60 transition"
+              className="ml-1 h-10 w-10 rounded-full bg-gray-100 border border-gray-200 dark:bg-zinc-800 dark:border-zinc-700 grid place-items-center overflow-hidden hover:bg-gray-200/60 dark:hover:bg-zinc-700/60 transition"
               aria-label="Profile"
             >
               {user?.avatarUrl ? (
@@ -110,7 +121,7 @@ export default function MainLayout() {
                   className="h-full w-full object-cover"
                 />
               ) : (
-                <span className="text-sm font-semibold text-gray-700">
+                <span className="text-sm font-semibold text-gray-700 dark:text-zinc-300">
                   {(user?.name?.[0] ?? "U").toUpperCase()}
                 </span>
               )}
@@ -131,7 +142,7 @@ export default function MainLayout() {
           {!hideSidebar && (
             <aside className="hidden lg:block">
               <div className="sticky top-[76px]">
-                <div className="rounded-2xl bg-white border border-gray-200/70 shadow-sm p-3">
+                <div className="rounded-2xl bg-white border border-gray-200/70 shadow-sm dark:bg-zinc-900 dark:border-zinc-800 p-3">
                   <nav className="space-y-1">
                     <SideLink to="/" label="Home" icon={<IconHome />} end />
                     <SideLink to="/explore" label="Explore" icon={<IconCompass />} />
@@ -144,7 +155,7 @@ export default function MainLayout() {
                     )}
                   </nav>
 
-                  <div className="mt-4 pt-4 border-t border-gray-200/70 text-[11px] text-gray-400 leading-relaxed">
+                  <div className="mt-4 pt-4 border-t border-gray-200/70 dark:border-zinc-800 text-[11px] text-gray-400 dark:text-zinc-500 leading-relaxed">
                     (c) 2026 Minly Inc. <br />
                     Privacy | Terms | Ahmed Hany
                   </div>
@@ -180,7 +191,7 @@ export default function MainLayout() {
 
 function MobileBottomNav({ unread }: { unread: number }) {
   return (
-    <nav className="md:hidden fixed bottom-0 left-0 right-0 z-50 border-t border-gray-200/70 bg-white/90 backdrop-blur">
+    <nav className="md:hidden fixed bottom-0 left-0 right-0 z-50 border-t border-gray-200/70 bg-white/90 backdrop-blur dark:border-zinc-800 dark:bg-zinc-900/90">
       <div className="mx-auto max-w-[1240px] px-4 h-16 flex items-center justify-between">
         <BottomLink to="/" ariaLabel="Home" end icon={<IconHome />} />
         <BottomLink to="/explore" ariaLabel="Explore" icon={<IconCompass />} />
@@ -226,7 +237,7 @@ function BottomLink({
       className={({ isActive }) =>
         [
           "relative h-10 w-10 rounded-xl grid place-items-center transition",
-          isActive ? "text-blue-700" : "text-gray-600",
+          isActive ? "text-blue-700 dark:text-blue-400" : "text-gray-600 dark:text-zinc-400",
         ].join(" ")
       }
     >
@@ -252,8 +263,8 @@ function TopLink({ to, label, end }: { to: string; label: string; end?: boolean 
           "h-9 px-4 rounded-full text-sm font-semibold transition inline-flex items-center",
           "focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/40",
           isActive
-            ? "text-blue-700 bg-blue-50 shadow-sm ring-1 ring-blue-100"
-            : "text-gray-600 hover:text-gray-900 hover:bg-gray-100",
+            ? "text-blue-700 bg-blue-50 shadow-sm ring-1 ring-blue-100 dark:text-blue-300 dark:bg-blue-950/50 dark:ring-blue-900"
+            : "text-gray-600 hover:text-gray-900 hover:bg-gray-100 dark:text-zinc-400 dark:hover:text-zinc-100 dark:hover:bg-zinc-800",
         ].join(" ")
       }
     >
@@ -282,21 +293,51 @@ function SideLink({
           "relative flex items-center gap-3 h-11 px-3 rounded-xl text-sm font-semibold transition",
           "focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/30",
           isActive
-            ? "bg-gray-100 text-gray-900"
-            : "text-gray-600 hover:bg-gray-50 hover:text-gray-900",
+            ? "bg-gray-100 text-gray-900 dark:bg-zinc-800 dark:text-zinc-100"
+            : "text-gray-600 hover:bg-gray-50 hover:text-gray-900 dark:text-zinc-400 dark:hover:bg-zinc-800/60 dark:hover:text-zinc-100",
           isActive
             ? "before:content-[''] before:absolute before:left-0 before:top-2 before:bottom-2 before:w-1 before:rounded-full before:bg-blue-600"
             : "",
         ].join(" ")
       }
     >
-      <span className="w-5 h-5 grid place-items-center text-gray-700">{icon}</span>
+      <span className="w-5 h-5 grid place-items-center text-gray-700 dark:text-zinc-300">{icon}</span>
       <span>{label}</span>
     </NavLink>
   );
 }
 
 /* ---------------- Icons ---------------- */
+
+function IconSun() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true">
+      <circle cx="12" cy="12" r="4" fill="none" stroke="currentColor" strokeWidth="2" />
+      <path
+        d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
+      />
+    </svg>
+  );
+}
+
+function IconMoon() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true">
+      <path
+        d="M21 12.8A9 9 0 1111.2 3a7 7 0 009.8 9.8z"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
 
 function IconSearch() {
   return (
