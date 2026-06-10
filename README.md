@@ -24,8 +24,11 @@ Built end‑to‑end as a realistic product with production‑style architecture
 - **Search & Hashtags:** User + media search, `#hashtag` extraction and hashtag feeds.
 - **Direct Messages:** 1:1 conversations with real-time delivery (SSE) on web and polling on mobile, unread badges.
 - **Notifications:** Real-time SSE stream (LIKE / COMMENT / FOLLOW / SYSTEM) with unread counters.
-- **Safety:** Block users (auto-unfollows both sides) and report media / comments / users.
+- **Stories:** 24-hour ephemeral stories with viewed/unviewed rings, full-screen viewer with progress bars, and viewer counts (web + mobile).
+- **Views & Trending:** Per-media view counts and a time-decay trending score `(views + likes×3 + comments×5) / age^1.5`.
+- **Safety & Moderation:** Block users (auto-unfollows both sides), report media / comments / users, and an admin dashboard (reports queue with content previews, force-delete, platform stats + live request metrics).
 - **Profiles:** View user info, user media, basic stats; edit name & avatar.
+- **Dev experience:** Database seed script (demo users/posts/stories), local dev-login (no Cognito needed), unit + API tests, CI, Docker.
 - **Shared API:** One backend consumed by both web and mobile.
 
 ---
