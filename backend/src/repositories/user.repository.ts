@@ -320,4 +320,57 @@ export const UserRepository = {
       },
     });
   },
+
+  // ------------------------
+  // Search
+  // ------------------------
+  searchUsers(params: {
+    q: string;
+    excludeIds: string[];
+    skip: number;
+    take: number;
+  }) {
+    const { q, excludeIds, skip, take } = params;
+
+    const where = {
+      id: { notIn: excludeIds },
+      OR: [
+        { name: { contains: q, mode: "insensitive" as const } },
+        { email: { contains: q, mode: "insensitive" as const } },
+      ],
+    };
+
+    return prisma.$transaction([
+      prisma.user.findMany({
+        where,
+        skip,
+        take,
+        orderBy: [{ followerCount: "desc" }, { createdAt: "desc" }],
+        select: {
+          id: true,
+          name: true,
+          email: true,
+          avatarUrl: true,
+          followerCount: true,
+        },
+      }),
+      prisma.user.count({ where }),
+    ]);
+  },
+
+  // ------------------------
+  // Mentions (case-insensitive exact name match)
+  // ------------------------
+  findManyByNamesInsensitive(names: string[]) {
+    if (names.length === 0) return Promise.resolve([]);
+
+    return prisma.user.findMany({
+      where: {
+        OR: names.map((name) => ({
+          name: { equals: name, mode: "insensitive" as const },
+        })),
+      },
+      select: { id: true, name: true },
+    });
+  },
 };

@@ -4,6 +4,9 @@ export type MediaComment = {
   id: string;
   text: string;
   createdAt: string;
+  // optional — absent on old comments / old backend payloads
+  isEdited?: boolean;
+  updatedAt?: string;
   user: { id: string; name: string; avatarUrl: string | null };
   _count?: { replies: number };
 };
@@ -19,6 +22,7 @@ export type MediaDetailsResponse = {
   media: {
     id: string;
     url: string;
+    thumbnailUrl?: string | null;
     type: "IMAGE" | "VIDEO";
     title?: string | null;
     description?: string | null;
@@ -71,5 +75,12 @@ export const MediaDetailsAPI = {
 
   getReplies(commentId: string, params?: { limit?: number; cursor?: string | null }) {
     return api.get<RepliesResponse>(`/comment/${commentId}/replies`, { params });
+  },
+
+  editComment(commentId: string, text: string) {
+    return api.patch<{
+      status: "success";
+      data: { id: string; text: string; isEdited: boolean; updatedAt: string };
+    }>(`/comment/${commentId}`, { text });
   },
 };

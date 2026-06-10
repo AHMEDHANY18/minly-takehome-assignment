@@ -36,6 +36,16 @@ export default function LoginScreen() {
           <Text style={styles.googleText}>Continue with Google</Text>
         </Pressable>
 
+        <Pressable
+          hitSlop={8}
+          onPress={() => router.push("/auth/register")}
+          style={styles.switchRow}
+        >
+          <Text style={styles.switchText}>
+            New to Minly? <Text style={styles.switchLink}>Create account</Text>
+          </Text>
+        </Pressable>
+
         <Text style={styles.terms}>
           By continuing, you agree to our Terms of Service and Privacy Policy
         </Text>
@@ -83,6 +93,17 @@ const styles = StyleSheet.create({
   },
   googleText: {
     fontWeight: "600",
+  },
+  switchRow: {
+    marginTop: 16,
+  },
+  switchText: {
+    fontSize: 12,
+    color: "#6b7280",
+  },
+  switchLink: {
+    color: "#2D7CFF",
+    fontWeight: "700",
   },
   terms: {
     marginTop: 16,

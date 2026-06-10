@@ -2,6 +2,7 @@ import { prisma } from "../../config/prisma";
 import { CommentRepository } from "../../repositories/comment.repository";
 import { MediaRepository } from "../../repositories/media.repository";
 import { NotificationRepository } from "../../repositories/notification.repository";
+import { notifyMentionedUsers } from "./mention.service";
 
 export async function createCommentService(
   mediaId: string,
@@ -46,6 +47,14 @@ export async function createCommentService(
       commentId: comment.id,
     });
   }
+
+  // 🔔 4) @mentions → SYSTEM notifications (best-effort)
+  await notifyMentionedUsers({
+    actorId: userId,
+    mediaId,
+    commentId: comment.id,
+    text,
+  });
 
   return {
     id: comment.id,

@@ -59,6 +59,10 @@ export const ProfileAPI = {
     return api.get<ProfileResponse>("/user/profile");
   },
 
+  byId(userId: string) {
+    return api.get<ProfileResponse>(`/user/profile/${userId}`);
+  },
+
   update(body: { name?: string }) {
     return api.patch<{ status: "success"; data: ProfileUser }>("/user", body);
   },

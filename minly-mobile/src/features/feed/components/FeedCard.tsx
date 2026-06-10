@@ -6,6 +6,7 @@ import { Video, ResizeMode } from "expo-av";
 import { timeAgo } from "@/shared/utils/time";
 import type { FeedItem } from "@/features/feed/api/feed.api";
 import { InteractionsAPI } from "@/features/social/api/interactions.api";
+import { HashtagText } from "@/shared/components/hashtag-text";
 
 export function FeedCard({
   item,

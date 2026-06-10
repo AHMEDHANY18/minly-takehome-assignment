@@ -6,6 +6,7 @@ export const PAGINATION = {
   export const presignKind = {
     AVATAR: "avatar",
     MEDIA: "media",
+    THUMBNAIL: "thumbnail",
   } as const;
 
   export type PresignKind =

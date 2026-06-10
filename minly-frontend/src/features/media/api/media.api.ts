@@ -1,7 +1,7 @@
 import { api } from "@/shared/api/http";
 
 export type MediaType = "IMAGE" | "VIDEO";
-export type UploadKind = "media" | "avatar";
+export type UploadKind = "media" | "avatar" | "thumbnail";
 
 export type PresignMediaResponse = {
   key: string;
@@ -38,6 +38,7 @@ export const MediaAPI = {
     title?: string;
     description?: string;
     type?: MediaType;
+    thumbnailUrl?: string;
   }) {
     return api.post<FinalizeApiResponse<T>>("/media/finalize", body);
   },

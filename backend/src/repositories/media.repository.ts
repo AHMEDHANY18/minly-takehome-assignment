@@ -52,6 +52,7 @@ export const MediaRepository = {
     type: "IMAGE" | "VIDEO";
     title?: string;
     description?: string;
+    thumbnailUrl?: string;
     uploaderId: string;
   }) {
     //Weak Consistency

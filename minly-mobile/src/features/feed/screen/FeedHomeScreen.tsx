@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from "react";
+import React, { useCallback, useMemo, useState } from "react";
 import {
   ActivityIndicator,
   FlatList,
@@ -9,18 +9,37 @@ import {
   View,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
-import { useRouter } from "expo-router";
+import { useFocusEffect, useRouter } from "expo-router";
 
 import { useFeed } from "@/features/feed/hooks/useFeed";
 import type { FeedMode } from "@/features/feed/api/feed.api";
 import { FeedCard } from "@/features/feed/components/FeedCard";
 import { SegmentedTabs } from "@/features/feed/components/SegmentedTabs";
 import { SuggestedUsers } from "@/features/feed/components/SuggestedUsers";
+import { MessagesAPI } from "@/features/messages/api/messages.api";
 
 export default function HomeScreen() {
   const router = useRouter();
 
   const [mode, setMode] = useState<FeedMode>("home");
+  const [unreadDMs, setUnreadDMs] = useState(0);
+
+  // refresh the DM badge whenever Home regains focus
+  useFocusEffect(
+    useCallback(() => {
+      let active = true;
+
+      MessagesAPI.unreadCount()
+        .then((count) => {
+          if (active) setUnreadDMs(count);
+        })
+        .catch(() => {});
+
+      return () => {
+        active = false;
+      };
+    }, [])
+  );
   const {
     items,
     initialLoading,
@@ -40,19 +59,43 @@ export default function HomeScreen() {
     <SafeAreaView style={styles.safe}>
       {/* Top bar */}
       <View style={styles.topBar}>
-        <View style={{ width: 28 }} />
-        <Text style={styles.brand}>Minly</Text>
-
         <Pressable
           hitSlop={10}
-          onPress={() =>
-            router.push({
-              pathname: "/notification",
-            })
-          }
+          onPress={() => router.push("/search" as any)}
         >
-          <Ionicons name="notifications-outline" size={22} color="#111" />
+          <Ionicons name="search-outline" size={22} color="#111" />
         </Pressable>
+
+        <Text style={styles.brand}>Minly</Text>
+
+        <View style={styles.topBarRight}>
+          <Pressable
+            hitSlop={10}
+            onPress={() => router.push("/messages" as any)}
+          >
+            <View>
+              <Ionicons name="chatbubble-ellipses-outline" size={22} color="#111" />
+              {unreadDMs > 0 ? (
+                <View style={styles.dmBadge}>
+                  <Text style={styles.dmBadgeText}>
+                    {unreadDMs > 99 ? "99+" : unreadDMs}
+                  </Text>
+                </View>
+              ) : null}
+            </View>
+          </Pressable>
+
+          <Pressable
+            hitSlop={10}
+            onPress={() =>
+              router.push({
+                pathname: "/notification",
+              })
+            }
+          >
+            <Ionicons name="notifications-outline" size={22} color="#111" />
+          </Pressable>
+        </View>
       </View>
 
       {/* Segmented tabs */}
@@ -159,6 +202,31 @@ const styles = StyleSheet.create({
     fontWeight: "900",
     fontSize: 16,
     color: "#111",
+  },
+
+  topBarRight: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 14,
+  },
+
+  dmBadge: {
+    position: "absolute",
+    top: -5,
+    right: -7,
+    minWidth: 15,
+    height: 15,
+    borderRadius: 8,
+    backgroundColor: "#E53935",
+    alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal: 3,
+  },
+
+  dmBadgeText: {
+    color: "#FFF",
+    fontSize: 8,
+    fontWeight: "900",
   },
 
   tabsWrap: {

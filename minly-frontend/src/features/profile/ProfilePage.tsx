@@ -1,12 +1,18 @@
 ﻿import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
 import { ProfileAPI, type ProfileMediaItem, type ProfileResponse } from "./api/profile.api";
 import { MediaAPI } from "../media";
+import { BlockAPI } from "./api/block.api";
+import { SocialAPI } from "@/shared/api/social.api";
+import { MessagesAPI } from "@/features/messages/api/messages.api";
+import { useUserStore } from "@/shared/store/user.store";
 
 type Tab = "ALL" | "VIDEOS" | "PHOTOS";
 
 export default function ProfilePage() {
   const nav = useNavigate();
+  const { userId } = useParams();
+  const me = useUserStore((s) => s.user);
 
   const [tab, setTab] = useState<Tab>("ALL");
   const [loading, setLoading] = useState(true);
@@ -22,8 +28,9 @@ export default function ProfilePage() {
 
     setLoading(true);
     setError(null);
+    setPayload(null);
 
-    ProfileAPI.me()
+    (userId ? ProfileAPI.byId(userId) : ProfileAPI.me())
       .then((res) => {
         if (!alive) return;
         setPayload(res.data.data);
@@ -40,9 +47,104 @@ export default function ProfilePage() {
     return () => {
       alive = false;
     };
-  }, []);
+  }, [userId]);
 
   const user = payload?.user;
+
+  const isMe =
+    !userId ||
+    payload?.meta?.isMe === true ||
+    (!!me && !!user && me.id === user.id);
+
+  /* -------- other-user actions (follow / message / block) -------- */
+
+  const targetId = !isMe ? user?.id ?? userId ?? null : null;
+
+  const [isFollowing, setIsFollowing] = useState<boolean | null>(null);
+  const [followBusy, setFollowBusy] = useState(false);
+  const [isBlocked, setIsBlocked] = useState<boolean | null>(null);
+  const [blockBusy, setBlockBusy] = useState(false);
+  const [confirmBlock, setConfirmBlock] = useState(false);
+  const [msgBusy, setMsgBusy] = useState(false);
+  const [actionError, setActionError] = useState<string | null>(null);
+
+  useEffect(() => {
+    setIsFollowing(null);
+    setIsBlocked(null);
+    setActionError(null);
+
+    if (!targetId) return;
+    let cancelled = false;
+
+    SocialAPI.checkFollow(targetId)
+      .then((v) => {
+        if (!cancelled) setIsFollowing(v);
+      })
+      .catch(() => {
+        if (!cancelled) setIsFollowing(false);
+      });
+
+    BlockAPI.list()
+      .then((res) => {
+        if (cancelled) return;
+        const blocked = (res.data.data.users ?? []).some((u) => u.id === targetId);
+        setIsBlocked(blocked);
+      })
+      .catch(() => {
+        if (!cancelled) setIsBlocked(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [targetId]);
+
+  const toggleFollow = async () => {
+    if (!targetId || followBusy || isFollowing === null) return;
+    const before = isFollowing;
+    setIsFollowing(!before);
+    setFollowBusy(true);
+    try {
+      const next = await SocialAPI.toggleFollow(targetId);
+      if (typeof next === "boolean") setIsFollowing(next);
+    } catch {
+      setIsFollowing(before);
+    } finally {
+      setFollowBusy(false);
+    }
+  };
+
+  const openChat = async () => {
+    if (!targetId || msgBusy) return;
+    setMsgBusy(true);
+    setActionError(null);
+    try {
+      const res = await MessagesAPI.getOrCreate(targetId);
+      const conv = res.data.data;
+      nav(`/messages/${conv.id}`, { state: { participant: conv.participant } });
+    } catch (e: any) {
+      setActionError(e?.response?.data?.message ?? "Failed to open conversation.");
+    } finally {
+      setMsgBusy(false);
+    }
+  };
+
+  const doToggleBlock = async () => {
+    if (!targetId || blockBusy) return;
+    setBlockBusy(true);
+    setActionError(null);
+    try {
+      const res = await BlockAPI.toggle(targetId);
+      const next = res.data.data.isBlocked;
+      setIsBlocked(next);
+      if (next) setIsFollowing(false); // blocking removes follow both ways
+      setConfirmBlock(false);
+    } catch (e: any) {
+      setActionError(e?.response?.data?.message ?? "Failed to update block.");
+    } finally {
+      setBlockBusy(false);
+    }
+  };
 
   const username = useMemo(() => {
     const email = user?.email ?? "";
@@ -148,12 +250,69 @@ export default function ProfilePage() {
                   <span>Joined {user?.createdAt ? formatMonthYear(user.createdAt) : "—"}</span>
                 </div>
 
-                <button
-                  onClick={() => nav("/profile/edit")}
-                  className="mt-4 h-10 w-full rounded-xl bg-blue-600 text-white text-sm font-semibold hover:bg-blue-700 transition"
-                >
-                  Edit Profile
-                </button>
+                {isMe ? (
+                  <button
+                    onClick={() => nav("/profile/edit")}
+                    className="mt-4 h-10 w-full rounded-xl bg-blue-600 text-white text-sm font-semibold hover:bg-blue-700 transition"
+                  >
+                    Edit Profile
+                  </button>
+                ) : (
+                  <div className="mt-4 w-full space-y-2">
+                    <div className="grid grid-cols-2 gap-2">
+                      <button
+                        onClick={toggleFollow}
+                        disabled={followBusy || isFollowing === null || isBlocked === true}
+                        className={[
+                          "h-10 rounded-xl text-sm font-semibold transition disabled:opacity-60",
+                          isFollowing
+                            ? "bg-white border border-gray-300 text-gray-900 hover:bg-gray-50"
+                            : "bg-blue-600 text-white hover:bg-blue-700",
+                        ].join(" ")}
+                      >
+                        {isFollowing === null || followBusy
+                          ? "…"
+                          : isFollowing
+                          ? "Following"
+                          : "Follow"}
+                      </button>
+
+                      <button
+                        onClick={openChat}
+                        disabled={msgBusy || isBlocked === true}
+                        className="h-10 rounded-xl bg-white border border-[#E7ECFF] text-sm font-semibold text-gray-900 hover:bg-[#F6F8FF] transition disabled:opacity-60"
+                      >
+                        {msgBusy ? "Opening…" : "Message"}
+                      </button>
+                    </div>
+
+                    <button
+                      onClick={() => {
+                        if (isBlocked) doToggleBlock();
+                        else setConfirmBlock(true);
+                      }}
+                      disabled={blockBusy || isBlocked === null}
+                      className={[
+                        "h-10 w-full rounded-xl text-sm font-semibold transition disabled:opacity-60",
+                        isBlocked
+                          ? "bg-white border border-gray-300 text-gray-900 hover:bg-gray-50"
+                          : "bg-white border border-red-200 text-red-600 hover:bg-red-50",
+                      ].join(" ")}
+                    >
+                      {isBlocked === null || blockBusy
+                        ? "…"
+                        : isBlocked
+                        ? "Unblock"
+                        : "Block user"}
+                    </button>
+
+                    {actionError && (
+                      <div className="rounded-xl border border-red-100 bg-red-50 p-2 text-xs text-red-700">
+                        {actionError}
+                      </div>
+                    )}
+                  </div>
+                )}
 
                 <div className="mt-4 w-full grid grid-cols-2 gap-3">
                   <MiniStat label="Followers" value={user?.followerCount ?? 0} />
@@ -208,21 +367,24 @@ export default function ProfilePage() {
                     <MediaTile
                       key={m.id}
                       media={m}
-                      onOpen={() => nav(`/media/${m.id}`)} 
+                      canManage={isMe}
+                      onOpen={() => nav(`/media/${m.id}`)}
                       onEdit={() => setEditing(m)}
                       onDelete={() => setDeleting(m)}
                     />
                   ))}
 
-                  <button
-                    onClick={() => nav("/upload")}
-                    className="aspect-square rounded-2xl border-2 border-dashed border-[#D8E2FF] bg-white/60 grid place-items-center text-gray-400 hover:bg-white transition"
-                  >
-                    <div className="text-center">
-                      <div className="text-xl">＋</div>
-                      <div className="mt-1 text-[12px] font-semibold">Add more</div>
-                    </div>
-                  </button>
+                  {isMe && (
+                    <button
+                      onClick={() => nav("/upload")}
+                      className="aspect-square rounded-2xl border-2 border-dashed border-[#D8E2FF] bg-white/60 grid place-items-center text-gray-400 hover:bg-white transition"
+                    >
+                      <div className="text-center">
+                        <div className="text-xl">＋</div>
+                        <div className="mt-1 text-[12px] font-semibold">Add more</div>
+                      </div>
+                    </button>
+                  )}
                 </div>
               )}
             </div>
@@ -250,6 +412,15 @@ export default function ProfilePage() {
 
           setEditing(null);
         }}
+      />
+
+      {/* ✅ Block confirm modal */}
+      <BlockConfirmModal
+        open={confirmBlock}
+        name={user?.name ?? "this user"}
+        busy={blockBusy}
+        onClose={() => !blockBusy && setConfirmBlock(false)}
+        onConfirm={doToggleBlock}
       />
 
       {/* ✅ One delete modal */}
@@ -348,11 +519,13 @@ function LinkTab({ children, onClick }: { children: ReactNode; onClick?: () => v
 
 function MediaTile({
   media,
+  canManage = true,
   onOpen,
   onEdit,
   onDelete,
 }: {
   media: ProfileMediaItem;
+  canManage?: boolean;
   onOpen: () => void;
   onEdit: () => void;
   onDelete: () => void;
@@ -427,6 +600,7 @@ function MediaTile({
       )}
 
       {/* 3 dots (visible on touch, hover on desktop) */}
+      {canManage && (
       <div className="absolute top-3 left-3 z-30 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition">
         <div ref={menuRef} className="relative">
           <button
@@ -471,6 +645,7 @@ function MediaTile({
           )}
         </div>
       </div>
+      )}
 
       {/* Hover overlay */}
       <div
@@ -665,6 +840,71 @@ function EditMediaModal({
             disabled={saving}
           >
             {saving ? "Saving..." : "Save changes"}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function BlockConfirmModal({
+  open,
+  name,
+  busy,
+  onClose,
+  onConfirm,
+}: {
+  open: boolean;
+  name: string;
+  busy: boolean;
+  onClose: () => void;
+  onConfirm: () => void;
+}) {
+  useEffect(() => {
+    if (!open) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onClose();
+    };
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
+  }, [open, onClose]);
+
+  if (!open) return null;
+
+  return (
+    <div
+      className="fixed inset-0 z-50 bg-black/35 backdrop-blur-sm grid place-items-center p-4"
+      onMouseDown={onClose}
+    >
+      <div
+        className="w-full max-w-[440px] rounded-2xl bg-white border border-[#E7ECFF] shadow-[0_18px_60px_rgba(16,24,40,0.25)] p-5"
+        onMouseDown={(e) => e.stopPropagation()}
+      >
+        <div className="text-[16px] font-semibold text-gray-900">
+          Block {name}?
+        </div>
+        <div className="mt-2 text-sm text-gray-500">
+          You will unfollow each other and they won't be able to message you.
+          You can unblock them anytime.
+        </div>
+
+        <div className="mt-5 flex items-center justify-end gap-3">
+          <button
+            type="button"
+            onClick={onClose}
+            disabled={busy}
+            className="h-10 px-4 rounded-xl border border-[#E7ECFF] bg-white text-sm font-semibold text-gray-700 hover:bg-[#F6F8FF] transition disabled:opacity-60"
+          >
+            Cancel
+          </button>
+
+          <button
+            type="button"
+            onClick={onConfirm}
+            disabled={busy}
+            className="h-10 px-4 rounded-xl bg-red-600 text-white text-sm font-semibold hover:bg-red-700 transition disabled:opacity-60"
+          >
+            {busy ? "Blocking…" : "Block"}
           </button>
         </div>
       </div>

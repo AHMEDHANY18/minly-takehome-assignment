@@ -27,6 +27,23 @@ function feedSelect(viewerId: string) {
   } as const;
 }
 
+export type FeedCursor = { createdAt: Date; id: string };
+
+// boundary clause for cursor-based (createdAt/id) pagination
+function cursorWhere(cursor: FeedCursor) {
+  return {
+    OR: [
+      { createdAt: { lt: cursor.createdAt } },
+      { createdAt: cursor.createdAt, id: { lt: cursor.id } },
+    ],
+  };
+}
+
+const cursorOrderBy = [
+  { createdAt: "desc" as const },
+  { id: "desc" as const },
+];
+
 export const FeedRepository = {
   // -------------------------
   // Social graph
@@ -47,17 +64,19 @@ export const FeedRepository = {
     take: number;
     viewerId: string;
     followingIds: string[];
+    cursor?: FeedCursor | null;
   }) {
-    const { skip, take, viewerId, followingIds } = params;
+    const { skip, take, viewerId, followingIds, cursor } = params;
     if (followingIds.length === 0) return [];
 
     return prisma.media.findMany({
-      skip,
+      skip: cursor ? 0 : skip,
       take,
       where: {
         uploaderId: { in: followingIds },
+        ...(cursor ? cursorWhere(cursor) : {}),
       },
-      orderBy: { createdAt: "desc" },
+      orderBy: cursor ? cursorOrderBy : { createdAt: "desc" },
       select: feedSelect(viewerId),
     });
   },
@@ -81,20 +100,24 @@ export const FeedRepository = {
     take: number;
     viewerId: string;
     excludeUploaderIds: string[];
+    cursor?: FeedCursor | null;
   }) {
-    const { skip, take, viewerId, excludeUploaderIds } = params;
+    const { skip, take, viewerId, excludeUploaderIds, cursor } = params;
 
     return prisma.media.findMany({
-      skip,
+      skip: cursor ? 0 : skip,
       take,
       where: {
         uploaderId: { notIn: excludeUploaderIds },
+        ...(cursor ? cursorWhere(cursor) : {}),
       },
-      orderBy: [
-        { likesCount: "desc" },
-        { commentCount: "desc" },
-        { createdAt: "desc" },
-      ],
+      orderBy: cursor
+        ? cursorOrderBy
+        : [
+            { likesCount: "desc" },
+            { commentCount: "desc" },
+            { createdAt: "desc" },
+          ],
       select: feedSelect(viewerId),
     });
   },
@@ -117,21 +140,25 @@ export const FeedRepository = {
     take: number;
     viewerId: string;
     excludeUploaderIds: string[];
+    cursor?: FeedCursor | null;
   }) {
-    const { skip, take, viewerId, excludeUploaderIds } = params;
+    const { skip, take, viewerId, excludeUploaderIds, cursor } = params;
 
     return prisma.$transaction([
       prisma.media.findMany({
-        skip,
+        skip: cursor ? 0 : skip,
         take,
         where: {
           uploaderId: { notIn: excludeUploaderIds },
+          ...(cursor ? cursorWhere(cursor) : {}),
         },
-        orderBy: [
-          { likesCount: "desc" },
-          { commentCount: "desc" },
-          { createdAt: "desc" },
-        ],
+        orderBy: cursor
+          ? cursorOrderBy
+          : [
+              { likesCount: "desc" },
+              { commentCount: "desc" },
+              { createdAt: "desc" },
+            ],
         select: feedSelect(viewerId),
       }),
 
@@ -151,22 +178,26 @@ export const FeedRepository = {
     take: number;
     viewerId: string;
     windowHours: number;
+    cursor?: FeedCursor | null;
   }) {
-    const { skip, take, viewerId, windowHours } = params;
+    const { skip, take, viewerId, windowHours, cursor } = params;
 
     const windowStart = new Date(Date.now() - windowHours * 60 * 60 * 1000);
 
     return prisma.media.findMany({
-      skip,
+      skip: cursor ? 0 : skip,
       take,
       where: {
         createdAt: { gte: windowStart },
+        ...(cursor ? cursorWhere(cursor) : {}),
       },
-      orderBy: [
-        { likesCount: "desc" },
-        { commentCount: "desc" },
-        { createdAt: "desc" },
-      ],
+      orderBy: cursor
+        ? cursorOrderBy
+        : [
+            { likesCount: "desc" },
+            { commentCount: "desc" },
+            { createdAt: "desc" },
+          ],
       select: feedSelect(viewerId),
     });
   },
@@ -180,5 +211,77 @@ export const FeedRepository = {
         createdAt: { gte: windowStart },
       },
     });
+  },
+
+  // -------------------------
+  // Cursor anchor
+  // -------------------------
+  findCursorAnchor(mediaId: string) {
+    return prisma.media.findUnique({
+      where: { id: mediaId },
+      select: { id: true, createdAt: true },
+    });
+  },
+
+  // -------------------------
+  // Search (title / description / hashtag)
+  // -------------------------
+  async searchMediaWithCount(params: {
+    q: string;
+    viewerId: string;
+    skip: number;
+    take: number;
+  }) {
+    const { q, viewerId, skip, take } = params;
+
+    const where = {
+      OR: [
+        { title: { contains: q, mode: "insensitive" as const } },
+        { description: { contains: q, mode: "insensitive" as const } },
+        {
+          hashtags: {
+            some: { hashtag: { tag: { contains: q.toLowerCase() } } },
+          },
+        },
+      ],
+    };
+
+    return prisma.$transaction([
+      prisma.media.findMany({
+        where,
+        skip,
+        take,
+        orderBy: { createdAt: "desc" },
+        select: feedSelect(viewerId),
+      }),
+      prisma.media.count({ where }),
+    ]);
+  },
+
+  // -------------------------
+  // Hashtag feed
+  // -------------------------
+  async findHashtagFeedWithCount(params: {
+    tag: string;
+    viewerId: string;
+    skip: number;
+    take: number;
+  }) {
+    const { tag, viewerId, skip, take } = params;
+
+    const where = {
+      hashtags: { some: { hashtag: { tag: tag.toLowerCase() } } },
+    };
+
+    return prisma.$transaction([
+      prisma.media.findMany({
+        where,
+        skip,
+        take,
+        orderBy: { createdAt: "desc" },
+        select: feedSelect(viewerId),
+      }),
+      prisma.media.count({ where }),
+    ]);
   },
 };

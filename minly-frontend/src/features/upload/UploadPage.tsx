@@ -6,6 +6,7 @@ import { http } from "@/shared/api/http";
 import { useNavigate } from "react-router-dom";
 import { MediaAPI, type MediaType } from "@/features/media/api/media.api";
 import { presignKind } from "@/shared/constant";
+import { captureVideoThumbnail } from "@/features/upload/captureVideoThumbnail";
 
 const MAX_SIZE_MB = 50;
 const MAX_SIZE_BYTES = MAX_SIZE_MB * 1024 * 1024;
@@ -126,6 +127,27 @@ export default function UploadPage() {
       // 2) PUT to S3
       await uploadToPresignedUrl(uploadUrl, file);
 
+      // 2.5) video → capture a frame and upload it as thumbnail (best effort)
+      let thumbnailUrl: string | undefined;
+      if (type === "VIDEO") {
+        try {
+          const blob = await captureVideoThumbnail(file);
+          if (blob) {
+            const thumbPresign = await MediaAPI.presign({
+              kind: presignKind.THUMBNAIL,
+              contentType: "image/jpeg",
+            });
+            await http.put(thumbPresign.data.data.uploadUrl, blob, {
+              headers: { "Content-Type": "image/jpeg" },
+            });
+            thumbnailUrl = thumbPresign.data.data.publicUrl;
+          }
+        } catch {
+          // graceful skip — the upload itself must not fail
+          thumbnailUrl = undefined;
+        }
+      }
+
       // 3) finalize (create DB record)
       await MediaAPI.finalize({
         kind: presignKind.MEDIA,
@@ -133,6 +155,7 @@ export default function UploadPage() {
         title: title.trim() || undefined,
         description: description.trim() || undefined,
         type, // مهم للـ media
+        thumbnailUrl,
       });
 
       // ✅ go back to feed

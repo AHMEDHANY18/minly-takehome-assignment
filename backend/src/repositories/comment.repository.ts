@@ -25,6 +25,13 @@ export const CommentRepository = {
     });
   },
 
+  async updateCommentText(commentId: string, text: string) {
+    return prisma.threadedComment.update({
+      where: { id: commentId },
+      data: { text, isEdited: true },
+    });
+  },
+
   // احذف كل replies المرتبطة بـ Comment رئيسي
   async deleteReplies(parentCommentId: string) {
     return prisma.threadedComment.deleteMany({

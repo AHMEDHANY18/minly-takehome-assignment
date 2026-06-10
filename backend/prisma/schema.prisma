@@ -33,6 +33,7 @@ model User {
   notificationsReceived Notification[]            @relation("NotificationTarget")
   comments              ThreadedComment[]
   stats                 UserStats?
+  reports               Report[]
 }
 
 model OAuthAccount {
@@ -66,6 +67,7 @@ model Media {
   uploader      User              @relation(fields: [uploaderId], references: [id])
   notifications Notification[]
   comments      ThreadedComment[]
+  hashtags      MediaHashtag[]
 }
 
 model Like {
@@ -85,7 +87,9 @@ model ThreadedComment {
   mediaId         String
   text            String
   parentCommentId String?
+  isEdited        Boolean           @default(false)
   createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
   notifications   Notification[]
   media           Media             @relation(fields: [mediaId], references: [id])
   parentComment   ThreadedComment?  @relation("CommentReplies", fields: [parentCommentId], references: [id])
@@ -164,10 +168,11 @@ model Block {
 }
 
 model Conversation {
-  id           String                    @id @default(uuid())
-  createdAt    DateTime                  @default(now())
-  participants ConversationParticipant[]
-  messages     Message[]
+  id            String                    @id @default(uuid())
+  createdAt     DateTime                  @default(now())
+  lastMessageAt DateTime?
+  participants  ConversationParticipant[]
+  messages      Message[]
 }
 
 model ConversationParticipant {
@@ -186,14 +191,67 @@ model Message {
   senderId       String
   text           String?
   mediaUrl       String?
+  isRead         Boolean      @default(false)
   createdAt      DateTime     @default(now())
   conversation   Conversation @relation(fields: [conversationId], references: [id])
   sender         User         @relation("SentMessages", fields: [senderId], references: [id])
+
+  @@index([conversationId, createdAt])
+}
+
+model Report {
+  id         String           @id @default(uuid())
+  reporterId String
+  targetType ReportTargetType
+  targetId   String
+  reason     ReportReason
+  details    String?
+  status     ReportStatus     @default(PENDING)
+  createdAt  DateTime         @default(now())
+  reporter   User             @relation(fields: [reporterId], references: [id])
+
+  @@index([reporterId])
+}
+
+model Hashtag {
+  id        String         @id @default(uuid())
+  tag       String         @unique
+  createdAt DateTime       @default(now())
+  media     MediaHashtag[]
+}
+
+model MediaHashtag {
+  id        String  @id @default(uuid())
+  mediaId   String
+  hashtagId String
+  media     Media   @relation(fields: [mediaId], references: [id])
+  hashtag   Hashtag @relation(fields: [hashtagId], references: [id])
+
+  @@unique([mediaId, hashtagId])
 }
 
 enum MediaType {
   IMAGE
   VIDEO
+}
+
+enum ReportTargetType {
+  MEDIA
+  COMMENT
+  USER
+}
+
+enum ReportReason {
+  SPAM
+  ABUSE
+  INAPPROPRIATE
+  OTHER
+}
+
+enum ReportStatus {
+  PENDING
+  REVIEWED
+  DISMISSED
 }
 
 enum NotificationType {

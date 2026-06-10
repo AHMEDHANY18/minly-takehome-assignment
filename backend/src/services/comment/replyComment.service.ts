@@ -1,4 +1,5 @@
 import { CommentRepository } from "../../repositories/comment.repository";
+import { notifyMentionedUsers } from "./mention.service";
 
 export async function replyCommentService(
   userId: string,
@@ -14,6 +15,14 @@ export async function replyCommentService(
   const reply = await CommentRepository.createReply({
     userId,
     parentCommentId,
+    text,
+  });
+
+  // 🔔 @mentions → SYSTEM notifications (best-effort)
+  await notifyMentionedUsers({
+    actorId: userId,
+    mediaId: reply.mediaId,
+    commentId: reply.id,
     text,
   });
 
