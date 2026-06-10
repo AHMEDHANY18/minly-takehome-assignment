@@ -164,7 +164,7 @@ export function FeedCard({
         {item.title || item.description ? (
           <Text style={styles.caption} numberOfLines={3}>
             <Text style={styles.captionUser}>{displayName} </Text>
-            {item.description ?? item.title}
+            <HashtagText text={item.description ?? item.title ?? ""} />
           </Text>
         ) : null}
 

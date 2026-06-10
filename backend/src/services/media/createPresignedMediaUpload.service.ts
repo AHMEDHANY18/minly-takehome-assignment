@@ -5,13 +5,16 @@ import { createPresignedPutUrl } from "../../utilities/storage/presignPut";
 
 export async function createPresignedMediaUploadService(params: {
   userId: string;
-  kind: "media" | "avatar";
+  kind: "media" | "avatar" | "thumbnail";
   contentType: string;
   type?: "IMAGE" | "VIDEO";
 }) {
   const { userId, kind,contentType, type } = params;
   if (!contentType) throw new Error("MISSING_CONTENT_TYPE");
   assertAllowedContentType(contentType);
+  // avatars & video thumbnails must be images
+  if ((kind === "avatar" || kind === "thumbnail") && !contentType.startsWith("image/"))
+    throw new Error("TYPE_MISMATCH");
   if (type === "IMAGE" && !contentType.startsWith("image/")) throw new Error("TYPE_MISMATCH");
   if (type === "VIDEO" && !contentType.startsWith("video/")) throw new Error("TYPE_MISMATCH");
   const extension = mimeToExt(contentType);
